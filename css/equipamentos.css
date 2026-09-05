@@ -1,0 +1,28 @@
+/* ==========================================================
+   EQUIPAMENTOS
+   Arquivo isolado: não redefine nenhuma classe já existente do
+   projeto (.cx-grid, .cx-card, .cx-body, .cx-dimlabel, .cx-arrow,
+   .cx-filters, .cx-filter-btn, .cx-empty, .cx-modal-box,
+   .cx-modal-dim, .cx-modal-section, .modal-overlay, .modal-box,
+   .modal-actions, .fonte-tag, .subtab-row, .subtab-btn,
+   .subtab-panel, .field, etc.) — este módulo REAPROVEITA essas
+   classes já definidas em index.html para os cards, os filtros, o
+   campo de pesquisa e o modal herdarem automaticamente o mesmo
+   visual já usado pelo restante do Compêndio (mesmo mecanismo já
+   usado por Marcos de Corrupção/Marcos de Infecção).
+
+   Para os cards e o modal herdarem uma cor própria pelo MESMO
+   mecanismo já usado por cada Dimensão (variáveis --cx-c/--cx-c-dim
+   lidas por .cx-card/.cx-modal-box/.cx-filter-btn), este arquivo
+   soma apenas UMA classe nova, ".cx-equipamento", no mesmo padrão já
+   usado por ".cx-infeccao" (marcos-infeccao.css) — nenhuma classe de
+   Dimensão existente é alterada, e nenhuma cor por subcategoria foi
+   criada (a categoria principal do Compêndio continua sendo uma
+   única: "Equipamentos").
+   ========================================================== */
+
+/* Cor da categoria Equipamentos — tom acinzentado/metálico,
+   reforçando a diferença visual em relação às cores de Dimensão e à
+   cor de Marcos de Infecção (nenhuma delas é reutilizada ou
+   sobrescrita). */
+.cx-equipamento{--cx-c:#8a8f98; --cx-c-dim:#4a4e56;}

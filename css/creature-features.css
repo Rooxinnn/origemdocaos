@@ -1,0 +1,295 @@
+/* ==========================================================
+   CREATURE FEATURES — CSS isolado
+   Não redefine nenhuma classe existente do projeto. Reaproveita
+   apenas as variáveis globais de cor (--panel, --panel-2, --paper,
+   --paper-dim, --line, --sigil, --amber, --amber-bright) já
+   definidas em :root (index.html) e a estrutura genérica de modal
+   já usada no projeto (.modal-overlay/.modal-box/.modal-actions —
+   não redeclaradas aqui, só complementadas com o modificador
+   ".cfh-hab-modal-box" para ajustar largura/alinhamento deste
+   modal específico).
+
+   Toda classe nova é prefixada com "cfh-" para nunca colidir com
+   nada existente — inclusive com "cr-*" (ficha de Criatura) e
+   "crf-*" (Ficha Completa/Compêndio).
+   ========================================================== */
+
+/* ---------- bloco de Habilidades dentro do painel
+   "Movimentos, Conexões e Habilidades" ---------- */
+.cfh-hab-wrap{
+  margin-top:18px;
+  padding-top:16px;
+  border-top:1px solid var(--line);
+}
+
+.cfh-hab-toolbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+  margin-bottom:14px;
+}
+.cfh-hab-toolbar-label{
+  font-family:'Oswald',sans-serif;
+  font-size:11.5px;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  color:var(--sigil);
+}
+.cfh-hab-add-btn{
+  font-family:'Oswald',sans-serif;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  background:var(--panel-2);
+  color:var(--paper-dim);
+  border:1px solid var(--line);
+  padding:9px 16px;
+  font-size:11.5px;
+  cursor:pointer;
+}
+.cfh-hab-add-btn:hover{
+  color:var(--paper);
+  border-color:var(--amber-bright);
+}
+
+.cfh-hab-list{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+/* ---------- card (colapsado / expandido) ---------- */
+.cfh-hab-card{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-left:3px solid var(--amber);
+}
+.cfh-hab-card.open{
+  border-left-color:var(--amber-bright);
+}
+
+.cfh-hab-card-head{
+  width:100%;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  background:transparent;
+  border:none;
+  padding:12px 16px;
+  cursor:pointer;
+  text-align:left;
+}
+.cfh-hab-card-name{
+  font-family:'Oswald',sans-serif;
+  font-size:13px;
+  letter-spacing:0.04em;
+  text-transform:uppercase;
+  color:var(--paper);
+}
+.cfh-hab-card-pb{
+  flex:0 0 auto;
+  font-family:'Oswald',sans-serif;
+  font-size:12px;
+  letter-spacing:0.06em;
+  color:var(--amber-bright);
+  white-space:nowrap;
+}
+
+.cfh-hab-card-body{
+  display:none;
+  padding:0 16px 16px;
+  border-top:1px solid var(--line);
+}
+.cfh-hab-row{
+  margin-top:14px;
+}
+.cfh-hab-row label{
+  display:block;
+  font-family:'Oswald',sans-serif;
+  font-size:10px;
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+  color:var(--sigil);
+  margin-bottom:5px;
+}
+.cfh-hab-row-value{
+  font-size:13px;
+  color:var(--paper-dim);
+}
+.cfh-hab-desc p{
+  margin:0;
+  font-size:12.5px;
+  line-height:1.75;
+  color:var(--paper-dim);
+  white-space:pre-wrap;
+  word-wrap:break-word;
+}
+
+.cfh-hab-card-actions{
+  display:flex;
+  gap:8px;
+  margin-top:16px;
+}
+.cfh-hab-card-actions button{
+  flex:0 0 auto;
+  font-size:10.5px;
+  padding:7px 14px;
+}
+.cfh-hab-del-btn{
+  background:rgba(224,96,96,0.10);
+  border-color:#e06060;
+  color:#f0c8c8;
+}
+.cfh-hab-del-btn:hover{
+  background:rgba(224,96,96,0.22);
+}
+
+/* ---------- modal de criação/edição ---------- */
+.cfh-hab-modal-box{
+  max-width:480px;
+  width:100%;
+  text-align:left;
+  max-height:86vh;
+  overflow-y:auto;
+}
+.cfh-hab-modal-box h3{
+  margin:0 0 18px;
+  font-size:15px;
+  letter-spacing:0.06em;
+  text-transform:uppercase;
+  color:var(--paper);
+  border-bottom:1px solid var(--line);
+  padding-bottom:10px;
+}
+.cfh-hab-field{
+  margin-bottom:14px;
+}
+.cfh-hab-field label{
+  display:block;
+  font-family:'Oswald',sans-serif;
+  font-size:10.5px;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  color:var(--sigil);
+  margin-bottom:6px;
+}
+.cfh-hab-field input,
+.cfh-hab-field textarea{
+  width:100%;
+}
+.cfh-hab-modal-box .modal-actions{
+  justify-content:flex-end;
+  margin-top:6px;
+}
+.cfh-hab-modal-box .modal-actions button.primary{
+  background:rgba(184,121,26,0.18);
+  border-color:var(--amber-bright);
+  color:var(--paper);
+}
+.cfh-hab-modal-box .modal-actions button.primary:hover{
+  background:rgba(184,121,26,0.30);
+}
+
+@media(max-width:640px){
+  .cfh-hab-modal-box{ max-width:94vw; padding:20px; }
+  .cfh-hab-card-head{ padding:11px 14px; }
+  .cfh-hab-card-body{ padding:0 14px 14px; }
+}
+
+/* ==========================================================
+   MODO VISUALIZAÇÃO / EDIÇÃO — botão no cabeçalho da ficha
+   (.cr-titlebar) + espelhamento dos 3 campos de texto livre
+   (cr_condicoes, cr_itens, cr_movimentos). Mesmo conceito visual
+   já usado em css/text-view-mode.css para a ficha de Agente —
+   reimplementado aqui com classes próprias ("cfh-view-*") para
+   nunca colidir com as classes "tvm-*" daquele módulo.
+   ========================================================== */
+
+/* ---------- botão de alternância, no cabeçalho da ficha ---------- */
+.cfh-view-toggle-btn{
+  position:relative;
+  z-index:1;
+  font-family:'Oswald',sans-serif;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  font-size:11px;
+  background:var(--panel-2);
+  color:var(--paper-dim);
+  border:1px solid var(--line);
+  padding:9px 16px;
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  white-space:nowrap;
+  align-self:flex-start;
+  margin-left:auto;
+  transition:border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+.cfh-view-toggle-btn:hover{
+  color:var(--paper);
+  border-color:var(--amber-bright);
+}
+.cfh-view-toggle-btn .cfh-view-toggle-icon{
+  font-size:13px;
+  line-height:1;
+}
+body.cfh-mode-view .cfh-view-toggle-btn{
+  border-color:var(--amber-bright);
+  color:var(--paper);
+  background:rgba(240,168,60,0.10);
+}
+
+/* ---------- modo visualização: esconde o textarea original ---------- */
+body.cfh-mode-view textarea.cfh-view-field{
+  display:none;
+}
+
+/* bloco de leitura, escondido por padrão (modo edição) */
+.cfh-view-mirror{
+  display:none;
+}
+body.cfh-mode-view .cfh-view-mirror{
+  display:block;
+}
+.cfh-view-mirror{
+  font-family:'Special Elite', monospace;
+  font-size:14.5px;
+  line-height:1.75;
+  color:var(--paper);
+  white-space:pre-wrap;
+  word-wrap:break-word;
+  overflow-wrap:break-word;
+  border-left:2px solid var(--line);
+  padding:4px 0 4px 14px;
+  margin:0;
+  /* cresce naturalmente com o conteúdo — sem altura fixa, sem scroll
+     interno; o scroll continua sendo o scroll normal da página. */
+  min-height:1.75em;
+}
+.cfh-view-mirror.is-empty{
+  color:var(--sigil);
+  font-style:italic;
+  border-left-color:var(--line);
+}
+.cfh-view-mirror:hover{
+  border-left-color:var(--amber);
+}
+
+/* ---------- modo visualização: ações de gerenciar Habilidades
+   ficam ocultas (criar/editar/excluir) — o nome, o PB e o clique
+   para ver a descrição completa continuam funcionando nos dois
+   modos, só a edição em si é que pertence ao modo Edição. ---------- */
+body.cfh-mode-view .cfh-hab-add-btn{
+  display:none;
+}
+body.cfh-mode-view .cfh-hab-card-actions{
+  display:none;
+}
+
+@media(max-width:640px){
+  .cfh-view-mirror{ font-size:14px; }
+  .cfh-view-toggle-btn{ font-size:10.5px; padding:7px 13px; margin-left:0; }
+}

@@ -1,0 +1,413 @@
+/* ==========================================================
+   COMPÊNDIO DE CRIATURAS — Etapa 1 (catálogo visual)
+   Arquivo isolado: não redefine nenhuma classe já existente do
+   projeto (.secret-wrap, .secret-header, .secret-eyebrow,
+   .secret-divider, .secret-back-btn, etc.) — este módulo só
+   REAPROVEITA essas classes (mesmo padrão visual dos Arquivos
+   Secretos) e soma classes novas, todas prefixadas com "cpd-"
+   para nunca colidir com nada existente — inclusive com
+   ".compendio-*", já usado pelo Compêndio de Regras (módulo
+   diferente, propositalmente isolado).
+
+   Cores das dimensões do ORIGEM DO CAOS (nunca as de Ordem
+   Paranormal): usadas apenas como detalhe — bordas, títulos,
+   linhas, indicadores — nunca como fundo de página inteira.
+   Cada elemento que precisa da cor recebe a classe "cpd-dim-*"
+   correspondente, que define a variável --cpd-accent local;
+   todo o resto do módulo continua no padrão escuro/dourado do
+   projeto.
+   ========================================================== */
+
+.cpd-dim-infernal    { --cpd-accent:#4d84d6; --cpd-bg:#0a1220; }
+.cpd-dim-arkanjerial  { --cpd-accent:#e4defa; --cpd-bg:#171423; }
+.cpd-dim-terrena      { --cpd-accent:#57a862; --cpd-bg:#0f1810; }
+.cpd-dim-carnical     { --cpd-accent:#c23f36; --cpd-bg:#1c0e0d; }
+.cpd-dim-sombria      { --cpd-accent:#6a4a8a; --cpd-bg:#0a0710; }
+.cpd-dim-perdicao     { --cpd-accent:#9a4fd1; --cpd-bg:#150a1c; }
+.cpd-dim-limbica      { --cpd-accent:#c7c7c0; --cpd-bg:#131313; }
+
+/* ---------- textura de fundo por dimensão ----------
+   Cada card recebe uma camada .cpd-card-texture (atrás do conteúdo,
+   z-index 0) com múltiplas camadas de gradiente que evocam a
+   identidade da dimensão, sem depender de nenhuma imagem externa. */
+.cpd-dim-infernal .cpd-card-texture{
+  background:
+    radial-gradient(circle at 22% 20%, rgba(77,132,214,0.32), transparent 45%),
+    radial-gradient(circle at 82% 78%, rgba(40,80,160,0.26), transparent 50%),
+    repeating-linear-gradient(45deg, rgba(120,170,240,0.09) 0 2px, transparent 2px 22px),
+    repeating-linear-gradient(-45deg, rgba(120,170,240,0.06) 0 1px, transparent 1px 26px),
+    var(--cpd-bg);
+}
+.cpd-dim-arkanjerial .cpd-card-texture{
+  background:
+    radial-gradient(circle at 50% -10%, rgba(228,222,250,0.30), transparent 55%),
+    repeating-linear-gradient(60deg, rgba(228,222,250,0.08) 0 1px, transparent 1px 28px),
+    repeating-linear-gradient(-60deg, rgba(228,222,250,0.08) 0 1px, transparent 1px 28px),
+    var(--cpd-bg);
+}
+.cpd-dim-terrena .cpd-card-texture{
+  background:
+    radial-gradient(circle at 18% 15%, rgba(87,168,98,0.30), transparent 42%),
+    radial-gradient(circle at 82% 85%, rgba(60,120,50,0.24), transparent 48%),
+    repeating-linear-gradient(72deg, rgba(120,180,90,0.09) 0 3px, transparent 3px 18px),
+    conic-gradient(from 45deg at 50% 130%, rgba(90,140,70,0.12), transparent 60%),
+    var(--cpd-bg);
+}
+.cpd-dim-carnical .cpd-card-texture{
+  background:
+    radial-gradient(circle at 16% 22%, rgba(194,63,54,0.34), transparent 42%),
+    radial-gradient(circle at 84% 78%, rgba(120,20,20,0.30), transparent 46%),
+    repeating-linear-gradient(118deg, rgba(194,63,54,0.11) 0 2px, transparent 2px 14px),
+    repeating-linear-gradient(24deg, rgba(90,10,10,0.16) 0 1px, transparent 1px 20px),
+    var(--cpd-bg);
+}
+.cpd-dim-sombria .cpd-card-texture{
+  background:
+    radial-gradient(circle at 28% 32%, rgba(106,74,138,0.22), transparent 50%),
+    radial-gradient(circle at 78% 30%, rgba(50,30,70,0.20), transparent 50%),
+    radial-gradient(circle at 60% 85%, rgba(15,8,22,0.55), transparent 60%),
+    var(--cpd-bg);
+}
+.cpd-dim-perdicao .cpd-card-texture{
+  background:
+    radial-gradient(circle at 22% 78%, rgba(154,79,209,0.32), transparent 46%),
+    repeating-linear-gradient(15deg, rgba(154,79,209,0.11) 0 2px, transparent 2px 10px),
+    repeating-linear-gradient(-25deg, rgba(200,80,220,0.08) 0 2px, transparent 2px 16px),
+    var(--cpd-bg);
+}
+.cpd-dim-limbica .cpd-card-texture{
+  background:
+    repeating-linear-gradient(90deg, rgba(199,199,192,0.07) 0 1px, transparent 1px 7px),
+    repeating-linear-gradient(0deg, rgba(199,199,192,0.05) 0 1px, transparent 1px 11px),
+    radial-gradient(circle at 55% 45%, rgba(199,199,192,0.10), transparent 62%),
+    var(--cpd-bg);
+}
+
+/* ---------- barra de ferramentas (busca + filtros) ---------- */
+.cpd-toolbar{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  margin-bottom:34px;
+}
+
+.cpd-search-box{
+  position:relative;
+  max-width:420px;
+  margin:0 auto;
+  width:100%;
+}
+.cpd-search-icon{
+  position:absolute;
+  left:14px;
+  top:50%;
+  transform:translateY(-50%);
+  color:var(--sigil);
+  font-size:14px;
+  pointer-events:none;
+}
+.cpd-search-box input{
+  width:100%;
+  background:var(--panel-2);
+  border:1px solid var(--line);
+  color:var(--paper);
+  padding:11px 14px 11px 36px;
+  font-family:'Special Elite', monospace;
+  font-size:13px;
+}
+.cpd-search-box input:focus{
+  outline:none;
+  border-color:var(--amber-bright);
+}
+.cpd-search-box input::placeholder{ color:var(--sigil); }
+
+.cpd-filters{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  gap:8px;
+}
+.cpd-filter-btn{
+  background:var(--panel-2);
+  border:1px solid var(--line);
+  color:var(--paper-dim);
+  padding:7px 14px;
+  font-size:11px;
+  letter-spacing:0.06em;
+  text-transform:uppercase;
+  font-family:'Oswald',sans-serif;
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  cursor:pointer;
+  transition:border-color 0.15s ease, color 0.15s ease;
+}
+.cpd-filter-btn:hover{ color:var(--paper); border-color:var(--amber-bright); }
+.cpd-filter-btn.active{
+  color:var(--paper);
+  border-color:var(--cpd-accent, var(--amber-bright));
+  background:rgba(240,168,60,0.08);
+}
+.cpd-filter-dot{
+  width:8px; height:8px; border-radius:50%;
+  background:var(--cpd-accent, var(--sigil));
+  flex:0 0 auto;
+  box-shadow:0 0 6px var(--cpd-accent, transparent);
+}
+
+/* ---------- grade / seções por dimensão ---------- */
+.cpd-grid{ display:flex; flex-direction:column; gap:26px; margin-bottom:44px; }
+
+.cpd-section{
+  border:1px solid var(--line);
+  border-left:3px solid var(--cpd-accent, var(--line));
+  background:var(--panel);
+}
+.cpd-section-header{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:13px 18px;
+  background:var(--panel-2);
+  border-bottom:1px solid var(--line);
+}
+.cpd-section-dot{
+  width:9px; height:9px; border-radius:50%; flex:0 0 auto;
+  background:var(--cpd-accent, var(--sigil));
+  box-shadow:0 0 8px var(--cpd-accent, transparent);
+}
+.cpd-section-header h3{
+  margin:0; flex:1 1 auto;
+  font-size:13.5px; letter-spacing:0.08em;
+  text-transform:uppercase; color:var(--paper);
+}
+.cpd-section-count{
+  font-size:10.5px; color:var(--sigil);
+  font-family:'Oswald',sans-serif;
+  white-space:nowrap;
+}
+
+.cpd-flat-grid{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  padding:18px;
+}
+
+.cpd-empty{
+  text-align:center;
+  padding:50px 0;
+  font-size:12px;
+  color:var(--sigil);
+  font-style:italic;
+}
+.cpd-empty-inline{
+  grid-column:1 / -1;
+  padding:16px 0;
+}
+
+/* ---------- card da criatura ----------
+   Layout em linha: imagem à esquerda (menor, sem cortar a criatura),
+   informações ao centro, botão "Ficha" à direita. O fundo do card
+   inteiro carrega a textura da dimensão (.cpd-card-texture, camada
+   absoluta atrás de tudo); o conteúdo fica sobre placas semi-
+   transparentes só para manter a leitura do texto. */
+.cpd-card{
+  position:relative;
+  display:flex;
+  align-items:stretch;
+  min-height:104px;
+  border:1px solid var(--line);
+  border-left:3px solid var(--cpd-accent, var(--line));
+  overflow:hidden;
+  isolation:isolate;
+  transition:border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+.cpd-card:hover{
+  border-color:var(--cpd-accent, var(--amber-bright));
+  transform:translateY(-1px);
+  box-shadow:0 4px 18px rgba(0,0,0,0.35);
+}
+
+.cpd-card-texture{
+  position:absolute;
+  inset:0;
+  z-index:0;
+}
+
+.cpd-card-photo{
+  position:relative;
+  z-index:1;
+  width:88px;
+  flex:0 0 88px;
+  background:rgba(8,7,6,0.55);
+  border-right:1px solid rgba(255,255,255,0.06);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+  padding:8px;
+}
+/* imagem inteira, sem corte, respeitando a proporção original */
+.cpd-card-photo img{ max-width:100%; max-height:100%; width:auto; height:auto; object-fit:contain; display:block; }
+.cpd-card-photo-fallback{
+  font-family:'Oswald',sans-serif;
+  font-size:9px;
+  letter-spacing:0.06em;
+  text-transform:uppercase;
+  color:var(--sigil);
+  text-align:center;
+  line-height:1.4;
+}
+
+.cpd-card-body{
+  position:relative;
+  z-index:1;
+  flex:1 1 auto;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  gap:4px;
+  padding:12px 18px;
+  background:rgba(9,7,5,0.34);
+  min-width:0;
+}
+.cpd-card-name{
+  font-family:'Oswald',sans-serif;
+  font-size:15px;
+  font-weight:700;
+  letter-spacing:0.05em;
+  text-transform:uppercase;
+  color:var(--paper);
+  text-shadow:0 1px 3px rgba(0,0,0,0.6);
+}
+.cpd-card-dim{
+  font-size:11px;
+  font-weight:600;
+  letter-spacing:0.06em;
+  text-transform:uppercase;
+  color:var(--cpd-accent, var(--paper-dim));
+}
+.cpd-card-tipo{
+  font-size:11px;
+  color:var(--paper-dim);
+  letter-spacing:0.02em;
+}
+
+.cpd-card-action{
+  position:relative;
+  z-index:1;
+  flex:0 0 auto;
+  display:flex;
+  align-items:center;
+  padding:0 18px;
+  background:rgba(9,7,5,0.22);
+  border-left:1px solid rgba(255,255,255,0.06);
+}
+.cpd-card-btn{
+  background:rgba(0,0,0,0.25);
+  border:1px solid var(--cpd-accent, var(--line));
+  color:var(--paper);
+  padding:9px 20px;
+  font-size:11px;
+  letter-spacing:0.14em;
+  text-transform:uppercase;
+  font-family:'Oswald',sans-serif;
+  cursor:pointer;
+  white-space:nowrap;
+}
+.cpd-card-btn:hover{
+  background:var(--cpd-accent, var(--amber-bright));
+  color:#0c0a06;
+}
+
+@media(max-width:560px){
+  .cpd-card{ flex-wrap:wrap; min-height:0; }
+  .cpd-card-photo{ width:100%; flex:1 1 100%; height:96px; border-right:none; border-bottom:1px solid rgba(255,255,255,0.06); }
+  .cpd-card-body{ flex:1 1 100%; padding:12px 16px; }
+  .cpd-card-action{ flex:1 1 100%; padding:10px 16px 14px; border-left:none; border-top:1px solid rgba(255,255,255,0.06); }
+  .cpd-card-btn{ width:100%; }
+}
+
+/* ---------- tela de registro (ficha futura ainda não implementada) ---------- */
+.cpd-reg-badges{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:14px;
+  flex-wrap:wrap;
+  margin-top:10px;
+}
+.cpd-reg-dim{
+  font-size:12px;
+  letter-spacing:0.06em;
+  color:var(--cpd-accent, var(--paper-dim));
+  border:1px solid var(--cpd-accent, var(--line));
+  padding:4px 12px;
+}
+.cpd-reg-tipo{
+  font-size:11px;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  color:var(--sigil);
+}
+
+.cpd-reg-body{
+  display:flex;
+  gap:26px;
+  flex-wrap:wrap;
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-left:3px solid var(--cpd-accent, var(--line));
+  padding:24px;
+  margin-bottom:36px;
+}
+.cpd-reg-photo-box{
+  width:200px;
+  height:200px;
+  flex:0 0 auto;
+  background:var(--ink);
+  border:1px solid var(--line);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+}
+.cpd-reg-photo-box img{ width:100%; height:100%; object-fit:cover; display:block; }
+.cpd-reg-photo-fallback{
+  font-family:'Oswald',sans-serif;
+  font-size:11px;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  color:var(--sigil);
+  text-align:center;
+  padding:10px;
+}
+.cpd-reg-info{
+  flex:1 1 260px;
+  display:flex;
+  flex-direction:column;
+  gap:18px;
+}
+.cpd-reg-field label{
+  display:block;
+  font-family:'Oswald',sans-serif;
+  font-size:10.5px;
+  letter-spacing:0.14em;
+  text-transform:uppercase;
+  color:var(--sigil);
+  margin-bottom:6px;
+}
+.cpd-reg-field p{
+  margin:0;
+  font-size:13px;
+  line-height:1.7;
+  color:var(--paper-dim);
+  font-style:italic;
+}
+
+@media(max-width:640px){
+  .cpd-flat-grid{ gap:12px; padding:14px; }
+  .cpd-reg-body{ flex-direction:column; align-items:center; text-align:center; }
+  .cpd-reg-photo-box{ width:160px; height:160px; }
+}

@@ -1,0 +1,693 @@
+/* ==========================================================
+   C.R.I.S. — SISTEMA DE CAMPANHAS — Fase B (Área + Criação)
+   ==========================================================
+   Estilos mínimos: a aba Campanhas reaproveita .panel, .field,
+   .empty-state, .modal-overlay/.modal-box/.modal-actions e as
+   variáveis de cor (--panel, --line, --amber-bright, --paper etc.)
+   já definidas no <style> principal do index.html. Este arquivo só
+   cobre o que é específico desta aba (cards de campanha e o botão
+   de destaque "+ Criar Campanha").
+   ========================================================== */
+
+.camp-actions-row{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin:14px 0 22px;
+}
+
+.camp-btn-primary{
+  background:rgba(240,168,60,0.16);
+  border-color:var(--amber-bright);
+  color:var(--paper);
+}
+.camp-btn-primary:hover{
+  background:rgba(240,168,60,0.28);
+}
+
+.camp-subheading{
+  margin:22px 0 10px;
+  font-size:13px;
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+  color:var(--paper-dim);
+}
+
+.camp-cards{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+.camp-card{
+  background:var(--panel-2, var(--panel));
+  border:1px solid var(--line);
+  padding:14px 16px;
+  display:flex;
+  align-items:center;
+  gap:14px;
+  flex-wrap:wrap;
+}
+
+.camp-card-info{
+  flex:1 1 260px;
+}
+
+.camp-card-name{
+  font-size:15px;
+  color:var(--paper);
+  margin:0 0 4px;
+  text-transform:uppercase;
+  letter-spacing:0.04em;
+}
+
+.camp-card-meta{
+  font-size:12px;
+  color:var(--paper-dim);
+}
+
+.camp-link-name{
+  font-size:14px;
+  color:var(--paper);
+  margin:0 0 16px;
+}
+
+/* ==========================================================
+   FASE D + E — sub-abas da campanha (Agentes / Jogadores),
+   cards de Personagem, lista de Jogadores e modal de
+   "Adicionar Personagem". Reaproveita as mesmas variáveis de
+   cor e os componentes genéricos (.field, .empty-state,
+   .modal-overlay/.modal-box/.modal-actions) já usados acima.
+   ========================================================== */
+
+.camp-subtabs{
+  display:flex;
+  gap:8px;
+  margin:24px 0 4px;
+  border-bottom:1px solid var(--line);
+}
+
+.camp-subtab-btn{
+  background:transparent;
+  border:none;
+  border-bottom:2px solid transparent;
+  padding:8px 4px;
+  margin-bottom:-1px;
+  color:var(--paper-dim);
+  font-size:13px;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  cursor:pointer;
+}
+.camp-subtab-btn.active{
+  color:var(--paper);
+  border-bottom-color:var(--amber-bright);
+}
+
+.camp-char-cards{
+  display:flex;
+  flex-wrap:wrap;
+  gap:14px;
+  margin:14px 0;
+}
+
+.camp-char-card{
+  background:var(--panel-2, var(--panel));
+  border:1px solid var(--line);
+  padding:14px;
+  width:160px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  text-align:center;
+  gap:8px;
+}
+
+.camp-char-card-img{
+  width:96px;
+  height:96px;
+  object-fit:cover;
+  background:rgba(0,0,0,0.25);
+  border:1px solid var(--line);
+}
+
+.camp-char-card-name{
+  font-size:13px;
+  color:var(--paper);
+  text-transform:uppercase;
+  letter-spacing:0.03em;
+}
+
+.camp-char-card-meta{
+  font-size:11px;
+  color:var(--paper-dim);
+}
+
+.camp-char-card-actions{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  width:100%;
+}
+.camp-char-card-actions button{
+  width:100%;
+}
+.camp-char-card-actions .entry-del{
+  color:#e06060;
+}
+
+.camp-player-cards{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  margin:14px 0;
+}
+
+.camp-player-card{
+  background:var(--panel-2, var(--panel));
+  border:1px solid var(--line);
+  padding:12px 16px;
+}
+
+.camp-player-card-name{
+  font-size:14px;
+  color:var(--paper);
+}
+
+.camp-player-card-role{
+  font-size:11px;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  color:var(--amber-bright);
+  margin:2px 0 4px;
+}
+
+.camp-player-card-count{
+  font-size:12px;
+  color:var(--paper-dim);
+}
+
+.camp-add-list{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  max-height:280px;
+  overflow-y:auto;
+  margin:12px 0;
+}
+
+.camp-add-item{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:8px 10px;
+  border:1px solid var(--line);
+  cursor:pointer;
+}
+.camp-add-item.selected{
+  border-color:var(--amber-bright);
+  background:rgba(240,168,60,0.12);
+}
+.camp-add-item.disabled{
+  cursor:not-allowed;
+  opacity:0.45;
+}
+
+/* ==========================================================
+   FASE G — lista expansível de personagens de um jogador (na
+   aba Jogadores, visível só ao Mestre) e banner/travamento da
+   "ficha de terceiro" (ver js/campaign-agent-view.js). Reaproveita
+   as mesmas variáveis de cor já usadas acima.
+   ========================================================== */
+
+.camp-player-char-list{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  margin-top:10px;
+  padding-top:10px;
+  border-top:1px solid var(--line);
+}
+
+.camp-player-char-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  font-size:12px;
+}
+
+#cris_foreign_banner{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  background:rgba(240,168,60,0.14);
+  border:1px solid var(--amber-bright);
+  color:var(--paper);
+  padding:10px 14px;
+  margin-bottom:16px;
+  font-size:13px;
+}
+
+/* Realce visual enquanto uma ficha de terceiro está carregada nos
+   campos — só um contorno, sem travar nada (a edição é permitida
+   nesta etapa; ver js/campaign-agent-view.js para o que ainda fica
+   de fora do escopo). */
+#agent-sheet-capture.cris-foreign-readonly{
+  outline:2px solid var(--amber-bright);
+  outline-offset:4px;
+}
+
+/* ==========================================================
+   FASE F — FUNDAÇÃO VISUAL, ESTRUTURA, CARDS, CONVITES,
+   RESPONSIVIDADE E MICROINTERAÇÕES
+   ----------------------------------------------------------
+   Auditoria em F.0. Só CSS/HTML (+ 3 toggles pontuais de classe
+   em js/campanhas.js). Nenhuma variável de cor nova: tudo deriva
+   de --panel/--panel-2/--line/--paper/--paper-dim/--amber-bright/
+   --sigil e da cor de perigo já usada no resto do app (#e06060,
+   mesma do `.entry-del:hover` e do `.modal-actions button.danger`
+   globais definidos no <style> principal).
+   ========================================================== */
+
+/* ---------- F.1 — Fundação: modais e mensagens de erro ---------- */
+/* Substitui os `style="max-width:420px; text-align:left;"` que
+   estavam repetidos em cada modal de campanha. */
+.camp-modal-box{
+  max-width:420px;
+  text-align:left;
+}
+
+/* Substitui o `style="color:#ffb0b0"` (cor de perigo inventada só
+   para Campanhas) por uma mensagem de erro consistente com
+   `.drc-error`/`.dtp-form-err` já usados no resto do app — mesma
+   cor de perigo (#e06060), sem itálico (a `.empty-state` de onde
+   herda é itálica; erro não deve parecer um texto informativo). */
+.camp-modal-erro{
+  color:#e06060;
+  font-style:normal;
+  margin-top:10px;
+}
+
+/* Ações destrutivas (botão global `.entry-del`) — dentro de
+   Campanhas ganham só um respiro extra quando usadas soltas numa
+   linha de ações (ex.: "Sair da Campanha", "Excluir" na lista). */
+.camp-actions-row .entry-del{
+  padding:10px 22px;
+}
+
+/* ---------- F.2 — Estrutura da tela ---------- */
+/* Cabeçalho leve das telas de Campanhas, no mesmo espírito do
+   `.titlebar` já usado em Agentes (moldura + logo + subtítulo),
+   mas sem o watermark grande — Campanhas lista/edita, não é uma
+   ficha para "folhear". Reaproveita img/logo-sol.png, já carregada
+   pelo app (mesmo arquivo do `.titlebar-logo`). */
+.camp-titlebar{
+  background:var(--panel);
+  border:2px solid var(--line);
+  padding:18px 22px;
+  margin-bottom:18px;
+}
+.camp-titlebar-head{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  flex-wrap:wrap;
+}
+.camp-titlebar-logo{
+  width:44px; height:44px; flex:0 0 auto;
+  box-shadow:0 0 16px rgba(240,168,60,0.32);
+  border:1px solid var(--line);
+}
+.camp-titlebar-logo img{width:100%; height:100%; object-fit:contain; display:block;}
+.camp-titlebar h2{
+  font-size:18px; margin:0 0 2px; color:var(--paper);
+  text-transform:uppercase; border:none; padding:0;
+}
+.camp-titlebar-sub{
+  color:var(--sigil); font-size:10.5px; letter-spacing:0.22em; text-transform:uppercase;
+  font-family:'Oswald',sans-serif;
+}
+.camp-titlebar .camp-link-name{margin:12px 0 0;}
+.camp-titlebar #camp_link_mestre{font-size:11px;}
+
+/* Selo "Você é o Mestre" — mesma linguagem visual do
+   `.titlebar-al-badge` já existente (faixa âmbar recortada), só
+   com recorte mais discreto para não competir com o badge de
+   Aborto Límbico da ficha. */
+.camp-master-badge{
+  margin-left:auto; align-self:center; white-space:nowrap;
+  font-family:'Oswald',sans-serif; font-size:10.5px; letter-spacing:0.14em; text-transform:uppercase;
+  color:var(--ink); background:linear-gradient(135deg, var(--amber-bright), var(--amber));
+  border:1px solid var(--amber-bright); padding:7px 12px; font-weight:600;
+}
+
+/* Separa ações neutras (Copiar Link/Editar/Voltar) de ações de
+   risco (Sair da Campanha) — antes dividiam a mesma fileira com o
+   mesmo peso visual. */
+.camp-actions-row--risk{margin-top:-8px;}
+
+/* ---------- F.3 — Cards ---------- */
+/* Card de campanha ganha um wrapper de ações (Abrir + Excluir,
+   quando Mestre) para controlar alinhamento/responsividade sem
+   depender só do flex-wrap do card inteiro. */
+.camp-card-actions{
+  display:flex;
+  gap:8px;
+  flex:0 0 auto;
+}
+.camp-card:hover{border-color:var(--amber);}
+.camp-card{transition:border-color 0.2s ease;}
+
+/* Cards de personagem — largura fluida em vez de fixa, para não
+   sobrar espaço vazio em telas largas nem forçar scroll em telas
+   estreitas. */
+.camp-char-card{
+  width:auto;
+  flex:1 1 140px;
+  max-width:180px;
+  transition:border-color 0.2s ease;
+}
+.camp-char-card:hover{border-color:var(--amber);}
+
+.camp-player-card{transition:border-color 0.2s ease;}
+.camp-player-card:hover{border-color:var(--amber);}
+/* Diferencia visualmente a linha do Mestre das linhas de jogador
+   comum na aba Jogadores (item 13/19 da auditoria — "Master"
+   deve ser identificado claramente também nesta lista). */
+.camp-player-card.is-master{
+  border-left:3px solid var(--amber-bright);
+}
+
+.camp-add-item{transition:border-color 0.2s ease, background 0.2s ease;}
+.camp-add-item:not(.disabled):hover{border-color:var(--amber);}
+
+/* ---------- F.4 — Convite: tela de destaque ---------- */
+.camp-invite-box{
+  max-width:400px;
+  padding-top:32px;
+  padding-bottom:28px;
+}
+/* FASE F (continuação) — mesma faixa "de arquivo" usada nos cards/
+   cabeçalho (item 9: reaproveitar a identidade já criada, não inventar
+   uma nova). Sangra até a borda do modal usando margem negativa igual
+   ao padding do .modal-box/.camp-invite-box, sem alterar a estrutura
+   do modal em si. */
+.camp-invite-box .camp-capa{
+  margin:-32px -26px 20px;
+  justify-content:center;
+}
+.camp-invite-logo{
+  width:52px; height:52px; margin:0 auto 16px;
+  box-shadow:0 0 18px rgba(240,168,60,0.4);
+  border:1px solid var(--line);
+}
+.camp-invite-logo img{width:100%; height:100%; object-fit:contain; display:block;}
+.camp-invite-eyebrow{
+  color:var(--sigil); font-size:11px; letter-spacing:0.24em; text-transform:uppercase;
+  font-family:'Oswald',sans-serif; margin-bottom:8px;
+}
+.camp-invite-title{
+  font-size:21px; margin:0 0 16px; color:var(--paper);
+  text-transform:uppercase; border:none; padding:0;
+  overflow-wrap:break-word;
+}
+
+/* ---------- F.5 — Responsividade ---------- */
+@media(max-width:560px){
+  .camp-titlebar-head{gap:10px;}
+  .camp-master-badge{margin-left:0; flex:0 0 100%; text-align:center;}
+
+  .camp-actions-row{flex-direction:column; align-items:stretch;}
+  .camp-actions-row button{width:100%;}
+  .camp-actions-row--risk{margin-top:0;}
+
+  .camp-card{flex-direction:column; align-items:stretch;}
+  .camp-card-actions{width:100%;}
+  .camp-card-actions button{flex:1 1 0;}
+
+  /* Só dentro dos modais de Campanha — não afeta os modais globais
+     (ex.: excluir ficha, restaurar backup) que já lidam bem com a
+     largura de 360px em telas pequenas. */
+  .camp-modal-box .modal-actions,
+  .camp-invite-box .modal-actions{
+    flex-direction:column;
+  }
+  .camp-modal-box .modal-actions button,
+  .camp-invite-box .modal-actions button{
+    width:100%;
+  }
+}
+
+/* ==========================================================
+   FASE F (continuação) — IDENTIDADE "CADA CAMPANHA É UM ARQUIVO"
+   ----------------------------------------------------------
+   Não há coluna de imagem/capa em public.campaigns (conferido no
+   schema atual — só id/owner_id/name/description/invite_token/
+   status/created_at/updated_at) e a instrução 6 do prompt proíbe
+   criar uma só para isto nesta fase. A "capa" abaixo é 100% CSS
+   (textura + moldura + selo), preparada para no futuro dar lugar
+   a uma <img> real (bastaria trocar o conteúdo de .camp-capa por
+   uma tag de imagem quando/se uma coluna de capa existir) — nenhum
+   dado novo é inventado ou lido do banco para gerá-la. Reaproveita
+   só --panel/--panel-2/--line/--sigil/--amber* já existentes.
+   ========================================================== */
+.camp-capa{
+  position:relative;
+  background:
+    repeating-linear-gradient(135deg, rgba(240,168,60,0.05) 0 2px, transparent 2px 14px),
+    var(--panel-2, var(--panel));
+  border:1px solid var(--line);
+  border-bottom:2px solid var(--line);
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  padding:8px 10px;
+  gap:8px;
+  min-height:34px;
+}
+.camp-capa::before{
+  content:"ARQUIVO";
+  position:absolute;
+  left:10px; bottom:6px;
+  font-family:'Oswald',sans-serif;
+  font-size:9px;
+  letter-spacing:0.28em;
+  color:var(--sigil);
+  opacity:0.55;
+}
+.camp-capa-badge{
+  font-family:'Oswald',sans-serif;
+  font-size:10.5px;
+  letter-spacing:0.04em;
+  color:var(--paper-dim);
+  background:rgba(0,0,0,0.35);
+  border:1px solid var(--line);
+  padding:3px 7px;
+  white-space:nowrap;
+}
+.camp-status-pill{
+  font-family:'Oswald',sans-serif;
+  font-size:9.5px;
+  letter-spacing:0.14em;
+  text-transform:uppercase;
+  color:var(--ink);
+  background:var(--amber-bright);
+  border:1px solid var(--amber-bright);
+  padding:3px 8px;
+  white-space:nowrap;
+}
+.camp-status-pill.is-inactive{
+  color:var(--paper-dim);
+  background:transparent;
+  border-color:var(--line);
+}
+
+/* ---------- Card da lista (F.3) — vira "arquivo" com capa no topo ---------- */
+.camp-cards{
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(240px, 1fr));
+  gap:14px;
+}
+.camp-card{
+  flex-direction:column;
+  align-items:stretch;
+  gap:0;
+  padding:0;
+  overflow:hidden;
+}
+.camp-card-body{
+  padding:14px 16px;
+  flex:1 1 auto;
+}
+.camp-card-date{
+  font-size:11px;
+  color:var(--sigil);
+  margin:4px 0 0;
+}
+.camp-card .camp-card-actions{
+  padding:0 16px 14px;
+}
+.camp-card .camp-card-actions button{
+  flex:1 1 0;
+}
+
+/* ---------- Cabeçalho da campanha (F.2) — metadados de dossiê ---------- */
+.camp-titlebar{
+  padding:0;
+  overflow:hidden;
+}
+.camp-titlebar .camp-capa{
+  border-left:none; border-right:none; border-top:none;
+}
+.camp-titlebar-inner{
+  padding:18px 22px;
+}
+.camp-dossie-meta{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:8px 14px;
+  margin:12px 0 0;
+  padding-top:10px;
+  border-top:1px dashed var(--line);
+}
+.camp-dossie-meta .camp-meta-item{
+  font-family:'Oswald',sans-serif;
+  font-size:11px;
+  letter-spacing:0.06em;
+  color:var(--paper-dim);
+  text-transform:uppercase;
+  margin:0;
+}
+.camp-dossie-meta .camp-meta-item strong{
+  color:var(--paper);
+  font-weight:600;
+}
+
+/* Descrição da campanha como um trecho de documento/dossiê, em vez de
+   um parágrafo solto (identidade documental — item 9). */
+.camp-link-name{
+  font-family:'Special Elite', monospace;
+  font-size:13.5px;
+  line-height:1.5;
+  color:var(--paper-dim);
+  border-left:2px solid var(--amber);
+  padding:2px 0 2px 12px;
+  margin:14px 0 0;
+}
+
+/* ---------- Cards de personagem (F.3/item 10) — retrato + profissão ---------- */
+.camp-char-card{
+  padding:0;
+  overflow:hidden;
+  align-items:stretch;
+  text-align:left;
+  gap:0;
+}
+.camp-char-card-portrait{
+  width:100%;
+  aspect-ratio:1/1;
+  background:
+    repeating-linear-gradient(135deg, rgba(240,168,60,0.05) 0 2px, transparent 2px 14px),
+    var(--panel-2, var(--panel));
+  border-bottom:1px solid var(--line);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+}
+.camp-char-card-img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+.camp-char-card-initials{
+  font-family:'Oswald',sans-serif;
+  font-size:30px;
+  font-weight:600;
+  letter-spacing:0.04em;
+  color:var(--sigil);
+}
+.camp-char-card-body{
+  padding:10px 12px 12px;
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+  flex:1 1 auto;
+}
+.camp-char-card-name{
+  font-size:13px;
+}
+.camp-char-card-role{
+  font-size:10.5px;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  color:var(--amber-bright);
+  margin:0;
+}
+.camp-char-card-meta{
+  margin:0;
+}
+.camp-char-card-actions{
+  padding:0 12px 12px;
+}
+
+/* Selo discreto "seu personagem" (item 11) — só um rótulo pequeno,
+   sem badge colorido chamativo; usado quando o Mestre está vendo os
+   próprios personagens junto da lista de um jogador. */
+.camp-mine-tag{
+  font-family:'Oswald',sans-serif;
+  font-size:9.5px;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  color:var(--sigil);
+}
+
+/* ---------- F.6 — Microinterações ---------- */
+/* Accordion suave da lista de personagens de um jogador (antes trocava
+   display:none/block sem transição). */
+.camp-player-char-list{
+  max-height:0;
+  opacity:0;
+  margin-top:0;
+  padding-top:0;
+  border-top:none;
+  overflow:hidden;
+  transition:max-height 0.25s ease, opacity 0.2s ease, margin-top 0.2s ease, padding-top 0.2s ease;
+}
+.camp-player-char-list.is-open{
+  max-height:600px;
+  opacity:1;
+  margin-top:10px;
+  padding-top:10px;
+  border-top:1px solid var(--line);
+}
+
+/* Estado "carregando/desabilitado" reaproveitável em qualquer botão de
+   ação assíncrona da área de Campanhas (ex.: "Acessar Ficha" enquanto
+   resolve o ID local da ficha). */
+.camp-btn-loading{
+  opacity:0.6;
+  cursor:default;
+}
+
+/* Evita texto/overflow quebrando o layout em nomes de campanha ou
+   personagem muito longos. */
+.camp-titlebar h2,
+.camp-card-name,
+.camp-char-card-name{
+  overflow-wrap:break-word;
+}
+
+@media(max-width:360px){
+  .camp-capa{flex-wrap:wrap;}
+}
+
+/* ---------- Responsividade adicional ---------- */
+@media(max-width:560px){
+  .camp-cards{grid-template-columns:1fr;}
+  .camp-titlebar-inner{padding:16px;}
+  .camp-dossie-meta{gap:6px 10px;}
+}

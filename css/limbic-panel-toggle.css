@@ -1,0 +1,41 @@
+/* ==========================================================
+   ABORTO LÍMBICO — MINIMIZAR/RECOLHER O PAINEL
+   Arquivo isolado: não redefine nenhuma classe já existente do
+   projeto (.al-buff-area, .al-buff-grid, .combat-subgroup-label
+   etc.) — apenas soma a classe nova ".al-collapse-btn" e o
+   estado ".al-panel-collapsed", reaproveitando as variáveis de
+   cor já definidas em :root.
+   ========================================================== */
+
+.al-collapse-btn{
+  font-family:'Oswald', sans-serif;
+  font-size:9.5px;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  background:transparent;
+  color:var(--sigil);
+  border:1px solid var(--line);
+  padding:2px 8px;
+  cursor:pointer;
+  margin-left:auto;
+  white-space:nowrap;
+  transition:border-color 0.15s ease, color 0.15s ease;
+}
+.al-collapse-btn:hover{
+  color:var(--paper);
+  border-color:var(--amber-bright);
+}
+
+/* Estado recolhido: some só com a grade de skills e a mensagem de
+   "nenhuma skill disponível" — o rótulo e o botão continuam visíveis,
+   para que o usuário consiga expandir de novo. !important é necessário
+   porque renderAbortoLimbico() (index.html) já controla o display de
+   #al_buff_empty diretamente via estilo inline. */
+#al_buff_area.al-panel-collapsed #al_buff_grid,
+#al_buff_area.al-panel-collapsed #al_buff_empty{
+  display:none !important;
+}
+
+@media (max-width:640px){
+  .al-collapse-btn{ font-size:9px; padding:2px 7px; }
+}

@@ -1,0 +1,25 @@
+/* ==========================================================
+   MARCOS DE INFECÇÃO
+   Arquivo isolado: não redefine nenhuma classe já existente do
+   projeto (.cx-grid, .cx-card, .cx-body, .cx-arrow, .cx-empty,
+   .cx-modal-box, .cx-modal-section, .modal-overlay, .modal-box,
+   .modal-actions, .fonte-tag, .subtab-row, .subtab-btn,
+   .subtab-panel, etc.) — este módulo REAPROVEITA essas classes já
+   definidas em index.html para os cards e o modal herdarem
+   automaticamente o mesmo visual já usado por Marcos de Corrupção e
+   por Conexões.
+
+   Diferente de Marcos de Corrupção, os Marcos de Infecção não têm
+   Dimensão (não usam .cx-infernal/.cx-terrena/etc.). Para os cards e
+   o modal ainda assim herdarem uma cor própria pelo MESMO mecanismo
+   já usado por cada Dimensão (variáveis --cx-c/--cx-c-dim lidas por
+   .cx-card/.cx-modal-box), este arquivo soma apenas UMA classe nova,
+   ".cx-infeccao", no mesmo padrão já usado por ".cx-personalizada"
+   (ver character-connections.css) para a categoria "Personalizada"
+   de Conexões — nenhuma classe de Dimensão existente é alterada.
+   ========================================================== */
+
+/* Cor da categoria Marcos de Infecção — tom esverdeado/doentio,
+   reforçando a diferença visual em relação às cores de Dimensão
+   (nenhuma delas é reutilizada ou sobrescrita). */
+.cx-infeccao{--cx-c:#9aab3c; --cx-c-dim:#5c6624;}

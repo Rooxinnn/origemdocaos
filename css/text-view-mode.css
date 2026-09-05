@@ -1,0 +1,103 @@
+/* ==========================================================
+   TEXT VIEW MODE — alterna blocos de texto da aba Agentes
+   entre "modo edição" (textarea normal) e "modo visualização"
+   (texto formatado, sem caixa, sem scroll interno).
+
+   Este arquivo é independente do restante do CSS do projeto.
+   Usa as mesmas variáveis de cor (--paper, --amber, --line, etc.)
+   já definidas em :root no index.html para se integrar ao
+   visual existente, sem redefini-las.
+
+   Classes usadas:
+     .tvm-toggle-btn        botão de alternância (injetado no titlebar)
+     .tvm-field             textarea alvo (marcada via atributo data-tvm)
+     .tvm-view              bloco de leitura espelhado, irmão do textarea
+     .tvm-view.is-empty     estado vazio ("—")
+     body.tvm-mode-view     classe aplicada ao <body> quando o modo
+                             visualização está ativo (afeta só os
+                             campos marcados com data-tvm)
+   ========================================================== */
+
+/* ---------- botão de alternância ---------- */
+.tvm-toggle-btn{
+  font-family:'Oswald', sans-serif;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  font-size:11px;
+  background:var(--panel-2, #211b14);
+  color:var(--paper-dim, #cbb98e);
+  border:1px solid var(--line, #463a26);
+  padding:7px 14px;
+  cursor:pointer;
+  border-radius:2px;
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  white-space:nowrap;
+  transition:border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+.tvm-toggle-btn:hover{
+  color:var(--paper, #f0e6cf);
+  border-color:var(--amber-bright, #f0a83c);
+}
+.tvm-toggle-btn .tvm-toggle-icon{
+  font-size:13px;
+  line-height:1;
+}
+
+/* pequeno indicador de estado ativo, sem exagero visual */
+body.tvm-mode-view .tvm-toggle-btn{
+  border-color:var(--amber-bright, #f0a83c);
+  color:var(--paper, #f0e6cf);
+  background:rgba(240,168,60,0.10);
+}
+
+/* ---------- modo visualização: esconde o textarea original ---------- */
+body.tvm-mode-view textarea.tvm-field{
+  display:none;
+}
+
+/* o bloco de leitura fica escondido por padrão (modo edição) */
+.tvm-view{
+  display:none;
+}
+body.tvm-mode-view .tvm-view{
+  display:block;
+}
+
+/* ---------- aparência do texto em modo leitura ---------- */
+.tvm-view{
+  font-family:'Special Elite', monospace;
+  font-size:14.5px;
+  line-height:1.75;
+  color:var(--paper, #f0e6cf);
+  white-space:pre-wrap;
+  word-wrap:break-word;
+  overflow-wrap:break-word;
+
+  /* nada de caixa de formulário: só um leve traço à esquerda para manter
+     alguma referência visual sutil de "campo da ficha", sem parecer input */
+  border-left:2px solid var(--line, #463a26);
+  padding:4px 0 4px 14px;
+  margin:0;
+
+  /* cresce naturalmente com o conteúdo — sem altura fixa, sem scroll */
+  min-height:1.75em;
+}
+
+.tvm-view.is-empty{
+  color:var(--sigil, #8a7550);
+  font-style:italic;
+  border-left-color:var(--line, #463a26);
+}
+
+/* leve destaque ao passar o mouse, só para indicar que é conteúdo da ficha
+   (sem sombras pesadas nem animação) */
+.tvm-view:hover{
+  border-left-color:var(--amber, #b8791a);
+}
+
+@media (max-width: 640px){
+  .tvm-view{ font-size:14px; }
+  .tvm-toggle-btn{ font-size:10.5px; padding:6px 11px; }
+}

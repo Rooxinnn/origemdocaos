@@ -1,0 +1,160 @@
+/* ==========================================================
+   IMPORTAR FICHA PDF — estilos específicos deste módulo
+   (não altera .modal-overlay/.modal-box/.modal-actions globais;
+   só ADICIONA uma variação escopada, seguindo o mesmo padrão já
+   usado por .cx-modal-box para modais largos e roláveis)
+   ========================================================== */
+
+.modal-box.pdfimp-modal-box{
+  max-width: 680px;
+  width: 100%;
+  text-align: left;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* só o corpo (#pdfimp_body) rola; cabeçalho e botões ficam fixos */
+}
+
+.pdfimp-body{
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0; /* obrigatório para o overflow funcionar dentro de um flex column */
+  padding-right: 4px;
+  margin: 4px 0 16px;
+}
+
+/* ---------- seções recolhíveis (accordion) ----------
+   Mesmo padrão visual já usado em outros módulos do projeto
+   (.mca-toggle-header/.mca-toggle-icon em marcos-corrupcao-agente.css),
+   aqui implementado com <details>/<summary> nativos. */
+.pdfimp-section{
+  margin-bottom: 10px;
+  border: 1px solid var(--line, rgba(184,121,26,0.25));
+  background: var(--panel-2, rgba(255,255,255,0.02));
+}
+
+.pdfimp-section > summary{
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  font-size: 12.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.pdfimp-section > summary::-webkit-details-marker{ display: none; }
+.pdfimp-section > summary:hover{ color: var(--amber-bright, #e8b23a); }
+
+.pdfimp-section > summary .pdfimp-count{
+  font-size: 11px;
+  opacity: 0.7;
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 400;
+}
+
+.pdfimp-section > summary::after{
+  content: "▸";
+  font-size: 11px;
+  opacity: 0.6;
+  transition: transform 0.15s ease;
+}
+.pdfimp-section[open] > summary::after{ transform: rotate(90deg); }
+
+.pdfimp-section-ok > summary{ color: #9fdca8; }
+.pdfimp-section-warn > summary{ color: #e0c060; }
+.pdfimp-section-unmapped > summary{ color: #bbb; }
+
+.pdfimp-section-body{
+  padding: 2px 12px 10px;
+}
+
+/* subgrupos dentro de "Identificados" (Habilidades, Talentos, Atributos...) */
+.pdfimp-subgroup{
+  margin-top: 4px;
+  border-top: 1px dashed rgba(255,255,255,0.08);
+}
+.pdfimp-subgroup > summary{
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+  padding: 6px 0;
+  font-size: 11.5px;
+  opacity: 0.75;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.pdfimp-subgroup > summary::-webkit-details-marker{ display: none; }
+.pdfimp-subgroup > summary::after{ content: "▸"; opacity: 0.5; }
+.pdfimp-subgroup[open] > summary::after{ content: "▾"; }
+
+.pdfimp-row{
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 2px 0;
+}
+
+.pdfimp-row .pdfimp-icon{
+  flex: 0 0 auto;
+  width: 1.4em;
+  text-align: center;
+}
+
+.pdfimp-row .pdfimp-label{
+  flex: 1 1 auto;
+}
+
+.pdfimp-row .pdfimp-value{
+  opacity: 0.85;
+  white-space: nowrap;
+}
+
+.pdfimp-ok .pdfimp-icon{ color: #7fd08a; }
+.pdfimp-warn .pdfimp-icon{ color: #e0c060; }
+.pdfimp-unmapped .pdfimp-icon{ color: #999; }
+
+.pdfimp-summary{
+  font-size: 13px;
+  opacity: 0.85;
+  margin-bottom: 14px;
+}
+
+.pdfimp-filename{
+  font-weight: bold;
+}
+
+.pdfimp-empty-note{
+  font-size: 12px;
+  opacity: 0.6;
+  font-style: italic;
+}
+
+.pdfimp-error{
+  color: #ffb3b3;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.pdfimp-loading{
+  font-size: 13px;
+  opacity: 0.8;
+  text-align: center;
+  padding: 20px 0;
+}
+
+.pdfimp-modal-box .modal-actions button.primary{
+  background: rgba(140,50,30,0.18);
+  border-color: #c0522f;
+}
+.pdfimp-modal-box .modal-actions button.primary:hover{
+  background: rgba(160,60,30,0.3);
+}

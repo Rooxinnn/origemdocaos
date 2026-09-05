@@ -1,0 +1,114 @@
+/* ==========================================================
+   MARCOS DE INFECÇÃO — INTEGRAÇÃO COM A FICHA
+   Arquivo isolado: não redefine nenhuma classe já existente do
+   projeto (.panel, .modal-overlay, .modal-box, .cx-modal-section,
+   .empty-state, .fonte-tag, .cx-infeccao, etc.) — apenas soma
+   classes novas prefixadas com "mia-" (Marcos de Infecção Agente),
+   no mesmo padrão visual já usado por Marcos de Corrupção
+   (css/marcos-corrupcao-agente.css, classes "mca-"), reaproveitando
+   a variável de cor --cx-c já definida por .cx-infeccao
+   (css/marcos-infeccao.css) para herdar a mesma identidade visual.
+   ========================================================== */
+
+/* ---------- painel "Marcos de Infecção" — recolhível ----------
+   ALTERAÇÃO 2 do pedido: o próprio <h2> já existente (herda toda a
+   aparência de ".panel h2" já definida em index.html) vira um cabeçalho
+   clicável, só somando um ícone ▲/▼. Não é uma aba/painel novo — apenas
+   oculta/mostra o corpo (#mia_body) que já existia dentro do MESMO painel
+   "Marcos de Infecção". Mesmo padrão visual já usado por
+   css/marcos-corrupcao-agente.css (.mca-toggle-*). */
+.mia-toggle-header{
+  cursor:pointer;
+  user-select:none;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+.mia-toggle-header:hover{
+  color:var(--amber-bright);
+}
+.mia-toggle-icon{
+  font-size:12px;
+  color:var(--sigil);
+  flex:0 0 auto;
+}
+.mia-collapse-body{
+  overflow:hidden;
+}
+.mia-panel.is-collapsed .mia-toggle-header{
+  margin-bottom:0;
+  border-bottom:none;
+  padding-bottom:0;
+}
+
+/* ---------- painel "Marcos de Infecção" ---------- */
+.mia-panel #mia_list{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.mia-row{
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  width:100%;
+  text-align:left;
+  background:var(--panel-2);
+  border:1px solid var(--line);
+  border-left:3px solid var(--cx-c, #9aab3c);
+  padding:8px 12px;
+  cursor:pointer;
+  transition:border-color 0.15s ease;
+}
+.mia-row:hover{
+  border-color:var(--cx-c, var(--amber-bright));
+}
+
+.mia-row-star{
+  color:var(--cx-c, #9aab3c);
+  font-size:13px;
+  line-height:1.4;
+  flex:0 0 auto;
+}
+
+.mia-row-body{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+  min-width:0;
+}
+
+.mia-row-title{
+  font-family:'Oswald', sans-serif;
+  font-size:12.5px;
+  letter-spacing:0.02em;
+  color:var(--paper);
+  text-transform:uppercase;
+}
+
+.mia-row-infeccao{
+  font-size:10.5px;
+  color:var(--paper-dim);
+}
+
+/* ---------- modal (Novo Marco / consulta de Marco já registrado) ---------- */
+.mia-modal-marco-titulo{
+  font-family:'Oswald', sans-serif;
+  font-size:14px;
+  font-weight:600;
+  color:var(--paper);
+  margin:0 0 6px;
+}
+.mia-modal-infeccao{
+  font-size:11.5px;
+  color:var(--amber-bright);
+  text-transform:uppercase;
+  letter-spacing:0.06em;
+  margin:0 0 14px;
+}
+
+@media (max-width:640px){
+  .mia-row-title{ font-size:12px; }
+}

@@ -1,0 +1,17 @@
+/* ==========================================================
+   MARCOS DE CORRUPÇÃO
+   Arquivo isolado: não redefine nenhuma classe já existente do
+   projeto (.cx-grid, .cx-card, .cx-body, .cx-dimlabel, .cx-arrow,
+   .cx-filters, .cx-filter-btn, .cx-empty, .cx-modal-box,
+   .cx-modal-dim, .cx-modal-section, .modal-overlay, .modal-box,
+   .modal-actions, .fonte-tag, as classes de cor por Dimensão
+   .cx-infernal/.cx-terrena/.cx-arkanjerial/.cx-sombria/
+   .cx-carnical/.cx-limbica/.cx-perdicao, etc.) — este módulo só
+   REAPROVEITA essas classes/variáveis já definidas em index.html
+   para os cards e o modal herdarem automaticamente o mesmo visual e
+   a mesma cor de cada Dimensão já usados por Conexões. Não há
+   nenhuma regra nova de layout/cor a acrescentar: este arquivo
+   existe apenas para manter o padrão de "um CSS por módulo" já
+   seguido pelos demais arquivos do projeto (sede-skills.css,
+   character-connections.css etc.), sem duplicar seletores.
+   ========================================================== */

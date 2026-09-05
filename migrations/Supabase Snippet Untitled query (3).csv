@@ -1,0 +1,24 @@
+table_name,column_name,data_type,is_nullable,column_default
+agents,id,uuid,NO,gen_random_uuid()
+agents,user_id,uuid,NO,null
+agents,name,text,YES,null
+agents,data,jsonb,NO,'{}'::jsonb
+agents,created_at,timestamp with time zone,NO,now()
+agents,updated_at,timestamp with time zone,NO,now()
+campaign_characters,id,uuid,NO,gen_random_uuid()
+campaign_characters,campaign_id,uuid,NO,null
+campaign_characters,user_id,uuid,NO,null
+campaign_characters,agent_id,uuid,NO,null
+campaign_characters,created_at,timestamp with time zone,NO,now()
+campaign_members,id,uuid,NO,gen_random_uuid()
+campaign_members,campaign_id,uuid,NO,null
+campaign_members,user_id,uuid,NO,null
+campaign_members,joined_at,timestamp with time zone,NO,now()
+campaigns,id,uuid,NO,gen_random_uuid()
+campaigns,owner_id,uuid,NO,null
+campaigns,name,text,NO,null
+campaigns,description,text,YES,''::text
+campaigns,invite_token,text,NO,"encode(gen_random_bytes(16), 'hex'::text)"
+campaigns,status,text,NO,'active'::text
+campaigns,created_at,timestamp with time zone,NO,now()
+campaigns,updated_at,timestamp with time zone,NO,now()

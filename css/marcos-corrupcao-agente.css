@@ -1,0 +1,175 @@
+/* ==========================================================
+   MARCOS DE CORRUPÇÃO — ETAPA 2 (INTEGRAÇÃO COM A FICHA)
+   Arquivo isolado: não redefine nenhuma classe já existente do
+   projeto (.panel, .combat-dimension-box, .modal-overlay,
+   .modal-box, .cx-modal-dim, .cx-modal-section, .empty-state, as
+   classes de cor por Dimensão .cx-infernal/.cx-terrena/
+   .cx-arkanjerial/.cx-sombria/.cx-carnical/.cx-limbica/
+   .cx-perdicao, etc.) — apenas soma classes novas prefixadas com
+   "mca-" e reaproveita as variáveis de cor já definidas em :root e
+   em cada .cx-<dimensao> (--cx-c/--cx-c-dim) para herdar
+   automaticamente a identidade visual de cada Dimensão.
+   ========================================================== */
+
+/* ---------- <select> de Dimensão dentro da caixa já existente ---------- */
+.combat-dimension-box select{
+  font-size:17px;
+  font-weight:600;
+  color:var(--amber-bright);
+  border:1px solid rgba(184,121,26,0.35);
+  border-bottom:1px solid var(--amber);
+  background:transparent;
+  cursor:pointer;
+}
+
+/* Correção visual: o <select> nativo do navegador abre seu menu suspenso
+   (a lista de opções) com o tema claro do sistema operacional por padrão,
+   ignorando o fundo transparente do controle acima — por isso aparecia
+   branco. Aqui só definimos a cor de fundo/texto do próprio elemento
+   <select> e de cada <option>, que é o único gancho que o CSS tem sobre
+   esse menu nativo (a lista de opções não é um elemento do DOM que possa
+   ser estilizado por classes .mca-*; ela é desenhada pelo navegador a
+   partir dessas mesmas propriedades). Nenhuma estrutura, nome de
+   Dimensão, lógica de seleção ou armazenamento foi alterado — só cor.
+   As bolinhas coloridas de cada Dimensão continuam vindo do emoji já
+   presente no texto de cada <option> (js/marcos-corrupcao-agente.js),
+   não são afetadas por esta regra. */
+.combat-dimension-box select,
+.combat-dimension-box select option{
+  background-color:#171513;
+  color:#e8dfd0;
+}
+.combat-dimension-box select option:checked,
+.combat-dimension-box select option:hover,
+.combat-dimension-box select option:focus,
+.combat-dimension-box select option:active{
+  /* Suporte parcial (principalmente Firefox — Chrome/Edge ainda decidem boa
+     parte da aparência do hover/seleção via tema do SO), mas não piora nada
+     onde não é suportado: nesse caso o navegador simplesmente ignora a regra
+     e usa o fundo escuro definido acima para todas as opções. */
+  background-color:#29251f;
+  color:var(--amber-bright);
+}
+
+/* ---------- painel "Marcos de Corrupção Alcançados" — recolhível ----------
+   ALTERAÇÃO 2 do pedido: o próprio <h2> já existente (herda toda a
+   aparência de ".panel h2" já definida em index.html) vira um cabeçalho
+   clicável, só somando um ícone ▲/▼. Não é uma aba/painel novo — apenas
+   oculta/mostra o corpo (#mca_body) que já existia dentro do MESMO painel
+   "Marcos de Corrupção Alcançados". */
+.mca-toggle-header{
+  cursor:pointer;
+  user-select:none;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+.mca-toggle-header:hover{
+  color:var(--amber-bright);
+}
+.mca-toggle-icon{
+  font-size:12px;
+  color:var(--sigil);
+  flex:0 0 auto;
+}
+.mca-collapse-body{
+  overflow:hidden;
+}
+/* Ao recolher, o espaço realmente é liberado (instrução 13) — sem
+   deixar nenhum espaço vazio no lugar do conteúdo. */
+.mca-panel.is-collapsed{
+  margin-bottom:18px; /* mantém o mesmo espaçamento entre painéis já usado por .panel */
+}
+.mca-panel.is-collapsed .mca-toggle-header{
+  margin-bottom:0;
+  border-bottom:none;
+  padding-bottom:0;
+}
+
+.mca-panel #mca_list{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+
+.mca-group{
+  border-left:3px solid var(--cx-c, var(--sigil));
+  padding-left:12px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.mca-group-title{
+  font-family:'Oswald', sans-serif;
+  font-size:12px;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  color:var(--cx-c, var(--amber-bright));
+  font-weight:600;
+}
+
+.mca-row{
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  width:100%;
+  text-align:left;
+  background:var(--panel-2);
+  border:1px solid var(--line);
+  padding:8px 12px;
+  cursor:pointer;
+  transition:border-color 0.15s ease;
+}
+.mca-row:hover{
+  border-color:var(--cx-c, var(--amber-bright));
+}
+
+.mca-row-star{
+  color:var(--cx-c, var(--amber-bright));
+  font-size:13px;
+  line-height:1.4;
+  flex:0 0 auto;
+}
+
+.mca-row-body{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+  min-width:0;
+}
+
+.mca-row-title{
+  font-family:'Oswald', sans-serif;
+  font-size:12.5px;
+  letter-spacing:0.02em;
+  color:var(--paper);
+  text-transform:uppercase;
+}
+
+.mca-row-corrupcao{
+  font-size:10.5px;
+  color:var(--paper-dim);
+}
+
+/* ---------- modal (Novo Marco / consulta de Marco já registrado) ---------- */
+.mca-modal-marco-titulo{
+  font-family:'Oswald', sans-serif;
+  font-size:14px;
+  font-weight:600;
+  color:var(--paper);
+  margin:0 0 6px;
+}
+.mca-modal-corrupcao{
+  font-size:11.5px;
+  color:var(--amber-bright);
+  text-transform:uppercase;
+  letter-spacing:0.06em;
+  margin:0 0 14px;
+}
+
+@media (max-width:640px){
+  .combat-dimension-box select{ font-size:15px; }
+  .mca-row-title{ font-size:12px; }
+}

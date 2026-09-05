@@ -1,0 +1,151 @@
+/* ==========================================================
+   HABILIDADES DE SEDE
+   Arquivo isolado: não redefine nenhuma classe já usada pelo
+   Compêndio (.subtab-*, .modal-*, .panel, .field, .note,
+   .empty-state) ou por Conexões (.cconn-*) — apenas soma classes
+   novas prefixadas com "sks-" e reaproveita as variáveis de cor já
+   definidas em :root pelo projeto.
+   ========================================================== */
+
+/* ---------- Compêndio → Habilidades de Sede ---------- */
+.sks-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(270px,1fr));
+  gap:12px;
+}
+
+.sks-card{
+  background:var(--panel-2);
+  border:1px solid var(--line);
+  border-left:3px solid var(--amber-bright);
+  padding:14px 16px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.sks-card-body{
+  cursor:pointer;
+}
+
+.sks-card-body h4{
+  margin:0 0 4px;
+  font-size:12.5px;
+  line-height:1.35;
+  color:var(--paper);
+  font-family:'Oswald',sans-serif;
+  font-weight:600;
+  display:flex;
+  flex-wrap:wrap;
+  align-items:baseline;
+  gap:8px;
+}
+
+.sks-card-sede{
+  font-size:9.5px;
+  text-transform:uppercase;
+  letter-spacing:0.09em;
+  color:var(--amber-bright);
+  font-family:'Oswald',sans-serif;
+  font-weight:600;
+}
+
+.sks-card-body p{
+  margin:0;
+  font-size:11.5px;
+  line-height:1.55;
+  color:var(--paper-dim);
+}
+
+.sks-add-btn{
+  align-self:flex-start;
+  font-family:'Oswald', sans-serif;
+  letter-spacing:0.05em;
+  text-transform:uppercase;
+  font-size:10.5px;
+  background:var(--panel-2);
+  color:var(--paper-dim);
+  border:1px solid var(--line);
+  padding:7px 12px;
+  cursor:pointer;
+  transition:border-color 0.15s ease, color 0.15s ease;
+}
+.sks-add-btn:hover{
+  color:var(--paper);
+  border-color:var(--amber-bright);
+}
+.sks-add-btn.in-sheet{
+  background:rgba(240,168,60,0.14);
+  border-color:var(--amber-bright);
+  color:var(--paper);
+}
+
+/* ---------- modal de detalhes ---------- */
+.sks-modal-box{
+  max-width:480px;
+  width:100%;
+  text-align:left;
+}
+.sks-modal-sede{
+  font-family:'Oswald',sans-serif;
+  font-size:10.5px;
+  text-transform:uppercase;
+  letter-spacing:0.08em;
+  color:var(--amber-bright);
+  margin:2px 0 14px;
+}
+.sks-modal-desc{
+  font-size:13px;
+  line-height:1.65;
+  color:var(--paper);
+  white-space:pre-wrap;
+}
+
+/* ---------- Agentes → Habilidades de Sede ---------- */
+.sks-agente-grid{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+
+.sks-chip{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  background:var(--panel-2);
+  border:1px solid var(--line);
+  border-left:3px solid var(--amber-bright);
+  padding:6px 8px 6px 12px;
+}
+
+.sks-chip-label{
+  font-family:'Oswald',sans-serif;
+  font-size:11.5px;
+  letter-spacing:0.02em;
+  color:var(--paper);
+  text-transform:uppercase;
+  cursor:pointer;
+}
+.sks-chip-label:hover{
+  color:var(--amber-bright);
+}
+
+.sks-chip-remove{
+  background:transparent;
+  border:1px solid var(--line);
+  color:var(--sigil);
+  width:20px;
+  height:20px;
+  line-height:1;
+  padding:0;
+  font-size:13px;
+  cursor:pointer;
+}
+.sks-chip-remove:hover{
+  color:#e06060;
+  border-color:#e06060;
+}
+
+@media (max-width:640px){
+  .sks-grid{ grid-template-columns:1fr; }
+}

@@ -1,0 +1,186 @@
+/* ==========================================================
+   AUTENTICAÇÃO (Supabase Auth) — ETAPA 1 / 1.1
+   Arquivo isolado. Não altera nenhum outro estilo do C.R.I.S.
+   Reutiliza exclusivamente as variáveis de cor/tipografia já
+   definidas em :root no index.html (--ink, --panel, --paper,
+   --amber, --line, --sigil etc.) para que a tela pareça nativa
+   do sistema, e não uma página genérica de SaaS.
+
+   ETAPA 1.1 — nota importante:
+   Na Etapa 1, #auth_screen era exibida/ocultada via JS com
+   element.style.display = "block"/"none". Um estilo INLINE
+   sempre vence a regra "display:flex" definida aqui na classe,
+   então a tela nunca era centralizada — aparecia como uma
+   caixa pequena colada no canto superior esquerdo. A partir
+   desta etapa, a visibilidade é controlada por uma classe
+   (.is-visible), no mesmo padrão já usado por #loading_screen,
+   e o layout usa position:fixed;inset:0 para garantir cobertura
+   total da viewport independente do fluxo do <body>.
+   ========================================================== */
+
+#auth_screen{
+  display:none;
+  position:fixed; inset:0; width:100%; height:100%;
+  z-index:250; /* acima de loading_screen (200); nunca coexistem, mas fica à prova de futuras telas */
+  flex-direction:column; align-items:center; justify-content:center;
+  gap:36px;
+  padding:48px 5vw;
+  overflow-y:auto;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(184,121,26,0.14), transparent 58%),
+    radial-gradient(ellipse at 15% 100%, rgba(184,121,26,0.09), transparent 55%),
+    var(--ink);
+}
+#auth_screen.is-visible{display:flex;}
+
+.auth-wrap{
+  width:100%; max-width:440px; flex:0 0 auto;
+  background:var(--panel); border:1px solid var(--line); border-top:2px solid var(--amber);
+  padding:40px 36px 34px;
+  clip-path:polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 18px 100%, 0 calc(100% - 18px));
+  box-shadow:0 0 46px rgba(0,0,0,0.45);
+}
+
+.auth-header{text-align:center; margin-bottom:30px; display:flex; flex-direction:column; align-items:center;}
+.auth-logo{width:64px; height:64px; object-fit:contain; margin-bottom:16px; box-shadow:0 0 22px rgba(240,168,60,0.3); border:1px solid var(--line);}
+.auth-sigil-line{width:70px; height:1px; margin:0 auto 18px; background:linear-gradient(90deg, transparent, var(--amber), transparent);}
+.auth-title{
+  font-size:clamp(24px, 5vw, 30px); letter-spacing:0.28em; margin:0; margin-right:-0.28em; color:var(--paper);
+  text-shadow:0 0 22px rgba(240,168,60,0.4); text-transform:uppercase; font-weight:700;
+}
+.auth-restricted-tag{
+  font-family:'Oswald',sans-serif; font-size:10px; letter-spacing:0.32em; color:var(--sigil);
+  text-transform:uppercase; margin:16px 0 0; padding:6px 16px; border:1px solid var(--line);
+}
+
+.auth-panel{display:none;}
+.auth-panel.active{display:flex; flex-direction:column; gap:18px;}
+
+.auth-field{display:flex; flex-direction:column; gap:6px;}
+.auth-field label{
+  font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:0.1em; color:var(--sigil); text-transform:uppercase;
+}
+.auth-field input{
+  background:transparent; border:none; border-bottom:1px solid var(--line);
+  color:var(--paper); font-family:'Special Elite', monospace; font-size:14px;
+  padding:7px 2px; width:100%; outline:none;
+}
+.auth-field input:focus{border-bottom-color:var(--amber-bright);}
+.auth-field input::placeholder{color:var(--paper-dim); opacity:0.45;}
+
+.auth-submit-btn{
+  margin-top:6px;
+  background:rgba(184,121,26,0.14); border:1px solid var(--amber-bright); color:var(--paper);
+  font-family:'Oswald',sans-serif; font-size:13px; letter-spacing:0.12em; text-transform:uppercase;
+  padding:14px 20px; font-weight:600; cursor:pointer;
+  box-shadow:0 0 18px rgba(240,168,60,0.14);
+  transition:background 0.25s ease, box-shadow 0.25s ease, transform 0.15s ease;
+}
+.auth-submit-btn:hover{background:rgba(184,121,26,0.26); box-shadow:0 0 26px rgba(240,168,60,0.26); transform:translateY(-1px);}
+.auth-submit-btn:disabled{opacity:0.5; cursor:default; transform:none; box-shadow:none;}
+
+/* links contextuais abaixo dos botões (ex.: "Esqueceu sua senha?" / "Criar conta" / "Voltar para login") */
+.auth-links-row{display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-top:2px;}
+.auth-links-row.single{justify-content:center;}
+.auth-tab-btn{
+  background:none; border:none; padding:0; margin:0; cursor:pointer;
+  font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:0.04em; text-transform:none;
+  color:var(--paper-dim); text-decoration:underline; text-underline-offset:3px;
+}
+.auth-tab-btn:hover{color:var(--amber-bright);}
+
+.auth-msg{
+  font-family:'Oswald',sans-serif; font-size:11.5px; letter-spacing:0.03em; line-height:1.5;
+  padding:10px 12px; border:1px solid transparent; display:none; margin-bottom:20px;
+}
+.auth-msg.show{display:block;}
+.auth-msg.info{color:var(--paper-dim); border-color:var(--line); background:var(--panel-2);}
+.auth-msg.success{color:#8fd68a; border-color:#3f6b3c; background:rgba(63,107,60,0.12);}
+.auth-msg.error{color:#e08a8a; border-color:#8a3a2a; background:rgba(138,58,42,0.12);}
+
+.auth-switch-hint{font-size:11px; color:var(--paper-dim); text-align:center; opacity:0.7; margin-top:18px;}
+
+/* rodapé de identidade, fora do cartão, parte da composição de tela inteira */
+.auth-footer{display:flex; flex-direction:column; align-items:center; flex:0 0 auto;}
+.auth-footer-line{width:50px; height:1px; margin-bottom:16px; background:linear-gradient(90deg, transparent, var(--amber-bright), transparent); opacity:0.5;}
+.auth-footer-text{font-family:'Oswald',sans-serif; font-size:10.5px; letter-spacing:0.34em; color:var(--sigil); text-transform:uppercase;}
+.auth-footer-brand{font-family:'Oswald',sans-serif; font-size:10.5px; letter-spacing:0.34em; color:var(--paper-dim); text-transform:uppercase; opacity:0.65; margin-top:4px;}
+
+/* ETAPA 1.1 — cartão de conta (nome/email + logout), reestilizado na
+   ETAPA 3.1 para não ocupar espaço fixo sobre a ficha: #account_bar
+   (controlado por js/supabase-auth.js via display:none/flex — isso não
+   mudou) agora é só um botão pequeno de engrenagem; o conteúdo antigo
+   (nome/email/Sair) mora em #account_popover, que fica oculto por padrão
+   e só aparece com a classe .is-open (alternada pelo script em
+   index.html, logo após a marcação de #account_bar — nenhuma mudança de
+   comportamento em js/supabase-auth.js). Reaproveita as mesmas variáveis
+   de cor/tipografia do resto do C.R.I.S. */
+#account_bar{
+  position:fixed; top:14px; right:16px; z-index:150;
+  display:none; /* controlado por js/supabase-auth.js — não mudou */
+}
+/* AJUSTE DE UI (visual apenas) — em telas com cabeçalho "ORIGEM DO CAOS"
+   (.topbar), #account_bar é reposicionado por js/account-bar-dock.js para
+   dentro desse cabeçalho, junto ao título, em vez de ficar fixo sobre as
+   abas. A classe .docked só troca a posição (de fixo-no-canto para
+   dentro do fluxo flex já existente do .topbar); o elemento continua
+   sendo o mesmo, com os mesmos listeners e o mesmo controle de
+   display:none/flex de js/supabase-auth.js — nada disso muda. Em telas
+   sem .topbar, #account_bar mantém o comportamento fixo de sempre. */
+#account_bar.docked{
+  position:relative; top:auto; right:auto; left:auto; z-index:auto;
+  margin-left:16px;
+}
+#account_gear_btn{
+  width:34px; height:34px;
+  display:flex; align-items:center; justify-content:center;
+  background:var(--panel-2); border:1px solid var(--line); border-left:2px solid var(--amber);
+  color:var(--paper-dim); font-size:16px; line-height:1; cursor:pointer;
+}
+#account_gear_btn:hover, #account_gear_btn.is-open{color:var(--paper); border-color:var(--amber-bright);}
+
+#account_popover{
+  position:absolute; top:40px; right:0; z-index:80;
+  display:none; flex-direction:column; gap:10px;
+  background:var(--panel-2); border:1px solid var(--line); border-left:2px solid var(--amber);
+  padding:12px 14px; min-width:170px;
+}
+#account_popover.is-open{display:flex;}
+
+#account_info{display:flex; flex-direction:column; gap:1px; line-height:1.25; max-width:200px;}
+#account_label{
+  font-family:'Oswald',sans-serif; font-size:9px; letter-spacing:0.24em; color:var(--sigil);
+  text-transform:uppercase;
+}
+#account_name{
+  font-family:'Oswald',sans-serif; font-size:11.5px; letter-spacing:0.03em; color:var(--paper);
+  text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  display:none; /* JS (supabase-auth.js) exibe (display:block) só quando há nome cadastrado — não mudou */
+}
+#account_email{
+  font-family:'Special Elite', monospace; font-size:10.5px; color:var(--paper-dim);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+#btn_logout{
+  background:var(--panel); color:var(--paper-dim); border:1px solid var(--line);
+  font-family:'Oswald',sans-serif; font-size:10.5px; letter-spacing:0.1em; text-transform:uppercase;
+  padding:8px 14px; cursor:pointer; align-self:stretch;
+}
+#btn_logout:hover{color:var(--paper); border-color:var(--amber-bright);}
+
+@media(max-width:520px){
+  #auth_screen{padding:32px 6vw; gap:26px;}
+  .auth-wrap{padding:30px 22px 26px;}
+  .auth-logo{width:52px; height:52px;}
+  .auth-links-row{justify-content:center; text-align:center;}
+  #account_bar{top:8px; right:8px;}
+  #account_bar.docked{margin-left:8px;}
+  #account_gear_btn{width:30px; height:30px; font-size:14px;}
+  #account_popover{min-width:150px; padding:10px 12px; top:36px;}
+}
+
+@media(max-height:640px){
+  #auth_screen{padding:26px 5vw; gap:18px;}
+  .auth-header{margin-bottom:20px;}
+  .auth-logo{width:44px; height:44px; margin-bottom:10px;}
+}

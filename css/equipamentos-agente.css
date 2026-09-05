@@ -1,0 +1,233 @@
+/* ==========================================================
+   EQUIPAMENTOS — INTEGRAÇÃO COM O INVENTÁRIO
+   Arquivo isolado: não redefine nenhuma classe já existente do
+   projeto (.panel, .entry-card, .entry-del, .field, .cx-filters,
+   .cx-filter-btn, .cx-equipamento, .modal-overlay, .modal-box,
+   .empty-state, etc.) — apenas soma classes novas prefixadas com
+   "eqinv-" (Equipamentos ↔ Inventário), no mesmo padrão visual já
+   usado pelos demais módulos "-agente" do projeto (mca-, mia-),
+   reaproveitando as variáveis de cor já definidas em :root e a
+   variável --cx-c já definida por .cx-equipamento (equipamentos.css)
+   para herdar a mesma identidade visual.
+   ========================================================== */
+
+/* ---------- botão "+ Adicionar Item" (Agentes → Inventário) ---------- */
+.eqinv-toolbar{
+  display:flex;
+  justify-content:flex-start;
+  margin-bottom:14px;
+}
+
+/* ---------- card de item referenciado dentro do #inv_list já existente ---------- */
+.eqinv-card{
+  border-left:3px solid var(--cx-c, var(--sigil));
+}
+.eqinv-title{
+  cursor:pointer;
+}
+.eqinv-title:hover{
+  color:var(--amber-bright);
+}
+
+/* ---------- modal "Adicionar Equipamento" ---------- */
+.eqinv-picker-box{
+  max-width:620px;
+  width:100%;
+  text-align:left;
+  max-height:86vh;
+  display:flex;
+  flex-direction:column;
+  position:relative;
+}
+
+.eqinv-picker-close{
+  position:absolute;
+  top:14px;
+  right:14px;
+  background:transparent;
+  border:none;
+  color:var(--sigil);
+  font-size:20px;
+  line-height:1;
+  padding:4px 8px;
+  cursor:pointer;
+}
+.eqinv-picker-close:hover{
+  color:var(--paper);
+  border:none;
+}
+
+.eqinv-picker-box h3{
+  margin:0 0 16px;
+  padding-right:30px;
+  font-family:'Oswald',sans-serif;
+  font-size:16px;
+  text-transform:uppercase;
+  letter-spacing:0.06em;
+  color:var(--amber-bright);
+}
+
+.eqinv-picker-search-row{
+  margin-bottom:10px;
+}
+
+.eqinv-picker-count{
+  text-align:left;
+  margin:0 0 10px;
+}
+
+.eqinv-picker-list{
+  overflow-y:auto;
+  padding-right:4px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.eqinv-picker-row{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  background:var(--panel-2);
+  border:1px solid var(--line);
+  border-left:3px solid var(--cx-c, var(--line));
+  padding:8px 10px;
+}
+
+.eqinv-picker-row-body{
+  flex:1 1 auto;
+  min-width:0;
+}
+
+.eqinv-picker-row-title{
+  font-family:'Oswald',sans-serif;
+  font-size:12.5px;
+  text-transform:uppercase;
+  color:var(--paper);
+  letter-spacing:0.03em;
+}
+
+.eqinv-picker-row-cat{
+  font-size:10.5px;
+  color:var(--sigil);
+  margin-top:2px;
+  text-transform:uppercase;
+  letter-spacing:0.06em;
+}
+
+.eqinv-picker-add-btn{
+  flex:0 0 auto;
+  padding:7px 14px;
+  font-size:10.5px;
+}
+
+.eqinv-picker-empty{
+  font-size:11px;
+  color:var(--sigil);
+  font-style:italic;
+  padding:14px 0;
+}
+
+@media (max-width:640px){
+  .eqinv-picker-row-title{ font-size:12px; }
+}
+
+/* ---------- "Agentes → Itens do Agente" — espelho do Inventário ----------
+   Somado logo abaixo da textarea "itens" já existente (nunca a
+   substitui) — só um rótulo pequeno e uma linha de cards clicáveis. */
+.eqinv-itens-wrap{
+  margin-top:12px;
+}
+.eqinv-itens-label{
+  font-family:'Oswald', sans-serif;
+  font-size:10.5px;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  color:var(--sigil);
+  margin-bottom:8px;
+}
+.eqinv-itens-list{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+.eqinv-item-row{
+  display:flex;
+  align-items:center;
+  gap:4px;
+}
+.eqinv-item-minus{
+  flex:0 0 auto;
+  background:transparent;
+  border:1px solid var(--line);
+  color:var(--sigil);
+  width:24px;
+  height:24px;
+  line-height:1;
+  padding:0;
+  font-size:14px;
+  cursor:pointer;
+}
+.eqinv-item-minus:hover{
+  color:#e06060;
+  border-color:#e06060;
+}
+.eqinv-item-chip{
+  background:var(--panel-2);
+  border:1px solid var(--line);
+  border-left:3px solid var(--cx-c, var(--sigil));
+  color:var(--paper);
+  font-family:'Oswald', sans-serif;
+  font-size:11.5px;
+  letter-spacing:0.02em;
+  text-transform:uppercase;
+  padding:7px 12px;
+  cursor:pointer;
+  transition:border-color 0.15s ease;
+}
+.eqinv-item-chip:hover{
+  border-color:var(--amber-bright);
+  color:var(--amber-bright);
+}
+.eqinv-item-chip-missing{
+  color:var(--sigil);
+  font-style:italic;
+  cursor:not-allowed;
+  text-transform:none;
+  letter-spacing:0;
+}
+.eqinv-item-chip-missing:hover{
+  border-color:var(--line);
+  color:var(--sigil);
+}
+
+/* ---------- popup "Quantos deseja adicionar?" ----------
+   Aberto ao clicar "Adicionar" numa linha do picker — reaproveita a
+   MESMA estrutura genérica de modal/campo do projeto (".modal-box"/
+   ".field"/".modal-actions", já estilizadas globalmente); só o
+   tamanho da caixa e o texto do item são específicos daqui. Não
+   altera em nada o layout do Compêndio nem da lista do picker. */
+.eqinv-qty-modal-box{
+  max-width:360px;
+}
+.eqinv-qty-modal-box .eqinv-qty-item-name{
+  margin:-8px 0 2px;
+  font-family:'Oswald', sans-serif;
+  font-size:12.5px;
+  text-transform:uppercase;
+  letter-spacing:0.04em;
+  color:var(--amber-bright);
+}
+.eqinv-qty-modal-box .eqinv-qty-question{
+  margin:0 0 16px;
+  font-size:12.5px;
+  color:var(--paper-dim);
+}
+.eqinv-qty-modal-box input#eqinv_qty_modal_input{
+  text-align:center;
+}
+
+/* ---------- popup do item personalizado (sem equivalente no Compêndio) ---------- */
+.eqinv-custom-modal-box{
+  max-width:420px;
+}

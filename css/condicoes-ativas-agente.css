@@ -1,0 +1,170 @@
+/* ==========================================================
+   CONDIÇÕES ATIVAS — INTEGRAÇÃO COM A FICHA (AGENTES → SOBREVIVÊNCIA)
+   Arquivo isolado: não redefine nenhuma classe já existente do
+   projeto (.combat-col-surv, .combat-hero-row, .combat-hero-box,
+   .combat-minor-row, .combat-minor-cell, .modal-overlay, .modal-box,
+   .cx-modal-box, .cx-modal-section, .modal-actions, .fonte-tag,
+   .field, .empty-state, etc.) — apenas soma classes novas
+   prefixadas com "ca-" (Condições Ativas), no mesmo padrão visual já
+   usado pelos demais módulos "-agente" do projeto (mia-, mca-,
+   eqinv-), reaproveitando as variáveis de cor já definidas em :root
+   para herdar a mesma identidade visual (fundo escuro, bordas
+   douradas, elementos angulares, mesma tipografia).
+   ========================================================== */
+
+/* ---------- painel "Condições Ativas" — dentro de Sobrevivência ---------- */
+.ca-panel{
+  margin-top:12px;
+}
+.ca-panel-label{
+  font-family:'Oswald', sans-serif;
+  font-size:10.5px;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  color:var(--sigil);
+  margin-bottom:8px;
+}
+
+.ca-list{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-bottom:10px;
+}
+
+.ca-empty{
+  font-size:11px;
+  color:var(--sigil);
+  font-style:italic;
+}
+
+.ca-chip{
+  background:var(--panel-2);
+  border:1px solid var(--line);
+  border-left:3px solid var(--amber);
+  color:var(--paper);
+  font-family:'Oswald', sans-serif;
+  font-size:11.5px;
+  letter-spacing:0.02em;
+  text-transform:uppercase;
+  padding:7px 12px;
+  cursor:pointer;
+  transition:border-color 0.15s ease;
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+}
+.ca-chip:hover{
+  border-color:var(--amber-bright);
+  color:var(--amber-bright);
+}
+
+.ca-add-btn{
+  width:100%;
+}
+
+/* ---------- modal "Adicionar Condição" — reaproveita .modal-overlay/.modal-box ---------- */
+.ca-picker-box{
+  max-width:520px;
+  width:100%;
+  text-align:left;
+  max-height:86vh;
+  display:flex;
+  flex-direction:column;
+  position:relative;
+}
+
+.ca-picker-close{
+  position:absolute;
+  top:14px;
+  right:14px;
+  background:transparent;
+  border:none;
+  color:var(--sigil);
+  font-size:20px;
+  line-height:1;
+  padding:4px 8px;
+  cursor:pointer;
+}
+.ca-picker-close:hover{
+  color:var(--paper);
+  border:none;
+}
+
+.ca-picker-box h3{
+  margin:0 0 16px;
+  padding-right:30px;
+  font-family:'Oswald',sans-serif;
+  font-size:16px;
+  text-transform:uppercase;
+  letter-spacing:0.06em;
+  color:var(--amber-bright);
+}
+
+.ca-picker-search-row{
+  margin-bottom:10px;
+}
+
+.ca-picker-count{
+  text-align:left;
+  margin:0 0 10px;
+}
+
+.ca-picker-list{
+  overflow-y:auto;
+  padding-right:4px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.ca-picker-row{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  background:var(--panel-2);
+  border:1px solid var(--line);
+  border-left:3px solid var(--amber);
+  padding:8px 10px;
+}
+
+.ca-picker-row-body{
+  flex:1 1 auto;
+  min-width:0;
+}
+
+.ca-picker-row-title{
+  font-family:'Oswald',sans-serif;
+  font-size:12.5px;
+  text-transform:uppercase;
+  color:var(--paper);
+  letter-spacing:0.03em;
+}
+
+.ca-picker-add-btn{
+  flex:0 0 auto;
+  padding:7px 14px;
+  font-size:10.5px;
+}
+
+.ca-picker-empty{
+  font-size:11px;
+  color:var(--sigil);
+  font-style:italic;
+  padding:14px 0;
+}
+
+/* ---------- popup de detalhes da condição — reaproveita .cx-modal-box/.cx-modal-section ---------- */
+.ca-modal-titulo{
+  font-family:'Oswald', sans-serif;
+  font-size:14px;
+  font-weight:600;
+  color:var(--paper);
+  margin:0 0 6px;
+}
+
+@media (max-width:640px){
+  .ca-picker-box{ max-width:94vw; }
+  .ca-picker-row-title{ font-size:12px; }
+  .ca-chip{ font-size:11px; }
+}

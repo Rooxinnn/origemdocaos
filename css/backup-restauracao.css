@@ -1,0 +1,193 @@
+/* ==========================================================
+   BACKUP E RESTAURAÇÃO
+   Arquivo isolado: não redefine nenhuma classe já existente do
+   projeto (.modal-overlay, .modal-box, .modal-actions, .field,
+   .welcome-new-btn, .action-bar, etc.) — este módulo só REAPROVEITA
+   .modal-overlay/.modal-box/.modal-actions já definidos em
+   index.html (mesmo padrão de popup usado pelos demais sistemas) e
+   soma classes novas prefixadas com "bkp-" (gerenciador — backup
+   completo/restauração/backups automáticos) e "fops-" (opções da
+   ficha — pontos de restauração individuais), reaproveitando as
+   variáveis de cor já definidas em :root pelo projeto.
+   ========================================================== */
+
+/* ---------- botão discreto no gerenciador de fichas ---------- */
+.bkp-menu-btn{
+  /* mesma aparência-base dos botões secundários já usados ao lado
+     ("⭱ Importar JSON") — nenhum estilo novo de botão é criado. */
+}
+
+/* ---------- botão discreto na action-bar da ficha ---------- */
+#btn_ficha_options{
+  /* idem: herda a aparência padrão dos botões da action-bar
+     (".action-bar button" já definido em index.html). */
+}
+
+/* ---------- caixas dos modais (variante mais larga sobre .modal-box) ---------- */
+.bkp-box,
+.fops-box{
+  max-width:460px;
+  width:100%;
+  text-align:left;
+  position:relative;
+  max-height:86vh;
+  overflow-y:auto;
+}
+
+.bkp-box h3,
+.fops-box h3{
+  margin:0 0 12px;
+  padding-right:26px;
+  font-family:'Oswald',sans-serif;
+  font-size:16px;
+  text-transform:uppercase;
+  letter-spacing:0.06em;
+  color:var(--amber-bright);
+}
+
+.bkp-box p,
+.fops-box p{
+  font-size:12.5px;
+  line-height:1.6;
+  color:var(--paper-dim);
+  margin:0 0 10px;
+}
+
+.bkp-sub{
+  color:var(--sigil) !important;
+  font-size:11.5px !important;
+}
+
+.bkp-close,
+.fops-close{
+  position:absolute;
+  top:12px;
+  right:12px;
+  background:transparent;
+  border:none;
+  color:var(--sigil);
+  font-size:18px;
+  line-height:1;
+  padding:4px 8px;
+  cursor:pointer;
+}
+.bkp-close:hover,
+.fops-close:hover{
+  color:var(--paper);
+  border:none;
+}
+
+/* ---------- menu principal (lista de botões empilhados) ---------- */
+.bkp-menu-actions,
+.fops-menu-actions{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  margin-top:14px;
+}
+.bkp-menu-actions button,
+.fops-menu-actions button{
+  width:100%;
+  text-align:left;
+  padding:11px 14px;
+}
+
+/* ---------- checklist do que o backup/restauração inclui ---------- */
+.bkp-checklist,
+.fops-checklist{
+  list-style:none;
+  margin:0 0 14px;
+  padding:0;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:6px 10px;
+}
+.bkp-checklist li,
+.fops-checklist li{
+  font-size:11.5px;
+  color:var(--paper);
+  padding-left:16px;
+  position:relative;
+}
+.bkp-checklist li::before,
+.fops-checklist li::before{
+  content:"✓";
+  position:absolute;
+  left:0;
+  color:var(--amber-bright);
+}
+
+.bkp-restore-summary{
+  color:var(--amber-bright) !important;
+  font-size:12px !important;
+}
+
+/* ---------- lista de backups automáticos / versões anteriores ---------- */
+#bkp_auto_list_body,
+#fops_list_body{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  max-height:320px;
+  overflow-y:auto;
+  margin-bottom:6px;
+}
+
+.bkp-auto-row,
+.fops-point-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  background:var(--panel-2);
+  border:1px solid var(--line);
+  border-left:3px solid var(--amber);
+  padding:9px 12px;
+  cursor:pointer;
+  transition:border-color 0.15s ease;
+}
+.bkp-auto-row:hover,
+.fops-point-row:hover{
+  border-color:var(--amber-bright);
+}
+
+.bkp-auto-row-body,
+.fops-point-body{
+  min-width:0;
+}
+
+.bkp-auto-row-label,
+.fops-point-name{
+  font-family:'Oswald',sans-serif;
+  font-size:12px;
+  text-transform:uppercase;
+  letter-spacing:0.02em;
+  color:var(--paper);
+}
+
+.bkp-auto-row-date,
+.fops-point-date{
+  font-size:10.5px;
+  color:var(--sigil);
+  margin-top:2px;
+}
+
+.bkp-auto-row-arrow,
+.fops-point-arrow{
+  flex:0 0 auto;
+  color:var(--sigil);
+  font-size:13px;
+}
+
+.bkp-empty,
+.fops-empty{
+  font-size:11.5px;
+  color:var(--sigil);
+  font-style:italic;
+  padding:10px 0;
+}
+
+@media (max-width:640px){
+  .bkp-box, .fops-box{ max-width:94vw; }
+  .bkp-checklist, .fops-checklist{ grid-template-columns:1fr; }
+}

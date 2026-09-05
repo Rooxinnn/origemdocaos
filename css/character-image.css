@@ -1,0 +1,132 @@
+/* ==========================================================
+   IMAGEM DO PERSONAGEM
+   Arquivo isolado: não redefine nenhuma classe já existente do
+   projeto (.titlebar-head, .sheet-card, .sheet-card-name, .field,
+   etc.) — apenas soma classes novas prefixadas com "cimg-" e
+   reaproveita as variáveis de cor já definidas em :root.
+   ========================================================== */
+
+/* ---------- controle na tela de edição da ficha (Agentes) ---------- */
+.cimg-picker{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-left:auto;
+}
+
+.cimg-picker-thumb{
+  width:40px;
+  height:40px;
+  flex:0 0 auto;
+  border:1px solid var(--line);
+  background:var(--panel-2);
+  overflow:hidden;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.cimg-picker-thumb img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+}
+.cimg-picker-thumb.is-empty::after{
+  content:"";
+  width:16px;
+  height:16px;
+  border:1px dashed var(--sigil);
+  border-radius:50%;
+}
+
+.cimg-picker-buttons{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex-wrap:wrap;
+}
+
+.cimg-choose-btn{
+  font-family:'Oswald', sans-serif;
+  letter-spacing:0.06em;
+  text-transform:uppercase;
+  font-size:10.5px;
+  background:var(--panel-2);
+  color:var(--paper-dim);
+  border:1px solid var(--line);
+  padding:7px 12px;
+  cursor:pointer;
+  white-space:nowrap;
+  transition:border-color 0.15s ease, color 0.15s ease;
+}
+.cimg-choose-btn:hover{
+  color:var(--paper);
+  border-color:var(--amber-bright);
+}
+
+.cimg-file-input{
+  position:absolute;
+  width:1px;
+  height:1px;
+  padding:0;
+  margin:-1px;
+  overflow:hidden;
+  clip:rect(0,0,0,0);
+  white-space:nowrap;
+  border:0;
+}
+
+.cimg-remove-btn{
+  background:transparent;
+  border:1px solid var(--line);
+  color:var(--sigil);
+  padding:6px 10px;
+  font-size:10px;
+  cursor:pointer;
+}
+.cimg-remove-btn:hover{
+  color:#e06060;
+  border-color:#e06060;
+}
+
+/* ---------- miniatura no card do gerenciador de fichas ---------- */
+.cimg-card-head{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+.cimg-card-head .sheet-card-name{
+  flex:1 1 auto;
+  min-width:0;
+}
+
+.cimg-card-thumb{
+  width:40px;
+  height:40px;
+  flex:0 0 auto;
+  border:1px solid var(--line);
+  background:var(--panel-2);
+  overflow:hidden;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.cimg-card-thumb img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+}
+.cimg-card-thumb.is-empty::after{
+  content:"";
+  width:16px;
+  height:16px;
+  border:1px dashed var(--sigil);
+  border-radius:50%;
+}
+
+@media (max-width:640px){
+  .cimg-picker-thumb, .cimg-card-thumb{ width:32px; height:32px; }
+  .cimg-choose-btn{ font-size:10px; padding:6px 10px; }
+  .cimg-picker{ width:100%; margin-left:0; margin-top:8px; }
+}

@@ -1,0 +1,204 @@
+/* ==========================================================
+   CONEXÕES DA FICHA — ETAPA 2
+   Integração Compêndio → Paranormal → Agentes.
+   Arquivo isolado: não redefine nenhuma classe já usada pelo
+   Compêndio (.cx-*), pela ficha (.panel, .entry-card, .field,
+   .note, .tag, .modal-*) ou por qualquer outro sistema — apenas
+   soma novas classes prefixadas com "cconn-" e reaproveita as
+   variáveis de cor já definidas em :root pelo projeto.
+   ========================================================== */
+
+/* ---------- Paranormal → Minhas Conexões ---------- */
+.cconn-toolbar{
+  display:flex;
+  justify-content:flex-start;
+  margin-bottom:14px;
+}
+
+.cconn-entry-card{
+  align-items:center;
+}
+
+.cconn-thumb{
+  width:40px;
+  height:40px;
+  object-fit:contain;
+  background:var(--panel);
+  border:1px solid var(--line);
+  padding:4px;
+  flex:0 0 auto;
+}
+
+/* ---------- Agentes → Conexão ---------- */
+.cconn-agente-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(200px,1fr));
+  gap:10px;
+}
+
+.cconn-block{
+  background:var(--panel-2);
+  border:1px solid var(--line);
+  border-left:3px solid var(--sigil);
+  padding:10px 12px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  cursor:pointer;
+  transition:border-color 0.15s ease;
+}
+.cconn-block:hover{
+  border-color:var(--amber-bright);
+}
+.cconn-block span{
+  font-family:'Oswald',sans-serif;
+  font-size:12.5px;
+  letter-spacing:0.03em;
+  color:var(--paper);
+  text-transform:uppercase;
+}
+
+.cconn-thumb-sm{
+  width:26px;
+  height:26px;
+  object-fit:contain;
+  flex:0 0 auto;
+}
+
+/* reaproveita as cores por Dimensão já definidas em .cx-<dimensao>
+   (--cx-c / --cx-c-dim) no Compêndio, só aplicando na borda do bloco */
+.cconn-block.cx-infernal,
+.cconn-block.cx-arkanjerial,
+.cconn-block.cx-terrena,
+.cconn-block.cx-carnical,
+.cconn-block.cx-sombria,
+.cconn-block.cx-perdicao,
+.cconn-block.cx-limbica,
+.cconn-block.cx-tecnica,
+.cconn-block.cx-superior,
+.cconn-block.cx-especial{
+  border-left-color:var(--cx-c, var(--sigil));
+}
+
+/* ---------- Modal "Adicionar Conexão" ---------- */
+.cconn-picker-box{
+  max-width:620px;
+  width:100%;
+  text-align:left;
+  max-height:86vh;
+  display:flex;
+  flex-direction:column;
+  position:relative;
+}
+
+.cconn-picker-close{
+  position:absolute;
+  top:14px;
+  right:14px;
+  background:transparent;
+  border:none;
+  color:var(--sigil);
+  font-size:20px;
+  line-height:1;
+  padding:4px 8px;
+  cursor:pointer;
+}
+.cconn-picker-close:hover{
+  color:var(--paper);
+  border:none;
+}
+
+.cconn-picker-box h3{
+  margin:0 0 16px;
+  padding-right:30px;
+  font-family:'Oswald',sans-serif;
+  font-size:16px;
+  text-transform:uppercase;
+  letter-spacing:0.06em;
+  color:var(--amber-bright);
+}
+
+.cconn-picker-search-row{
+  margin-bottom:10px;
+}
+
+.cconn-picker-count{
+  text-align:left;
+  margin:0 0 10px;
+}
+
+.cconn-picker-list{
+  overflow-y:auto;
+  padding-right:4px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.cconn-picker-row{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  background:var(--panel-2);
+  border:1px solid var(--line);
+  border-left:3px solid var(--cx-c, var(--line));
+  padding:8px 10px;
+}
+
+.cconn-picker-row-body{
+  flex:1 1 auto;
+  min-width:0;
+}
+
+.cconn-picker-row-title{
+  font-family:'Oswald',sans-serif;
+  font-size:12.5px;
+  text-transform:uppercase;
+  color:var(--paper);
+  letter-spacing:0.03em;
+}
+
+.cconn-picker-row-dim{
+  font-size:10.5px;
+  color:var(--sigil);
+  margin-top:2px;
+  text-transform:uppercase;
+  letter-spacing:0.06em;
+}
+
+.cconn-picker-add-btn{
+  flex:0 0 auto;
+  padding:7px 14px;
+  font-size:10.5px;
+}
+
+.cconn-picker-add-btn.in-sheet{
+  background:rgba(240,168,60,0.14);
+  border-color:var(--amber-bright);
+  color:var(--paper);
+  cursor:default;
+}
+.cconn-picker-add-btn.in-sheet:hover{
+  border-color:var(--amber-bright);
+}
+
+/* Exceção: Aborto Límbico é listado no Compêndio mas não pode ser
+   adicionado como Conexão — botão desabilitado, sem o destaque
+   "Na Ficha" (que é reservado para o que já está na ficha). */
+.cconn-picker-add-btn[disabled]{
+  background:transparent;
+  border-color:var(--line);
+  color:var(--sigil);
+  cursor:not-allowed;
+  opacity:0.7;
+}
+.cconn-picker-add-btn[disabled]:hover{
+  border-color:var(--line);
+}
+
+.cconn-picker-empty{
+  font-size:11px;
+  color:var(--sigil);
+  font-style:italic;
+  padding:14px 0;
+}

@@ -1,0 +1,441 @@
+/* ==========================================================
+   ORDEM DO CAOS — VISUAL DEFINITIVO
+   Redesign visual incremental, carregado por último (depois do
+   <style> principal e de todos os módulos css/*.css já
+   existentes), para poder REFINAR a aparência dos componentes
+   já existentes sem duplicar nada.
+
+   AO CONTRÁRIO dos outros arquivos css/*.css do projeto (que são
+   isolados e só somam classes novas), este arquivo é o único que
+   deliberadamente toca em classes JÁ EXISTENTES — mas só em
+   propriedades puramente visuais:
+
+     background (camadas extras de gradiente, cor final preservada)
+     box-shadow, border-color (nunca a espessura/estilo da borda)
+     transform, transition, animation, filter, text-shadow
+
+   NUNCA toca em: display, position, layout (grid/flex/width/
+   height/margin/padding estrutural), conteúdo, atributos,
+   IDs ou qualquer coisa que os módulos JS leiam/escrevam. Nenhuma
+   função, cálculo ou regra do RPG é afetada — isto é só a "pele"
+   visual por cima do sistema que já funciona.
+
+   Sumário das seções:
+     1. Tokens (variáveis) — hierarquia de dourado, sombras, ritmo
+     2. Atmosfera global (fundo, ruído, vinheta, scrollbar)
+     3. Acessibilidade (foco visível, prefers-reduced-motion)
+     4. Painéis / titlebar — profundidade de nível 1
+     5. Divisores e cabeçalhos (h2/h3) com acento dourado
+     6. Botões — estados normal/hover/active/disabled/foco
+     7. Campos de texto (input/select/textarea)
+     8. Abas e subabas
+     9. Cards de nível 2 (stat-box, combat-cluster, cx-card,
+        compendio-card, entry-card, sks-card, cconn-block,
+        hab50-card, al-buff-card, compendio-section-header)
+    10. Compêndio (seções, filtros, grid)
+    11. Modais (abertura/fechamento com animação)
+    12. Gerenciador de fichas / tela inicial
+    13. Aborto Límbico (acento especial, sem alterar a lógica)
+    14. Bandeja de rolagens (dice tray)
+    15. Animações de entrada para abas e cards dinâmicos
+    16. Responsivo / performance
+   ========================================================== */
+
+/* ==========================================================
+   1. TOKENS — hierarquia de dourado, sombras, ritmo de transição
+   ========================================================== */
+:root{
+  /* hierarquia de dourado — o --amber e --amber-bright originais
+     continuam sendo a base; estes só ACRESCENTAM níveis */
+  --gold-dim:#8f6a2e;                 /* dourado apagado, para acentos secundários */
+  --gold-hover:#ffc26a;               /* dourado de hover, mais claro que --amber-bright */
+  --gold-select:rgba(240,168,60,0.16); /* fundo de seleção/ativo */
+  --gold-glow-soft:rgba(240,168,60,0.16);
+  --gold-glow:rgba(240,168,60,0.32);
+  --gold-glow-strong:rgba(240,168,60,0.5);
+  --gold-hairline:rgba(240,168,60,0.14);
+
+  /* sombras por camada — do fundo para os elementos ativos */
+  --shadow-l1:
+    0 10px 28px rgba(0,0,0,0.50),
+    0 1px 0 rgba(255,255,255,0.04) inset,
+    0 0 0 1px rgba(240,168,60,0.05) inset;
+  --shadow-l2:
+    0 3px 12px rgba(0,0,0,0.38),
+    0 1px 0 rgba(255,255,255,0.03) inset;
+  --shadow-l2-hover:
+    0 8px 22px rgba(0,0,0,0.48),
+    0 0 0 1px var(--gold-hairline) inset,
+    0 0 18px var(--gold-glow-soft);
+  --shadow-inset-press: inset 0 2px 6px rgba(0,0,0,0.4);
+
+  /* ritmo de transição consistente em todo o site */
+  --ease-base: cubic-bezier(.4,0,.2,1);
+  --t-fast: 120ms var(--ease-base);
+  --t-base: 200ms var(--ease-base);
+  --t-slow: 380ms var(--ease-base);
+
+  /* texturas compostas — mesma cor final das classes originais,
+     só com camadas extras de gradiente por cima */
+  --tex-panel:
+    radial-gradient(ellipse 120% 60% at 50% -12%, rgba(240,168,60,0.055), transparent 60%),
+    repeating-linear-gradient(135deg, rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px, transparent 1px, transparent 4px),
+    linear-gradient(180deg, rgba(255,255,255,0.025), transparent 45%),
+    var(--panel);
+  --tex-panel2:
+    radial-gradient(ellipse 120% 60% at 50% -10%, rgba(240,168,60,0.045), transparent 62%),
+    repeating-linear-gradient(135deg, rgba(255,255,255,0.010) 0px, rgba(255,255,255,0.010) 1px, transparent 1px, transparent 4px),
+    linear-gradient(180deg, rgba(255,255,255,0.02), transparent 50%),
+    var(--panel-2);
+}
+
+/* ==========================================================
+   2. ATMOSFERA GLOBAL — ruído sutil, vinheta, scrollbar
+   ========================================================== */
+body{
+  position:relative;
+}
+/* Camada de ruído/textura de arquivo — fixa, atrás de tudo
+   (z-index negativo garante que fica sob o conteúdo normal do
+   body, ver nota de empilhamento no cabeçalho do arquivo).
+   Estático (sem animação) por performance — instrução 26. */
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:-1;
+  pointer-events:none;
+  background-image:
+    radial-gradient(ellipse 70% 50% at 50% 0%, rgba(240,168,60,0.05), transparent 60%),
+    radial-gradient(ellipse 60% 45% at 100% 100%, rgba(240,168,60,0.035), transparent 60%),
+    repeating-linear-gradient(0deg, rgba(255,255,255,0.008) 0px, rgba(255,255,255,0.008) 1px, transparent 1px, transparent 3px),
+    radial-gradient(ellipse 140% 100% at 50% 50%, transparent 40%, rgba(0,0,0,0.35) 100%);
+  opacity:0.9;
+}
+
+/* scrollbar temática (webkit) — aplica em qualquer área com
+   overflow-y do projeto, sem precisar marcar cada uma */
+*::-webkit-scrollbar{ width:8px; height:8px; }
+*::-webkit-scrollbar-track{ background:transparent; }
+*::-webkit-scrollbar-thumb{ background:var(--line); border:2px solid transparent; background-clip:padding-box; }
+*::-webkit-scrollbar-thumb:hover{ background:var(--amber); background-clip:padding-box; }
+html{ scrollbar-color:var(--line) transparent; scrollbar-width:thin; }
+
+/* ==========================================================
+   3. ACESSIBILIDADE
+   ========================================================== */
+:focus-visible{
+  outline:2px solid var(--amber-bright);
+  outline-offset:2px;
+}
+@media (prefers-reduced-motion: reduce){
+  *, *::before, *::after{
+    animation-duration:0.001ms !important;
+    animation-iteration-count:1 !important;
+    transition-duration:0.001ms !important;
+    scroll-behavior:auto !important;
+  }
+}
+
+/* ==========================================================
+   4. PAINÉIS / TITLEBAR — profundidade de nível 1
+   ========================================================== */
+.panel, .titlebar{
+  background:var(--tex-panel);
+  box-shadow:var(--shadow-l1);
+  position:relative;
+  transition:box-shadow var(--t-slow);
+}
+.dice-tray-panel, .compendio-section{
+  box-shadow:var(--shadow-l1);
+}
+.compendio-section{
+  background:var(--tex-panel);
+}
+
+/* ==========================================================
+   5. DIVISORES / CABEÇALHOS — acento dourado refinado
+   ========================================================== */
+.panel h2, .titlebar h2{
+  position:relative;
+}
+.panel h2::after{
+  content:"";
+  position:absolute;
+  left:0; bottom:-1px;
+  width:52px; height:2px;
+  background:linear-gradient(90deg, var(--amber-bright), transparent);
+  box-shadow:0 0 8px var(--gold-glow-soft);
+}
+
+/* ==========================================================
+   6. BOTÕES — normal / hover / active / disabled / foco
+   ========================================================== */
+button{
+  position:relative;
+  transition:
+    border-color var(--t-base),
+    color var(--t-base),
+    background var(--t-base),
+    box-shadow var(--t-base),
+    transform var(--t-fast),
+    filter var(--t-fast);
+  background-image:linear-gradient(180deg, rgba(255,255,255,0.035), transparent 55%);
+}
+button:hover{
+  transform:translateY(-1px);
+  box-shadow:0 4px 14px rgba(0,0,0,0.35), 0 0 14px var(--gold-glow-soft);
+}
+button:active{
+  transform:translateY(0) scale(0.97);
+  box-shadow:var(--shadow-inset-press);
+  filter:brightness(0.96);
+}
+button:disabled, button[disabled]{
+  opacity:0.5;
+  cursor:not-allowed;
+  transform:none !important;
+  box-shadow:none !important;
+  filter:none !important;
+}
+button.primary, button.save-agent-btn, .welcome-new-btn, .al-toggle-btn{
+  box-shadow:0 2px 10px rgba(0,0,0,0.3), 0 0 0 1px var(--gold-hairline) inset;
+}
+button.primary:hover, button.save-agent-btn:hover, .al-toggle-btn:hover{
+  box-shadow:0 6px 18px rgba(0,0,0,0.4), 0 0 18px var(--gold-glow);
+}
+.welcome-new-btn:hover{
+  box-shadow:0 0 34px rgba(240,168,60,0.3), 0 6px 18px rgba(0,0,0,0.4);
+}
+.modal-actions button.danger{
+  box-shadow:0 2px 10px rgba(224,96,96,0.15);
+}
+.modal-actions button.danger:hover{
+  box-shadow:0 6px 16px rgba(224,96,96,0.28), 0 0 16px rgba(224,96,96,0.25);
+}
+
+/* ==========================================================
+   7. CAMPOS DE TEXTO
+   ========================================================== */
+input[type=text], input[type=number], textarea, select{
+  transition:border-color var(--t-base), box-shadow var(--t-base), background var(--t-base);
+}
+textarea{
+  background:linear-gradient(180deg, rgba(255,255,255,0.015), transparent 30%), transparent;
+}
+textarea:focus, select:focus{
+  box-shadow:0 0 0 1px var(--gold-hairline), 0 0 14px var(--gold-glow-soft);
+}
+input[type=text]:focus, input[type=number]:focus{
+  box-shadow:0 1px 0 var(--amber-bright);
+}
+
+/* ==========================================================
+   8. ABAS / SUBABAS
+   ========================================================== */
+.tab-btn, .subtab-btn{
+  position:relative;
+  transition:border-color var(--t-base), color var(--t-base), background var(--t-base), box-shadow var(--t-base), transform var(--t-fast);
+  overflow:hidden;
+}
+.tab-btn::after{
+  content:"";
+  position:absolute; left:0; right:0; bottom:0; height:2px;
+  background:var(--amber-bright);
+  transform:scaleX(0);
+  transform-origin:center;
+  transition:transform var(--t-base);
+  box-shadow:0 0 10px var(--gold-glow);
+}
+.tab-btn.active::after{ transform:scaleX(1); }
+.tab-btn.active, .subtab-btn.active{
+  box-shadow:0 0 14px var(--gold-glow-soft), inset 0 -1px 0 var(--gold-hairline);
+}
+.cx-filter-btn{
+  transition:border-color var(--t-base), color var(--t-base), background var(--t-base), transform var(--t-fast);
+}
+.cx-filter-btn:hover{ transform:translateY(-1px); }
+.cx-filter-btn.active{ box-shadow:0 0 10px var(--gold-glow-soft); }
+
+/* ==========================================================
+   9. CARDS DE NÍVEL 2 — depth + microinteração de hover
+   ========================================================== */
+.stat-box, .combat-cluster, .combat-minor-cell, .threshold-box,
+.compendio-card, .entry-card, .hab50-card, .al-buff-card,
+.compendio-section-header, .cx-card, .sks-card, .cconn-block,
+.sheet-card, .prg-row, .dice-roll-card, .dtp-quickroll, .dtp-form{
+  box-shadow:var(--shadow-l2);
+  transition:
+    box-shadow var(--t-base),
+    border-color var(--t-base),
+    background var(--t-base),
+    transform var(--t-base);
+}
+.compendio-card, .entry-card, .hab50-card, .al-buff-card,
+.cx-card, .sks-card, .cconn-block{
+  background:var(--tex-panel2);
+}
+.stat-box, .combat-cluster, .combat-minor-cell, .threshold-box,
+.compendio-section-header, .prg-row, .dice-roll-card{
+  background:var(--tex-panel2);
+}
+
+.compendio-card:hover, .cx-card:hover, .hab50-card:hover,
+.al-buff-card:hover, .sks-card:hover, .cconn-block:hover,
+.sheet-card:hover, .guia-item:hover{
+  box-shadow:var(--shadow-l2-hover);
+  transform:translateY(-2px);
+}
+.al-buff-card.selected{
+  box-shadow:var(--shadow-l2-hover);
+}
+.guia-item{ transition:background var(--t-base), transform var(--t-fast); }
+
+/* ==========================================================
+   10. COMPÊNDIO
+   ========================================================== */
+.compendio-section-header{
+  transition:background var(--t-base), box-shadow var(--t-base);
+}
+.compendio-section.open .compendio-section-body{
+  animation:ocFadeInUp var(--t-slow) var(--ease-base);
+}
+.cx-filter-btn .dot{
+  transition:box-shadow var(--t-base);
+}
+
+/* ==========================================================
+   11. MODAIS — abertura suave (a animação replaya sozinha toda
+   vez que o JS troca display:none → flex, sem precisar de
+   nenhuma alteração no JS existente)
+   ========================================================== */
+.modal-overlay{
+  animation:ocOverlayIn var(--t-base) var(--ease-base);
+  backdrop-filter:blur(1.5px);
+}
+.modal-box{
+  animation:ocModalIn var(--t-slow) var(--ease-base);
+  box-shadow:var(--shadow-l1), 0 0 40px rgba(0,0,0,0.4);
+}
+@keyframes ocOverlayIn{
+  from{ opacity:0; }
+  to{ opacity:1; }
+}
+@keyframes ocModalIn{
+  from{ opacity:0; transform:translateY(10px) scale(0.97); }
+  to{ opacity:1; transform:translateY(0) scale(1); }
+}
+
+/* ==========================================================
+   12. GERENCIADOR DE FICHAS / TELA INICIAL
+   ========================================================== */
+#welcome_screen{ position:relative; }
+.sheet-card{
+  background:var(--tex-panel);
+}
+.sheet-card::before{
+  content:"";
+  position:absolute; inset:0;
+  background:linear-gradient(180deg, rgba(240,168,60,0.05), transparent 40%);
+  pointer-events:none;
+  opacity:0;
+  transition:opacity var(--t-base);
+}
+.sheet-card:hover::before{ opacity:1; }
+.sheet-card{ overflow:hidden; }
+.welcome-title{
+  animation:ocFadeInUp var(--t-slow) var(--ease-base);
+}
+.sheet-card{
+  animation:ocFadeInUp var(--t-slow) var(--ease-base);
+}
+
+/* ==========================================================
+   13. ABORTO LÍMBICO — acento especial (visual apenas; nenhuma
+   lógica de aborto_limbico_ativo/habilidades é tocada aqui)
+   ========================================================== */
+.titlebar-al-badge{
+  animation:ocBadgeGlow 2.6s ease-in-out infinite;
+}
+@keyframes ocBadgeGlow{
+  0%,100%{ box-shadow:0 0 14px rgba(240,168,60,0.45); }
+  50%{ box-shadow:0 0 22px rgba(240,168,60,0.7); }
+}
+.panel.al-active{
+  box-shadow:var(--shadow-l1), inset 0 0 24px rgba(240,168,60,0.14);
+}
+/* leve dessaturação/frieza nos cards de skill do buff límbico,
+   coerente com "perdeu o paranormal, ganhou o físico" — só filtro
+   visual, não altera nenhum dado nem seleção */
+.al-buff-card{
+  filter:saturate(0.94);
+}
+.al-buff-card.selected{
+  filter:saturate(1.05);
+}
+
+/* ==========================================================
+   14. BANDEJA DE ROLAGENS
+   ========================================================== */
+.dice-tray-panel.open{
+  animation:ocModalIn var(--t-base) var(--ease-base);
+}
+.drc-die{
+  box-shadow:0 1px 4px rgba(0,0,0,0.3);
+}
+
+/* ==========================================================
+   15. ANIMAÇÕES DE ENTRADA — abas e cards dinâmicos
+   (replay automático: sempre que o elemento ganha a classe
+   .active, ou é recriado pelo JS via innerHTML, a animação
+   dispara de novo sozinha — nenhum hook novo é necessário)
+   ========================================================== */
+.tab-panel.active{
+  animation:ocFadeInUp var(--t-slow) var(--ease-base);
+}
+.subtab-panel.active{
+  animation:ocFadeInUp var(--t-base) var(--ease-base);
+}
+.compendio-card, .cx-card, .entry-card, .sks-card, .cconn-block,
+.hab50-card, .al-buff-card, .prg-row, .dice-roll-card{
+  animation:ocFadeInUp 260ms var(--ease-base);
+}
+@keyframes ocFadeInUp{
+  from{ opacity:0; transform:translateY(6px); }
+  to{ opacity:1; transform:translateY(0); }
+}
+
+/* ==========================================================
+   16. RESPONSIVO / PERFORMANCE
+   Em telas pequenas, reduz o custo de repaint dos gradientes
+   compostos (menos camadas) e do blur do backdrop dos modais,
+   sem alterar nenhum breakpoint de layout já existente.
+   ========================================================== */
+@media (max-width:640px){
+  :root{
+    --tex-panel:
+      linear-gradient(180deg, rgba(255,255,255,0.02), transparent 45%),
+      var(--panel);
+    --tex-panel2:
+      linear-gradient(180deg, rgba(255,255,255,0.018), transparent 50%),
+      var(--panel-2);
+  }
+  body::before{
+    background-image:
+      radial-gradient(ellipse 90% 60% at 50% 0%, rgba(240,168,60,0.045), transparent 60%),
+      radial-gradient(ellipse 140% 100% at 50% 50%, transparent 45%, rgba(0,0,0,0.3) 100%);
+  }
+  .modal-overlay{ backdrop-filter:none; }
+  .panel h2::after{ width:36px; }
+}
+
+/* impressão/captura de ficha (character-image / export) não deve
+   herdar sombras ou animações que atrapalhem a leitura em PDF —
+   mantém só a cor de fundo original das camadas de textura */
+@media print{
+  body::before{ display:none; }
+  .panel, .titlebar, .modal-box{ box-shadow:none; }
+  .tab-panel.active, .subtab-panel.active,
+  .compendio-card, .cx-card, .entry-card, .sks-card,
+  .cconn-block, .hab50-card, .al-buff-card{ animation:none; }
+}

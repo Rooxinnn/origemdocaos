@@ -1,0 +1,194 @@
+/* ==========================================================
+   ANOMALIA PARANORMAL — SELEÇÃO DA DIMENSÃO LÍMBICA
+   Arquivo isolado: não redefine nenhuma classe já existente do
+   projeto (.modal-overlay, .modal-box, .modal-actions,
+   .combat-dimension-box select, as classes de cor por Dimensão
+   .cx-infernal/.cx-terrena/.cx-arkanjerial/.cx-sombria/
+   .cx-carnical/.cx-limbica/.cx-perdicao, etc.) — este módulo só
+   REAPROVEITA .modal-overlay/.modal-box/.modal-actions já
+   definidos em index.html (mesmo padrão de popup usado por
+   Marcos de Corrupção) e soma classes novas prefixadas com
+   "lda-" (Límbica / Dimension / Anomalia), além da variável de
+   cor --cx-c já usada pela Dimensão Límbica (.cx-limbica) para
+   herdar automaticamente o mesmo tom acinzentado.
+   ========================================================== */
+
+/* ---------- caixa do popup (variante sobre .modal-box) ---------- */
+.lda-box{
+  max-width:420px;
+  width:100%;
+  text-align:left;
+  position:relative;
+  overflow:hidden;
+  border-color:var(--cx-c, var(--line));
+  animation:lda-box-in 0.35s ease-out;
+}
+
+@keyframes lda-box-in{
+  0%{opacity:0; transform:scale(0.97) translateX(-2px);}
+  35%{opacity:0.7; transform:scale(1.01) translateX(2px);}
+  55%{opacity:0.85; transform:scale(0.995) translateX(-1px);}
+  100%{opacity:1; transform:scale(1) translateX(0);}
+}
+
+/* linhas de interferência muito discretas, sobre a caixa do popup */
+.lda-box::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:repeating-linear-gradient(
+    to bottom,
+    rgba(200,200,205,0.05) 0px,
+    rgba(200,200,205,0.05) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  opacity:0;
+  animation:lda-scanlines 1.4s ease-out 1;
+}
+@keyframes lda-scanlines{
+  0%{opacity:0.28;}
+  60%{opacity:0.08;}
+  100%{opacity:0;}
+}
+
+.lda-warn{
+  font-family:'Oswald',sans-serif;
+  font-size:11px;
+  letter-spacing:0.14em;
+  text-transform:uppercase;
+  color:var(--cx-c, #8b8f96);
+  margin:0 0 6px;
+}
+
+.lda-title{
+  font-family:'Oswald',sans-serif;
+  font-size:16px;
+  letter-spacing:0.06em;
+  text-transform:uppercase;
+  color:var(--paper);
+  margin:0 0 4px;
+  animation:lda-title-glitch 0.5s ease-out 1;
+}
+@keyframes lda-title-glitch{
+  0%{transform:translateX(0); opacity:0.2;}
+  15%{transform:translateX(-2px); opacity:0.6;}
+  30%{transform:translateX(2px); opacity:0.4;}
+  45%{transform:translateX(-1px); opacity:0.85;}
+  60%{transform:translateX(1px); opacity:0.5;}
+  100%{transform:translateX(0); opacity:1;}
+}
+
+.lda-dim-line{
+  font-size:11px;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  color:var(--sigil);
+  margin:0 0 14px;
+  padding-bottom:12px;
+  border-bottom:1px dashed var(--line);
+}
+.lda-dim-line b{ color:var(--cx-c, var(--paper-dim)); }
+
+.lda-body p{
+  margin:0 0 10px;
+  font-size:12.5px;
+  line-height:1.6;
+  color:var(--paper-dim);
+}
+.lda-body p:last-of-type{ margin-bottom:0; }
+
+.lda-scan{
+  display:block;
+  margin-top:12px;
+  font-family:'Oswald',sans-serif;
+  font-size:10px;
+  letter-spacing:0.08em;
+  color:var(--cx-c, #8b8f96);
+  opacity:0.85;
+  animation:lda-flicker 1.6s steps(1,end) infinite;
+}
+@keyframes lda-flicker{
+  0%,100%{opacity:0.85;}
+  8%{opacity:0.15;}
+  9%{opacity:0.85;}
+  32%{opacity:0.85;}
+  33%{opacity:0.25;}
+  35%{opacity:0.85;}
+  70%{opacity:0.85;}
+  71%{opacity:0.3;}
+  73%{opacity:0.85;}
+}
+
+.lda-actions{
+  display:flex;
+  justify-content:flex-end;
+  margin-top:16px;
+}
+
+.lda-btn-continue{
+  position:relative;
+  font-size:10.5px;
+  padding:9px 16px;
+  border-color:var(--cx-c, var(--amber));
+  animation:lda-btn-pulse 2.2s ease-in-out infinite;
+}
+.lda-btn-continue:hover{
+  border-color:var(--paper);
+  background:rgba(240,230,207,0.08);
+}
+@keyframes lda-btn-pulse{
+  0%,100%{ box-shadow:0 0 0 rgba(139,143,150,0);}
+  50%{ box-shadow:0 0 10px rgba(139,143,150,0.35);}
+}
+
+/* ---------- segunda mensagem curta ("VÍNCULO ACEITO") ---------- */
+.lda-toast{
+  position:fixed;
+  left:50%;
+  bottom:34px;
+  transform:translateX(-50%) translateY(6px);
+  z-index:320;
+  background:var(--panel);
+  border:1px solid var(--cx-c, var(--line));
+  padding:10px 18px;
+  text-align:center;
+  opacity:0;
+  pointer-events:none;
+  animation:lda-toast-inout 1.6s ease-in-out forwards;
+}
+.lda-toast-title{
+  font-family:'Oswald',sans-serif;
+  font-size:11px;
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+  color:var(--cx-c, var(--paper));
+  margin:0 0 2px;
+}
+.lda-toast-sub{
+  font-size:10px;
+  color:var(--sigil);
+  margin:0;
+}
+@keyframes lda-toast-inout{
+  0%{opacity:0; transform:translateX(-50%) translateY(6px);}
+  15%{opacity:1; transform:translateX(-50%) translateY(0);}
+  80%{opacity:1; transform:translateX(-50%) translateY(0);}
+  100%{opacity:0; transform:translateX(-50%) translateY(-4px);}
+}
+
+/* ---------- reação visual discreta no próprio <select> ---------- */
+.combat-dimension-box select.lda-select-anomaly{
+  animation:lda-select-pulse 1.1s ease-in-out infinite;
+  border-bottom-color:#8b8f96;
+}
+@keyframes lda-select-pulse{
+  0%,100%{ text-shadow:0 0 0 rgba(139,143,150,0); }
+  50%{ text-shadow:0 0 6px rgba(139,143,150,0.65); }
+}
+
+@media (max-width:640px){
+  .lda-box{ max-width:94vw; }
+  .lda-title{ font-size:14.5px; }
+}
