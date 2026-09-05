@@ -1349,6 +1349,15 @@
       }
     } catch (e) {
       console.error("[CRIS Campanhas] Falha ao entrar na campanha:", e);
+      console.log("[CRIS Campanhas DIAG] erro real capturado (accept_campaign_invite):", {
+        message: e && e.message,
+        code: e && e.code,
+        details: e && e.details,
+        hint: e && e.hint,
+        status: e && e.status,
+        tokenUsado: JSON.stringify(conviteAtualToken),
+        raw: e
+      });
       if (carregandoEl) carregandoEl.style.display = "none";
       if (actionsEl) actionsEl.style.display = "flex";
       // Convite pode ter deixado de ser válido entre o preview e a
