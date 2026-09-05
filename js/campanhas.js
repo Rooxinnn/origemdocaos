@@ -56,6 +56,7 @@
   // ainda não esteja autenticado.
   (function captureInviteFromHash() {
     var hash = window.location.hash || "";
+    console.log("[CRIS Campanhas DIAG] hash bruto da URL:", JSON.stringify(hash));
     var m = hash.match(/^#campanha=(.+)$/);
     if (!m || !m[1]) return;
     var token = "";
@@ -1258,6 +1259,7 @@
     var client = getClient();
     if (!client) throw new Error("Sem conexão com o Supabase.");
     var res = await client.rpc("get_campaign_invite_info", { p_token: token });
+    console.log("[CRIS Campanhas DIAG] resultado de get_campaign_invite_info:", res);
     if (res.error) throw res.error;
     var rows = res.data;
     if (!rows || rows.length === 0) return null;
@@ -1265,6 +1267,7 @@
   }
 
   async function showInvitePreview(token) {
+    console.log("[CRIS Campanhas DIAG] showInvitePreview chamado com token:", JSON.stringify(token));
     conviteAtualToken = token;
     openInviteModal();
     showInviteModalState("preview");
@@ -1290,6 +1293,14 @@
       $("camp_convite_mestre").textContent = info.master_name ? ("Mestre: " + info.master_name) : "";
     } catch (e) {
       console.error("[CRIS Campanhas] Falha ao buscar convite:", e);
+      console.log("[CRIS Campanhas DIAG] erro real capturado:", {
+        message: e && e.message,
+        code: e && e.code,
+        details: e && e.details,
+        hint: e && e.hint,
+        status: e && e.status,
+        raw: e
+      });
       if (carregandoEl) carregandoEl.style.display = "none";
       clearPendingInviteToken();
       showInviteModalState("invalido");
@@ -1365,6 +1376,7 @@
   // de qualquer aba).
   async function checkPendingInvite() {
     var token = getPendingInviteToken();
+    console.log("[CRIS Campanhas DIAG] token pendente recuperado:", JSON.stringify(token));
     if (!token) return;
     await showInvitePreview(token);
   }
