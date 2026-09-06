@@ -3578,7 +3578,10 @@ async function saveAgent(){
 document.getElementById("btn_save_agent").addEventListener("click", () => { saveAgent(); });
 
 window.addEventListener("beforeunload", (e) => {
-  if(__agentDirty){
+  const foreignDirty = (typeof window.CRISCampaignAgentView === "object" && window.CRISCampaignAgentView && typeof window.CRISCampaignAgentView.isDirty === "function")
+    ? window.CRISCampaignAgentView.isDirty()
+    : false;
+  if(__agentDirty || foreignDirty){
     e.preventDefault();
     e.returnValue = "";
   }
@@ -3596,6 +3599,64 @@ async function loadAgent(sheetId){
   }catch(e){}
   __agentDirty = false;
 }
+
+/* ==========================================================
+   CORREÇÃO (Problema 1) — RECEBER ATUALIZAÇÃO REMOTA (Realtime)
+   NA PRÓPRIA FICHA ABERTA
+   ----------------------------------------------------------------
+   Chamada por js/agents-realtime.js quando chega, via Supabase
+   Realtime, um UPDATE em public.agents cujo id é o mesmo da ficha
+   que o usuário tem aberta agora em #tab-agentes (currentAgentId).
+   É o caminho que faz o JOGADOR ver a alteração feita pelo Mestre
+   (ou por ele mesmo em outro dispositivo) sem F5/reload/reabrir.
+
+   Regras (instruções "CUIDADO COM CAMPOS EDITÁVEIS"/"CONFLITOS"):
+     - se __agentDirty (há edição local ainda não salva), NÃO
+       sobrescreve os campos agora — o sistema de conflito já
+       existente (syncSheetToCloud) vai detectar a divergência de
+       updated_at na próxima vez que o usuário clicar em "Salvar
+       Ficha" e abrir a resolução normalmente. Só avisa, discreto,
+       que há uma versão mais nova esperando;
+     - caso contrário, aplica os campos (exceto o que estiver com
+       foco neste exato momento), atualiza os indicadores derivados
+       e espelha o resultado em disco via
+       CRISSync.recordRemoteSyncForOpenSheet() — para não haver
+       "conflito" falso da próxima vez que o usuário salvar, já que
+       a versão local passa a bater com a da nuvem.
+   ---------------------------------------------------------------- */
+async function applyRemoteAgentUpdateToOpenSheet(row){
+  if(!row || !currentAgentId) return;
+
+  if(__agentDirty){
+    flashIndicator("☁ Esta ficha foi alterada em outro dispositivo — salve para ver as mudanças.", true, 3600);
+    return;
+  }
+
+  const data = (row.data && typeof row.data === "object") ? row.data : {};
+  const focused = document.activeElement;
+  agentFieldIds().forEach(id => {
+    if(focused && focused.id === id) return; // não interrompe uma digitação em andamento
+    if(!(id in data)) return;
+    const el = document.getElementById(id);
+    if(el) el.value = data[id];
+  });
+
+  // Mesmos recálculos que o carregamento normal de ficha já dispara.
+  [updateSAN, updateHP, updateFatigue, updateLevelDisplay, renderProgressao,
+   initAllSkillBaselines, checkHabilidades50Unlock, renderAbortoLimbico].forEach(fn => {
+    if(typeof fn === "function"){ try{ fn(); }catch(e){ /* melhor esforço */ } }
+  });
+
+  if(typeof window.CRISSync === "object" && window.CRISSync && typeof window.CRISSync.recordRemoteSyncForOpenSheet === "function"){
+    await window.CRISSync.recordRemoteSyncForOpenSheet(currentAgentId, row);
+  }
+  if(typeof window.CRISSync === "object" && window.CRISSync && typeof window.CRISSync.refreshBadge === "function"){
+    await window.CRISSync.refreshBadge(currentAgentId);
+  }
+
+  flashIndicator("↻ Ficha atualizada (alterada em outro dispositivo).", false, 2600);
+}
+window.applyRemoteAgentUpdateToOpenSheet = applyRemoteAgentUpdateToOpenSheet;
 
 /* ==========================================================
    MÚLTIPLAS FICHAS — TELA INICIAL / GERENCIADOR
@@ -5032,6 +5093,17 @@ async function crisStartAppIfNeeded(){
       catch(e){ console.error("[C.R.I.S. SyncQueue] Erro ao processar fila após login:", e); }
     }
     console.log("[C.R.I.S. DIAG] 3.4) CRISSyncQueue.onLogin OK");
+    // CORREÇÃO (Problema 1) — Realtime: precisa rodar DEPOIS que
+    // sheetsIndex já está carregado e isolado por conta (senão a
+    // resolução de cloudId/local id, usada para rotear cada evento
+    // recebido, poderia enxergar dados da conta anterior). Não bloqueia
+    // a inicialização se falhar — o app continua funcionando com
+    // sincronização manual, como antes desta correção.
+    if(typeof window.CRISAgentsRealtime === "object" && window.CRISAgentsRealtime && typeof window.CRISAgentsRealtime.start === "function"){
+      try{ await window.CRISAgentsRealtime.start(); }
+      catch(e){ console.error("[C.R.I.S. Realtime] Erro ao iniciar subscription de agents:", e); }
+    }
+    console.log("[C.R.I.S. DIAG] 3.5) CRISAgentsRealtime.start OK");
     // Inventário não é mais carregado aqui: agora pertence a cada ficha e
     // é carregado por loadInventory(id) dentro de openSheet(). Antes de
     // qualquer ficha ser aberta, permanece vazio.
@@ -5086,6 +5158,17 @@ window.crisResetAppState = function () {
   }
   if(typeof window.CRISCreaturesSync === "object" && window.CRISCreaturesSync && typeof window.CRISCreaturesSync.resetOnLogout === "function"){
     window.CRISCreaturesSync.resetOnLogout();
+  }
+  // CORREÇÃO (Problema 1) — Realtime: encerra a subscription da conta que
+  // está saindo (instrução "LOGOUT / TROCA DE CONTA" — nenhum evento
+  // atrasado da Conta A pode alterar fichas/cache/DOM da Conta B).
+  if(typeof window.CRISAgentsRealtime === "object" && window.CRISAgentsRealtime && typeof window.CRISAgentsRealtime.stop === "function"){
+    window.CRISAgentsRealtime.stop();
+  }
+  // Também encerra, defensivamente, o modo "ficha de terceiro" caso o
+  // Mestre faça logout com uma ficha de jogador ainda aberta.
+  if(typeof window.CRISCampaignAgentView === "object" && window.CRISCampaignAgentView && typeof window.CRISCampaignAgentView.exitIfNeeded === "function"){
+    window.CRISCampaignAgentView.exitIfNeeded();
   }
   // ETAPA 6 — interrompe qualquer processamento da fila em andamento e
   // limpa o estado em memória desta aba (NUNCA apaga a fila persistida —
@@ -7183,6 +7266,16 @@ const ORIGINAL_PDF_BASE64 = "JVBERi0xLjYNJeLjz9MNCjIxMTMgMCBvYmoNPDwvRmlsdGVyL0Z
      window.CRISAuth.client) e depois do script principal (reaproveita
      storageGet/storageSet/sheetsIndex/sheetStorageKey()/etc.). -->
 <script src="js/supabase-sync.js"></script>
+<!-- CORREÇÃO (Problema 1 — atualização quase em tempo real): precisa vir
+     depois de js/supabase-auth.js (reaproveita window.CRISAuth.client) e
+     depois de js/supabase-sync.js (reaproveita CRISSync.getCloudIdForLocalSheet/
+     applyCloudRowToLinkedLocalCopy/recordRemoteSyncForOpenSheet). Também
+     reaproveita window.CRISCampaignAgentView (js/campaign-agent-view.js,
+     carregado antes) e window.applyRemoteAgentUpdateToOpenSheet (definida
+     no script principal do index.html) — mas só usa essas referências
+     dentro de funções chamadas depois do carregamento completo da página,
+     então a ordem exata entre estes três não é crítica. -->
+<script src="js/agents-realtime.js"></script>
 <!-- ETAPA 5.2B: precisa vir depois de js/supabase-auth.js (reaproveita
      window.CRISAuth.client), depois do script principal (reaproveita
      storageGet/storageSet/storageDeleteKey/flashIndicator) e depois de

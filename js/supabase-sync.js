@@ -336,6 +336,13 @@
           lastSyncedCloudUpdatedAt: updated.updated_at,
           lastSyncedAt: Date.now(),
         });
+        // Guarda-loop do Realtime (ver js/agents-realtime.js): registra que
+        // este UPDATE foi feito por nós mesmos, para o eco do Realtime
+        // deste mesmo evento ser reconhecido e ignorado, em vez de tratado
+        // como "alteração de outro dispositivo".
+        if (window.CRISAgentsRealtime && typeof window.CRISAgentsRealtime.markSelfWrite === "function") {
+          window.CRISAgentsRealtime.markSelfWrite(updated.id, updated.updated_at);
+        }
         console.log("[CRIS Sync] UPDATE agents concluído");
         console.log("[CRIS Sync] updated_at recebido:", updated.updated_at);
         setBadge("synced");
@@ -378,6 +385,9 @@
         lastSyncedCloudUpdatedAt: inserted.updated_at,
         lastSyncedAt: Date.now(),
       });
+      if (window.CRISAgentsRealtime && typeof window.CRISAgentsRealtime.markSelfWrite === "function") {
+        window.CRISAgentsRealtime.markSelfWrite(inserted.id, inserted.updated_at);
+      }
       setBadge("synced");
       return { ok: true, mode: "insert" };
     } catch (e) {
@@ -417,22 +427,31 @@
     wireBannerButtons({ migrate: true });
   }
 
+  // CORREÇÃO (Problema 2): localCount/cloudOnlyCount recebidos aqui já são
+  // as contagens PENDENTES (não os totais) — ver unlinkedLocalCount() e o
+  // filtro de unlinkedCloud em onLogin(). Cada botão só aparece se houver
+  // algo real daquele tipo para resolver; esta função só é chamada quando
+  // pelo menos um dos dois é > 0 (nunca à toa).
   function renderBothBanner(localCount, cloudOnlyCount) {
     const parts = [];
+    const bits = [];
+    if (localCount > 0) bits.push(localCount + " local(is) sem backup na nuvem");
+    if (cloudOnlyCount > 0) bits.push(cloudOnlyCount + " só na nuvem, sem cópia neste dispositivo");
     parts.push(
-      "<p>Encontramos fichas locais e fichas na nuvem para esta conta " +
-      "(<strong>" + localCount + "</strong> local(is), <strong>" + cloudOnlyCount + "</strong> só na nuvem). " +
+      "<p>Encontramos fichas pendentes de sincronização (" + bits.join(" e ") + "). " +
       "Escolha o que deseja fazer — nenhuma ficha é apagada nesse processo.</p>"
     );
     parts.push('<div class="cloud-sync-banner-actions">');
     if (cloudOnlyCount > 0) {
       parts.push('<button id="cloud_sync_btn_download" class="primary">☁ Carregar fichas da nuvem</button>');
     }
-    parts.push('<button id="cloud_sync_btn_migrate">☁ Migrar fichas locais para a nuvem</button>');
+    if (localCount > 0) {
+      parts.push('<button id="cloud_sync_btn_migrate">☁ Migrar fichas locais para a nuvem</button>');
+    }
     parts.push('<button id="cloud_sync_btn_dismiss">Agora não</button>');
     parts.push("</div>");
     showBanner(parts.join(""));
-    wireBannerButtons({ migrate: true, download: cloudOnlyCount > 0 });
+    wireBannerButtons({ migrate: localCount > 0, download: cloudOnlyCount > 0 });
   }
 
   function wireBannerButtons(opts) {
@@ -554,6 +573,25 @@
     return linked;
   }
 
+  // CORREÇÃO (Problema 2 — aviso de sincronização toda hora): antes, o
+  // Caso 3/4 do onLogin() decidia mostrar a faixa de migração usando a
+  // CONTAGEM TOTAL de fichas locais (window.sheetsIndex.length), sem
+  // considerar quantas delas JÁ estavam vinculadas à nuvem. Resultado:
+  // qualquer usuário que já tivesse feito a migração uma vez (ou nunca
+  // teve fichas 100% locais) via a faixa "Migrar fichas locais para a
+  // nuvem" reaparecer em TODO login, para sempre — mesmo com 0 fichas
+  // realmente pendentes de ação. Esta função conta só as fichas locais
+  // SEM cloudId (as únicas que "Migrar" realmente processaria).
+  async function unlinkedLocalCount() {
+    const entries = Array.isArray(window.sheetsIndex) ? window.sheetsIndex : [];
+    let count = 0;
+    for (const entry of entries) {
+      const meta = await readCloudMeta(entry.id);
+      if (!meta || !meta.cloudId) count++;
+    }
+    return count;
+  }
+
   // ETAPA 7.1: aceita opcionalmente a geração capturada no início do
   // fluxo que chamou esta função (onLogin()). Quando não informada
   // (chamada a partir do botão da faixa de migração, fora do fluxo de
@@ -666,6 +704,39 @@
      do usuário, e esta função nunca decide sozinha qual versão
      prevalece.
      ============================================================ */
+  // Aplica UM registro da nuvem já atualizado (cloudAgent) sobre a cópia
+  // local já vinculada (entry, um item de window.sheetsIndex). Extraído de
+  // refreshLinkedCloudAgents() (Etapa 2.2) para ser reaproveitado também
+  // pelo Realtime (ver applyCloudRowToLinkedLocalCopy() logo abaixo) sem
+  // duplicar a lógica de gravação local/cloudMeta/índice. NÃO decide
+  // conflito nem verifica updated_at — quem chama já garantiu isso.
+  async function applyCloudAgentToLocalEntry(entry, cloudAgent) {
+    const cloudData = (cloudAgent.data && typeof cloudAgent.data === "object") ? cloudAgent.data : {};
+    const inventario = Array.isArray(cloudData.inventario) ? cloudData.inventario : [];
+    const agentData = Object.assign({}, cloudData);
+    delete agentData.inventario;
+    delete agentData.localSheetId;
+
+    const okSheet = await window.storageSet(window.sheetStorageKey(entry.id), JSON.stringify(agentData), 1, true);
+    if (!okSheet) return false;
+
+    // Mantém o Inventário local igual ao que veio junto da ficha na
+    // nuvem (instrução 8 — mesma arquitetura já usada no download
+    // inicial), inclusive quando ficou vazio.
+    await window.storageSet(window.inventoryStorageKey(entry.id), JSON.stringify(inventario), 1, true);
+
+    await writeCloudMeta(entry.id, {
+      cloudId: cloudAgent.id,
+      lastSyncedCloudUpdatedAt: cloudAgent.updated_at,
+      lastSyncedAt: Date.now(),
+    });
+
+    const nome = (agentData.nome || "").trim() || cloudAgent.name || "Ficha sem nome";
+    entry.nome = nome;
+    entry.updatedAt = Date.now();
+    return true;
+  }
+
   async function refreshLinkedCloudAgents(cloudAgents, genAtLogin) {
     const gen = (typeof genAtLogin === "number") ? genAtLogin : currentGeneration();
     const entries = Array.isArray(window.sheetsIndex) ? window.sheetsIndex.slice() : [];
@@ -683,34 +754,11 @@
 
       if (cloudAgent.updated_at === meta.lastSyncedCloudUpdatedAt) continue; // já em dia
 
-      const cloudData = (cloudAgent.data && typeof cloudAgent.data === "object") ? cloudAgent.data : {};
-      const inventario = Array.isArray(cloudData.inventario) ? cloudData.inventario : [];
-      const agentData = Object.assign({}, cloudData);
-      delete agentData.inventario;
-      delete agentData.localSheetId;
-
       try {
         if (gen !== currentGeneration()) { logGenStale("refreshLinkedCloudAgents (antes de gravar ficha)"); break; }
-        const okSheet = await window.storageSet(window.sheetStorageKey(entry.id), JSON.stringify(agentData), 1, true);
-        if (!okSheet) continue;
-
-        if (gen !== currentGeneration()) { logGenStale("refreshLinkedCloudAgents (antes de gravar inventário)"); break; }
-        // Mantém o Inventário local igual ao que veio junto da ficha na
-        // nuvem (instrução 8 — mesma arquitetura já usada no download
-        // inicial), inclusive quando ficou vazio.
-        await window.storageSet(window.inventoryStorageKey(entry.id), JSON.stringify(inventario), 1, true);
-
-        if (gen !== currentGeneration()) { logGenStale("refreshLinkedCloudAgents (antes de gravar cloudMeta)"); break; }
-        await writeCloudMeta(entry.id, {
-          cloudId: cloudAgent.id,
-          lastSyncedCloudUpdatedAt: cloudAgent.updated_at,
-          lastSyncedAt: Date.now(),
-        });
-
-        if (gen !== currentGeneration()) { logGenStale("refreshLinkedCloudAgents (antes de atualizar índice)"); break; }
-        const nome = (agentData.nome || "").trim() || cloudAgent.name || "Ficha sem nome";
-        entry.nome = nome;
-        entry.updatedAt = Date.now();
+        const ok = await applyCloudAgentToLocalEntry(entry, cloudAgent);
+        if (!ok) continue;
+        if (gen !== currentGeneration()) { logGenStale("refreshLinkedCloudAgents (pós-gravação)"); break; }
         console.log("[CRIS Sync] ficha atualizada da nuvem:", entry.id);
         updated++;
       } catch (e) {
@@ -727,6 +775,83 @@
       await window.saveSheetsIndex();
     }
     return { updated: updated };
+  }
+
+  /* ============================================================
+     REALTIME — SUPORTE (ver js/agents-realtime.js)
+     ------------------------------------------------------------
+     Este arquivo continua sendo o ÚNICO dono do formato de
+     agente:sheet:<id>:cloudsync e do sheetsIndex; js/agents-realtime.js
+     nunca lê/escreve essas chaves diretamente — só chama as duas
+     funções abaixo.
+     ============================================================ */
+
+  // Chamada quando chega, via Realtime, um UPDATE de um agente que este
+  // dispositivo já tem localmente vinculado (agente:sheet:...:cloudsync)
+  // mas que NÃO é a ficha aberta agora (currentAgentId aponta para outra
+  // coisa, ou nenhuma). Mantém o cache local em dia silenciosamente —
+  // instrução "FICHA NÃO ABERTA": não há tela para atualizar, mas o
+  // cache não pode envelhecer. Ignora fichas em conflito (o usuário
+  // ainda precisa decidir) e nunca sobrescreve nada se este dispositivo
+  // não tiver nenhuma cópia local desse agente.
+  async function applyCloudRowToLinkedLocalCopy(cloudRow) {
+    if (!cloudRow || !cloudRow.id) return false;
+    const localId = await getLocalSheetIdForCloudId(cloudRow.id);
+    if (!localId) return false; // este dispositivo não tem cópia local deste agente
+
+    const meta = await readCloudMeta(localId);
+    if (meta && meta.conflict) return false; // conflito pendente — não decide sozinho
+    if (meta && meta.lastSyncedCloudUpdatedAt === cloudRow.updated_at) return false; // já em dia
+
+    const entries = Array.isArray(window.sheetsIndex) ? window.sheetsIndex : [];
+    const entry = entries.find((e) => e.id === localId);
+    if (!entry) return false;
+
+    try {
+      const ok = await applyCloudAgentToLocalEntry(entry, cloudRow);
+      if (ok && typeof window.saveSheetsIndex === "function") await window.saveSheetsIndex();
+      return ok;
+    } catch (e) {
+      logSyncError("Falha ao aplicar atualização Realtime na cópia local '" + localId + "'", e);
+      return false;
+    }
+  }
+
+  // Chamada pelo script principal (index.html) depois de aplicar, EM
+  // MEMÓRIA (nos próprios campos de #tab-agentes), um UPDATE recebido via
+  // Realtime para a ficha que está aberta agora — grava o mesmo resultado
+  // em disco (storageSet) e atualiza o cloudMeta, para que um F5 logo
+  // depois não mostre a versão antiga nem um "conflito" falso na próxima
+  // vez que o usuário clicar em "Salvar Ficha" (o updated_at local passa
+  // a bater com o da nuvem). NÃO reenvia nada ao Supabase — é só um
+  // espelhamento local do que já chegou pronto.
+  async function recordRemoteSyncForOpenSheet(localId, cloudRow) {
+    if (!localId || !cloudRow || !cloudRow.id) return false;
+    const cloudData = (cloudRow.data && typeof cloudRow.data === "object") ? cloudRow.data : {};
+    const inventario = Array.isArray(cloudData.inventario) ? cloudData.inventario : [];
+    const agentData = Object.assign({}, cloudData);
+    delete agentData.inventario;
+    delete agentData.localSheetId;
+    try {
+      await window.storageSet(window.sheetStorageKey(localId), JSON.stringify(agentData), 1, true);
+      await window.storageSet(window.inventoryStorageKey(localId), JSON.stringify(inventario), 1, true);
+      await writeCloudMeta(localId, {
+        cloudId: cloudRow.id,
+        lastSyncedCloudUpdatedAt: cloudRow.updated_at,
+        lastSyncedAt: Date.now(),
+      });
+      const entries = Array.isArray(window.sheetsIndex) ? window.sheetsIndex : [];
+      const entry = entries.find((e) => e.id === localId);
+      if (entry) {
+        entry.nome = (agentData.nome || "").trim() || cloudRow.name || "Ficha sem nome";
+        entry.updatedAt = Date.now();
+        if (typeof window.saveSheetsIndex === "function") await window.saveSheetsIndex();
+      }
+      return true;
+    } catch (e) {
+      logSyncError("Falha ao gravar localmente atualização Realtime da ficha aberta '" + localId + "'", e);
+      return false;
+    }
   }
 
   /* ============================================================
@@ -1156,15 +1281,32 @@
       return;
     }
 
-    if (cloudCount === 0 && localCount > 0) {
-      if (genAtLogin !== currentGeneration()) { logGenStale("onLogin (pré-faixa, Caso 3)"); return; }
-      renderMigrateOnlyBanner(localCount); // Caso 3
+    // CORREÇÃO (Problema 2): a partir daqui, "há algo para o usuário
+    // decidir" só é verdade se existir de fato uma ficha LOCAL sem
+    // vínculo com a nuvem (precisa de "Migrar") ou uma ficha na NUVEM
+    // sem cópia local neste dispositivo (precisa de "Carregar"). Fichas
+    // já sincronizadas nos dois lados (a grande maioria, no dia a dia)
+    // não geram nenhum aviso — silêncio é o padrão pedido.
+    const pendingLocal = await unlinkedLocalCount();
+    if (genAtLogin !== currentGeneration()) { logGenStale("onLogin (unlinkedLocalCount)"); return; }
+
+    if (pendingLocal === 0 && unlinkedCloud.length === 0) {
+      // Tudo já sincronizado nos dois sentidos — nada a perguntar.
       return;
     }
 
-    // Caso 4 — cloud > 0 e local > 0: nunca decide sozinho.
+    if (cloudCount === 0 && localCount > 0) {
+      if (pendingLocal === 0) return; // fichas locais já eram todas de outra sincronização — nada pendente
+      renderMigrateOnlyBanner(pendingLocal); // Caso 3
+      return;
+    }
+
+    // Caso 4 — cloud > 0 e local > 0, e existe pelo menos um lado
+    // realmente pendente (verificado acima). Nunca decide sozinho.
     if (genAtLogin !== currentGeneration()) { logGenStale("onLogin (pré-faixa, Caso 4)"); return; }
-    renderBothBanner(localCount, unlinkedCloud.length);
+    if (pendingLocal > 0 || unlinkedCloud.length > 0) {
+      renderBothBanner(pendingLocal, unlinkedCloud.length);
+    }
   }
 
   // ETAPA 7.1 — chamado a partir de window.crisResetAppState() (logout),
@@ -1197,6 +1339,9 @@
     openConflictResolution: openConflictResolution,
     getCloudIdForLocalSheet: getCloudIdForLocalSheet,
     getLocalSheetIdForCloudId: getLocalSheetIdForCloudId,
+    // usados por js/agents-realtime.js — ver comentário na seção "REALTIME — SUPORTE" acima
+    applyCloudRowToLinkedLocalCopy: applyCloudRowToLinkedLocalCopy,
+    recordRemoteSyncForOpenSheet: recordRemoteSyncForOpenSheet,
   };
 
   wireConflictModals();

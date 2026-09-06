@@ -53,7 +53,31 @@
   // de ficha de terceiro está aberta.
   var __foreignActive = false;
   var __foreignAgentId = null;
+  var __foreignAgentName = null;
   var __restoreAgentId = null;
+
+  /* ============================================================
+     CORREÇÃO — AUTOSAVE DA FICHA DE TERCEIRO (Problema 1)
+     ------------------------------------------------------------
+     Antes desta correção, a única forma de gravar a edição do
+     Mestre era o clique manual em "Salvar Alterações". Isso não
+     violava a arquitetura (o UPDATE direto em public.agents já
+     descrito acima continua sendo o único caminho de escrita),
+     mas exigia uma ação manual — o que não funciona bem no celular
+     e não dá a sensação "quase em tempo real" pedida.
+
+     __foreignDirty rastreia se HÁ edição do Mestre ainda não
+     confirmada no Supabase desde a última aplicação de uma
+     atualização remota — usado para nunca sobrescrever
+     silenciosamente uma edição do Mestre ainda não salva quando uma
+     atualização remota (de outro dispositivo do mesmo jogador,
+     por exemplo) chegar via Realtime enquanto o Mestre edita.
+     ============================================================ */
+  var __foreignDirty = false;
+  var __foreignSaveInFlight = false; // evita saves concorrentes (autosave x clique manual), mesmo padrão de __agentSaveInFlight
+  var __foreignSaveDebounced = null; // criado sob demanda (precisa de window.debounce)
+
+  function isForeignDirty() { return __foreignActive && __foreignDirty; }
 
   function clearFields() {
     if (typeof window.agentFieldIds !== "function") return;
@@ -82,10 +106,15 @@
     });
   }
 
+  function foreignBannerBaseText(nome) {
+    return "Editando ficha de " + nome + " como Mestre — as alterações são salvas direto nesta ficha (nunca cria uma cópia).";
+  }
+
   function showBanner(nome) {
+    __foreignAgentName = nome;
     var banner = $("cris_foreign_banner");
     var text = $("cris_foreign_banner_text");
-    if (text) text.textContent = "Editando ficha de " + nome + " como Mestre — as alterações são salvas direto nesta ficha (nunca cria uma cópia).";
+    if (text) text.textContent = foreignBannerBaseText(nome);
     if (banner) banner.style.display = "flex";
     var capture = $("agent-sheet-capture");
     if (capture) capture.classList.add("cris-foreign-readonly");
@@ -109,6 +138,8 @@
     if (!__foreignActive) return;
     __foreignActive = false;
     __foreignAgentId = null;
+    __foreignAgentName = null;
+    __foreignDirty = false;
     hideBanner();
     var btnSave = $("btn_save_agent");
     if (btnSave) btnSave.style.display = "";
@@ -185,15 +216,41 @@
      de saneamento que saveAgent() já faz (checkHabilidades50Unlock
      e o teto de SAN Atual pela SAN Máxima) para não divergir do
      comportamento normal de salvar uma ficha.
+
+     CORREÇÃO (autosave): agora aceita ser chamada tanto pelo clique
+     manual em "Salvar Alterações" (isAutosave=false — comportamento
+     idêntico ao de antes, com botão desabilitado e toast de
+     sucesso/erro) quanto pelo debounce do autosave (isAutosave=true
+     — não desabilita o botão nem mostra um toast a cada salvamento
+     silencioso; só o texto discreto do próprio banner muda para
+     "Salvando…"/"Salvo"). Erros SEMPRE aparecem, nos dois modos —
+     nunca falham silenciosamente.
      ------------------------------------------------------------ */
-  async function saveForeignAgentSheet() {
+  async function saveForeignAgentSheet(isAutosave) {
     if (!__foreignActive || !__foreignAgentId) return;
+    if (__foreignSaveInFlight) {
+      // Já existe um salvamento em andamento (autosave ou clique manual):
+      // não dispara um segundo em paralelo. Como o debounce só chama esta
+      // função depois de ~700ms sem edição, o próprio __foreignDirty
+      // (marcado a cada tecla) garante que a próxima chamada tentará de
+      // novo assim que o salvamento atual terminar, se ainda houver
+      // edição pendente — nenhuma alteração fica perdida silenciosamente.
+      return;
+    }
     var client = getClient();
     if (!client) return;
+    __foreignSaveInFlight = true;
 
+    var agentIdAtSaveStart = __foreignAgentId; // protege contra "Voltar"/trocar de ficha no meio do salvamento
     var btn = $("cris_foreign_banner_salvar");
     var originalLabel = btn ? btn.textContent : null;
-    if (btn) { btn.disabled = true; btn.textContent = "Salvando…"; }
+    var textEl = $("cris_foreign_banner_text");
+
+    if (isAutosave) {
+      if (textEl) textEl.textContent = "Salvando…";
+    } else {
+      if (btn) { btn.disabled = true; btn.textContent = "Salvando…"; }
+    }
 
     try {
       if (typeof window.checkHabilidades50Unlock === "function") window.checkHabilidades50Unlock();
@@ -216,10 +273,39 @@
       var upd = await client
         .from("agents")
         .update({ name: nomeFicha, data: data, updated_at: new Date().toISOString() })
-        .eq("id", __foreignAgentId);
+        .eq("id", agentIdAtSaveStart)
+        .select("id,updated_at")
+        .single();
       if (upd.error) throw upd.error;
 
-      if (typeof window.flashIndicator === "function") {
+      // Se o Mestre saiu da ficha (ou abriu outra) enquanto o UPDATE estava
+      // em voo, não mexe mais em nenhum estado/UI desta ficha antiga.
+      if (__foreignAgentId !== agentIdAtSaveStart) return;
+
+      // Registra este próprio UPDATE no guarda-loop do Realtime (ver
+      // js/agents-realtime.js): quando o evento Realtime deste mesmo
+      // UPDATE chegar de volta (o Supabase notifica também quem
+      // escreveu), ele é reconhecido como eco e ignorado — nunca tratado
+      // como uma nova alteração remota de terceiro.
+      if (window.CRISAgentsRealtime && typeof window.CRISAgentsRealtime.markSelfWrite === "function") {
+        window.CRISAgentsRealtime.markSelfWrite(upd.data.id, upd.data.updated_at);
+      }
+
+      __foreignDirty = false;
+
+      if (isAutosave) {
+        if (textEl) {
+          textEl.textContent = "Salvo.";
+          setTimeout(function () {
+            // só restaura o texto padrão se ainda estivermos na mesma ficha
+            // e nenhuma outra mensagem transitória (ex.: atualização remota
+            // chegada nesse meio-tempo) já tiver substituído esta.
+            if (__foreignActive && __foreignAgentId === agentIdAtSaveStart && textEl.textContent === "Salvo." && __foreignAgentName) {
+              textEl.textContent = foreignBannerBaseText(__foreignAgentName);
+            }
+          }, 1800);
+        }
+      } else if (typeof window.flashIndicator === "function") {
         window.flashIndicator("✓ Ficha salva com sucesso!", false, 2500);
       }
     } catch (e) {
@@ -227,8 +313,98 @@
       if (typeof window.flashIndicator === "function") {
         window.flashIndicator("✕ Não foi possível salvar: " + (e && e.message ? e.message : "erro desconhecido"), true, 3000);
       }
+      if (isAutosave && textEl) textEl.textContent = "Erro ao salvar — tentando de novo em breve.";
     } finally {
-      if (btn) { btn.disabled = false; btn.textContent = originalLabel; }
+      if (!isAutosave && btn) { btn.disabled = false; btn.textContent = originalLabel; }
+      __foreignSaveInFlight = false;
+      // Se chegou edição nova enquanto este salvamento estava em voo (ou o
+      // salvamento falhou e __foreignDirty nunca foi zerado), garante que
+      // não fica "esquecida" sem tentar de novo — reagenda o autosave.
+      if (__foreignActive && __foreignDirty) getForeignSaveDebounced()();
+    }
+  }
+
+  /* ------------------------------------------------------------
+     AUTOSAVE — dispara saveForeignAgentSheet(true) depois de um
+     debounce curto (700ms) sem novas edições, exatamente como
+     pedido ("aguarda ~500-1000ms sem nova alteração"). Reaproveita
+     a função debounce() já definida globalmente pelo script
+     principal do index.html (window.debounce) — nenhuma segunda
+     implementação de debounce é criada.
+     ------------------------------------------------------------ */
+  function getForeignSaveDebounced() {
+    if (!__foreignSaveDebounced) {
+      var fn = (typeof window.debounce === "function")
+        ? window.debounce(function () { saveForeignAgentSheet(true); }, 700)
+        : function () { saveForeignAgentSheet(true); }; // fallback defensivo — nunca deveria faltar
+      __foreignSaveDebounced = fn;
+    }
+    return __foreignSaveDebounced;
+  }
+
+  /* ------------------------------------------------------------
+     Ouve input/change dentro de #tab-agentes SOMENTE enquanto o
+     modo "ficha de terceiro" está ativo — um listener PRÓPRIO,
+     paralelo ao listener delegado já existente no script principal
+     (que continua marcando __agentDirty normalmente para a ficha do
+     PRÓPRIO Mestre; não é tocado por este arquivo). Não usa
+     dispatchEvent em nenhum lugar deste módulo, então atualizações
+     remotas aplicadas via applyRemoteUpdate() (que só faz
+     el.value = ...) nunca disparam este listener — sem risco do
+     loop "salva -> Realtime -> recebe -> salva de novo" descrito no
+     prompt.
+     ------------------------------------------------------------ */
+  function wireForeignAutosave() {
+    var panel = $("tab-agentes");
+    if (!panel) return;
+    function onEdit(e) {
+      if (!__foreignActive) return;
+      if (!e.target || !e.target.matches || !e.target.matches("input, textarea, select")) return;
+      __foreignDirty = true;
+      getForeignSaveDebounced()();
+    }
+    panel.addEventListener("input", onEdit);
+    panel.addEventListener("change", onEdit);
+  }
+
+  /* ------------------------------------------------------------
+     RECEBER ATUALIZAÇÃO REMOTA (Realtime) enquanto o Mestre está
+     vendo esta MESMA ficha de terceiro — chamado por
+     js/agents-realtime.js quando chega um UPDATE em public.agents
+     cujo id é o __foreignAgentId atual.
+
+     Regras (instruções "CUIDADO COM CAMPOS EDITÁVEIS"/"CONFLITOS"):
+       - se o Mestre tem uma edição própria ainda não salva aqui
+         (__foreignDirty), NÃO sobrescreve nada agora — o próprio
+         autosave, ao rodar em seguida, vai fazer um UPDATE que
+         sobrescreve com a versão do Mestre (é o comportamento já
+         aceito hoje, sem lock otimista nesta ficha específica —
+         documentado no relatório como risco residual do Caso D);
+       - caso contrário, aplica os campos exceto o que estiver com
+         foco neste exato momento (evita interromper uma digitação
+         em andamento mesmo que ainda não tenha marcado dirty).
+     ------------------------------------------------------------ */
+  function applyRemoteUpdate(row) {
+    if (!__foreignActive || !row || row.id !== __foreignAgentId) return;
+    if (__foreignDirty) return; // não sobrescreve edição do Mestre ainda não salva
+
+    var data = (row.data && typeof row.data === "object") ? row.data : {};
+    var focused = document.activeElement;
+    Object.keys(data).forEach(function (id) {
+      if (focused && focused.id === id) return; // não mexe no campo em edição agora
+      var el = $(id);
+      if (el) el.value = data[id];
+    });
+    refreshDerivedDisplays();
+
+    var textEl = $("cris_foreign_banner_text");
+    if (textEl) {
+      textEl.textContent = "Ficha atualizada (alterada em outro dispositivo).";
+      setTimeout(function () {
+        if (__foreignActive && __foreignAgentId === row.id && __foreignAgentName && textEl.textContent.indexOf("Ficha atualizada") === 0) {
+          textEl.textContent = foreignBannerBaseText(__foreignAgentName);
+        }
+      }, 2600);
     }
   }
 
@@ -261,9 +437,10 @@
       });
     }
     var salvarBtn = $("cris_foreign_banner_salvar");
-    if (salvarBtn) salvarBtn.addEventListener("click", saveForeignAgentSheet);
+    if (salvarBtn) salvarBtn.addEventListener("click", function () { saveForeignAgentSheet(false); });
 
     wireAutoExitOnOtherTabs();
+    wireForeignAutosave();
   }
 
   if (document.readyState === "loading") {
@@ -276,5 +453,10 @@
     open: openForeignAgentSheet,
     exitIfNeeded: exitForeignModeIfNeeded,
     isActive: function () { return __foreignActive; },
+    // usados por js/agents-realtime.js para rotear um evento de UPDATE
+    // recebido do Supabase até esta ficha de terceiro (quando aplicável).
+    currentForeignId: function () { return __foreignActive ? __foreignAgentId : null; },
+    applyRemoteUpdate: applyRemoteUpdate,
+    isDirty: isForeignDirty,
   };
 })();
