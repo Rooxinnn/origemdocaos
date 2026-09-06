@@ -113,13 +113,28 @@
     return pill;
   }
 
-  // Capa gerada só em CSS (ver comentário em css/campanhas.css) — mostra
-  // a contagem de participantes e o status como um selo de arquivo.
-  // Não recebe/usa nenhum dado de imagem: quando/se uma coluna de capa
-  // existir em campaigns, basta trocar este conteúdo por uma <img>.
-  function buildCapaEl(status, participantCount) {
+  // Capa da campanha. Se houver imageUrl (campaigns.image_url),
+  // mostra a imagem real por baixo do selo/badge (via CSS, .camp-capa
+  // vira position:relative e a <img> preenche o espaço, z-index
+  // abaixo do badge/pill). Sem imageUrl, mantém o fallback 100% CSS
+  // que já existia (textura + "ARQUIVO"), sem imagem quebrada/vazio.
+  function buildCapaEl(status, participantCount, imageUrl) {
     var capa = document.createElement("div");
-    capa.className = "camp-capa";
+    capa.className = "camp-capa" + (imageUrl ? " camp-capa--tem-imagem" : "");
+    if (imageUrl) {
+      var img = document.createElement("img");
+      img.className = "camp-capa-img";
+      img.src = imageUrl;
+      img.alt = "";
+      img.loading = "lazy";
+      // Se a URL falhar (arquivo removido, etc.), cai de volta pro
+      // visual 100% CSS em vez de mostrar ícone de imagem quebrada.
+      img.onerror = function () {
+        capa.classList.remove("camp-capa--tem-imagem");
+        if (img.parentNode) img.parentNode.removeChild(img);
+      };
+      capa.appendChild(img);
+    }
     if (participantCount !== null && participantCount !== undefined) {
       var badge = document.createElement("span");
       badge.className = "camp-capa-badge";
@@ -192,7 +207,7 @@
     // "Capa" do arquivo (item 6) — decorativa, mostra de relance status +
     // total de participantes (mestre + jogadores) sem precisar abrir a
     // campanha.
-    card.appendChild(buildCapaEl(campaign.status, memberCount + 1));
+    card.appendChild(buildCapaEl(campaign.status, memberCount + 1, campaign.image_url));
 
     const info = document.createElement("div");
     info.className = "camp-card-info camp-card-body";
@@ -203,44 +218,44 @@
 
     const meta = document.createElement("p");
     meta.className = "camp-card-meta";
-    const jogadoresTxt = memberCount === 1 ? "1 jogador" : memberCount + " jogadores";
-    meta.textContent = "Mestre: " + mestreLabel + " · " + jogadoresTxt;
-
-    const dataEl = document.createElement("p");
-    dataEl.className = "camp-card-date";
     const criada = formatDatePtBr(campaign.created_at);
-    if (criada) dataEl.textContent = "Iniciada em " + criada;
+    const papel = isMestre ? "Mestre" : "Jogador";
+    meta.textContent = (criada ? "Iniciada em " + criada + " · " : "") + papel;
 
-    info.appendChild(name);
-    info.appendChild(meta);
-    if (criada) info.appendChild(dataEl);
+    // Título/meta à esquerda, "Acessar" à direita — mesma linha, no
+    // espírito da referência enviada (card com CTA alinhado ao rodapé).
+    const linha = document.createElement("div");
+    linha.className = "camp-card-linha";
+
+    const textos = document.createElement("div");
+    textos.className = "camp-card-textos";
+    textos.appendChild(name);
+    textos.appendChild(meta);
 
     const abrirBtn = document.createElement("button");
     abrirBtn.className = "camp-btn-primary";
     abrirBtn.textContent = "Acessar";
     abrirBtn.addEventListener("click", () => openCampaignLinkView(campaign));
 
+    linha.appendChild(textos);
+    linha.appendChild(abrirBtn);
+    info.appendChild(linha);
+
     card.appendChild(info);
 
-    // FASE F.3 — Abrir/Excluir agrupados num wrapper próprio, em vez de
-    // soltos direto no card, para controlar alinhamento e permitir que
-    // a Fase F.5 (responsividade) os empilhe como um grupo só.
-    const actions = document.createElement("div");
-    actions.className = "camp-card-actions";
-    actions.appendChild(abrirBtn);
-
-    // Excluir campanha — só o Mestre (dono) vê esta opção. Jogadores
-    // comuns saem pela própria tela da campanha ("Sair da Campanha"),
-    // nunca excluem a campanha em si.
+    // FASE F.3 — Excluir fica numa linha discreta abaixo (só Mestre),
+    // separada da ação principal para não competir com "Acessar".
     if (isMestre) {
+      const actions = document.createElement("div");
+      actions.className = "camp-card-actions";
       const excluirBtn = document.createElement("button");
       excluirBtn.className = "entry-del";
       excluirBtn.textContent = "Excluir";
       excluirBtn.addEventListener("click", () => openDeleteCampanhaModal(campaign));
       actions.appendChild(excluirBtn);
+      card.appendChild(actions);
     }
 
-    card.appendChild(actions);
     return card;
   }
 
@@ -357,7 +372,7 @@
     try {
       const { data, error } = await client
         .from("campaigns")
-        .select("id,owner_id,name,description,invite_token,status,created_at")
+        .select("id,owner_id,name,description,invite_token,status,created_at,image_url")
         .order("created_at", { ascending: false });
       if (error) throw error;
 
@@ -402,7 +417,7 @@
     const capaSlot = $("camp_link_capa");
     if (capaSlot) {
       capaSlot.innerHTML = "";
-      capaSlot.appendChild(buildCapaEl(campaign.status, null));
+      capaSlot.appendChild(buildCapaEl(campaign.status, null, campaign.image_url));
     }
     const criadaEl = $("camp_link_criada_em");
     if (criadaEl) {
@@ -472,8 +487,174 @@
     $("camp_editar_descricao").value = currentCampaign.description || "";
     const erroEl = $("camp_editar_erro");
     if (erroEl) erroEl.style.display = "none";
+    atualizarCapaEditarPreview();
     const modal = $("camp_editar_modal");
     if (modal) modal.style.display = "flex";
+  }
+
+  /* ============================================================
+     CAPA DA CAMPANHA — upload/remoção (só Mestre)
+     ------------------------------------------------------------
+     Guardada no Supabase Storage (bucket "campaign-covers", criado
+     na migration 0007), nunca em Base64 dentro de campaigns. Só
+     campaigns.image_url é gravado (a URL pública do arquivo).
+     Redimensiona/comprime no cliente antes do upload (mesmo
+     espírito de js/character-image.js), sem editor de imagem
+     complexo — só reduz o lado maior e reexporta em JPEG.
+     ============================================================ */
+  var CAPA_ACCEPTED_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+  var CAPA_MAX_BYTES = 8 * 1024 * 1024; // 8MB antes de comprimir
+  var CAPA_MAX_DIMENSION = 1280;
+  var CAPA_JPEG_QUALITY = 0.85;
+
+  function atualizarCapaEditarPreview() {
+    const img = $("camp_editar_capa_img");
+    const vazio = $("camp_editar_capa_vazio");
+    const btnRemover = $("camp_editar_capa_remover");
+    const btnAlterar = $("camp_editar_capa_alterar");
+    const temCapa = !!(currentCampaign && currentCampaign.image_url);
+    if (img) {
+      img.src = temCapa ? currentCampaign.image_url : "";
+      img.style.display = temCapa ? "block" : "none";
+    }
+    if (vazio) vazio.style.display = temCapa ? "none" : "block";
+    if (btnRemover) btnRemover.style.display = temCapa ? "inline-block" : "none";
+    if (btnAlterar) btnAlterar.textContent = temCapa ? "Alterar Capa" : "+ Adicionar Capa";
+  }
+
+  function capaStatus(msg, isErro) {
+    const el = $("camp_editar_capa_status");
+    if (!el) return;
+    if (!msg) { el.style.display = "none"; el.textContent = ""; return; }
+    el.textContent = msg;
+    el.style.display = "block";
+    el.style.color = isErro ? "var(--danger, #c0392b)" : "";
+  }
+
+  // Redimensiona/comprime a imagem escolhida no <canvas> e devolve um
+  // Blob JPEG pronto para upload (mesma técnica de js/character-image.js,
+  // adaptada para capa — imagem maior, formato de saída único).
+  function resizeImageFile(file) {
+    return new Promise(function (resolve, reject) {
+      const reader = new FileReader();
+      reader.onerror = function () { reject(new Error("Falha ao ler o arquivo.")); };
+      reader.onload = function () {
+        const img = new Image();
+        img.onerror = function () { reject(new Error("Arquivo de imagem inválido.")); };
+        img.onload = function () {
+          let w = img.naturalWidth, h = img.naturalHeight;
+          if (w <= 0 || h <= 0) { reject(new Error("Imagem inválida.")); return; }
+          if (Math.max(w, h) > CAPA_MAX_DIMENSION) {
+            const scale = CAPA_MAX_DIMENSION / Math.max(w, h);
+            w = Math.round(w * scale);
+            h = Math.round(h * scale);
+          }
+          const canvas = document.createElement("canvas");
+          canvas.width = w; canvas.height = h;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, w, h);
+          canvas.toBlob(function (blob) {
+            if (!blob) { reject(new Error("Falha ao processar a imagem.")); return; }
+            resolve(blob);
+          }, "image/jpeg", CAPA_JPEG_QUALITY);
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function uploadCampaignCover(file) {
+    if (!currentCampaign || !isCurrentUserMaster()) return;
+    if (CAPA_ACCEPTED_TYPES.indexOf(file.type) === -1) {
+      capaStatus("Formato não suportado. Use JPG, PNG ou WEBP.", true);
+      return;
+    }
+    if (file.size > CAPA_MAX_BYTES) {
+      capaStatus("Arquivo muito grande (máx. 8MB).", true);
+      return;
+    }
+    const client = getClient();
+    if (!client) { capaStatus("Sem conexão com o Supabase.", true); return; }
+
+    capaStatus("Enviando capa…", false);
+    try {
+      const blob = await resizeImageFile(file);
+      const path = currentCampaign.id + "/capa.jpg";
+      const { error: upErr } = await client.storage
+        .from("campaign-covers")
+        .upload(path, blob, { contentType: "image/jpeg", upsert: true });
+      if (upErr) throw upErr;
+
+      const { data: pub } = client.storage.from("campaign-covers").getPublicUrl(path);
+      // Cache-busting simples: a Storage Policy permite upsert no mesmo
+      // path, mas o navegador (e outros jogadores) podem ter a URL
+      // antiga em cache — um parâmetro de versão evita capa "presa".
+      const urlComVersao = pub && pub.publicUrl
+        ? pub.publicUrl + "?v=" + Date.now()
+        : null;
+      if (!urlComVersao) throw new Error("Falha ao obter URL pública da capa.");
+
+      const { data: updated, error: dbErr } = await client
+        .from("campaigns")
+        .update({ image_url: urlComVersao, updated_at: new Date().toISOString() })
+        .eq("id", currentCampaign.id)
+        .select("id,owner_id,name,description,invite_token,status,created_at,image_url")
+        .single();
+      if (dbErr) throw dbErr;
+
+      currentCampaign = updated;
+      atualizarCapaEditarPreview();
+      const capaSlot = $("camp_link_capa");
+      if (capaSlot) {
+        capaSlot.innerHTML = "";
+        capaSlot.appendChild(buildCapaEl(updated.status, null, updated.image_url));
+      }
+      capaStatus("Capa atualizada!", false);
+      if (typeof window.flashIndicator === "function") window.flashIndicator("Capa da campanha atualizada!");
+    } catch (e) {
+      console.error("[CRIS Campanhas] Falha ao enviar capa:", e);
+      capaStatus("Falha ao enviar capa: " + (e && e.message ? e.message : "erro desconhecido"), true);
+    }
+  }
+
+  async function removeCampaignCover() {
+    if (!currentCampaign || !isCurrentUserMaster()) return;
+    const client = getClient();
+    if (!client) { capaStatus("Sem conexão com o Supabase.", true); return; }
+
+    capaStatus("Removendo capa…", false);
+    try {
+      // Remove o registro em campaigns primeiro (é o que efetivamente
+      // controla o que é exibido); a remoção do arquivo em Storage é
+      // best-effort — se falhar, não deixa a UI inconsistente, só
+      // sobra um arquivo órfão no bucket.
+      const { data: updated, error: dbErr } = await client
+        .from("campaigns")
+        .update({ image_url: null, updated_at: new Date().toISOString() })
+        .eq("id", currentCampaign.id)
+        .select("id,owner_id,name,description,invite_token,status,created_at,image_url")
+        .single();
+      if (dbErr) throw dbErr;
+
+      currentCampaign = updated;
+      atualizarCapaEditarPreview();
+      const capaSlot = $("camp_link_capa");
+      if (capaSlot) {
+        capaSlot.innerHTML = "";
+        capaSlot.appendChild(buildCapaEl(updated.status, null, null));
+      }
+      capaStatus("", false);
+
+      try {
+        await client.storage.from("campaign-covers").remove([currentCampaign.id + "/capa.jpg"]);
+      } catch (e2) { /* best-effort, não é crítico */ }
+
+      if (typeof window.flashIndicator === "function") window.flashIndicator("Capa removida.");
+    } catch (e) {
+      console.error("[CRIS Campanhas] Falha ao remover capa:", e);
+      capaStatus("Falha ao remover capa: " + (e && e.message ? e.message : "erro desconhecido"), true);
+    }
   }
 
   function closeEditarCampanhaModal() {
@@ -504,7 +685,7 @@
         .from("campaigns")
         .update({ name: nome, description: descricao, updated_at: new Date().toISOString() })
         .eq("id", currentCampaign.id)
-        .select("id,owner_id,name,description,invite_token,status,created_at")
+        .select("id,owner_id,name,description,invite_token,status,created_at,image_url")
         .single();
       if (error) throw error;
 
@@ -1211,7 +1392,7 @@
       const { data: inserted, error } = await client
         .from("campaigns")
         .insert({ owner_id: user.id, name: nome, description: descricao })
-        .select("id,owner_id,name,description,invite_token,status,created_at")
+        .select("id,owner_id,name,description,invite_token,status,created_at,image_url")
         .single();
       if (error) throw error;
 
@@ -1290,7 +1471,35 @@
       }
 
       $("camp_convite_nome").textContent = info.campaign_name;
-      $("camp_convite_mestre").textContent = info.master_name ? ("Mestre: " + info.master_name) : "";
+      $("camp_convite_mestre").textContent = info.master_name
+        ? (info.master_name + " convidou você para participar desta campanha.")
+        : "Você recebeu um convite para participar desta campanha.";
+      var descEl = $("camp_convite_descricao");
+      if (descEl) {
+        if (info.campaign_description) {
+          descEl.textContent = info.campaign_description;
+          descEl.style.display = "block";
+        } else {
+          descEl.textContent = "";
+          descEl.style.display = "none";
+        }
+      }
+      var capaEl = $("camp_convite_capa");
+      if (capaEl) {
+        capaEl.innerHTML = "";
+        capaEl.className = "camp-capa" + (info.campaign_image_url ? " camp-capa--tem-imagem" : "");
+        if (info.campaign_image_url) {
+          var capaImg = document.createElement("img");
+          capaImg.className = "camp-capa-img";
+          capaImg.alt = "";
+          capaImg.src = info.campaign_image_url;
+          capaImg.onerror = function () {
+            capaEl.classList.remove("camp-capa--tem-imagem");
+            if (capaImg.parentNode) capaImg.parentNode.removeChild(capaImg);
+          };
+          capaEl.appendChild(capaImg);
+        }
+      }
     } catch (e) {
       console.error("[CRIS Campanhas] Falha ao buscar convite:", e);
       console.log("[CRIS Campanhas DIAG] erro real capturado:", {
@@ -1340,7 +1549,7 @@
           try {
             var full = await client2
               .from("campaigns")
-              .select("id,owner_id,name,description,invite_token,status,created_at")
+              .select("id,owner_id,name,description,invite_token,status,created_at,image_url")
               .eq("id", aceita.campaign_id)
               .single();
             if (!full.error && full.data) openCampaignLinkView(full.data);
@@ -1445,6 +1654,22 @@
     if (btnEditarCancelar) btnEditarCancelar.addEventListener("click", closeEditarCampanhaModal);
     const btnEditarConfirmar = $("camp_editar_confirmar");
     if (btnEditarConfirmar) btnEditarConfirmar.addEventListener("click", confirmEditarCampanha);
+
+    // Capa da campanha (edição)
+    const capaInput = $("camp_editar_capa_input");
+    const btnCapaAlterar = $("camp_editar_capa_alterar");
+    if (btnCapaAlterar && capaInput) {
+      btnCapaAlterar.addEventListener("click", () => capaInput.click());
+    }
+    if (capaInput) {
+      capaInput.addEventListener("change", () => {
+        const file = capaInput.files && capaInput.files[0];
+        capaInput.value = ""; // permite escolher o mesmo arquivo de novo depois
+        if (file) uploadCampaignCover(file);
+      });
+    }
+    const btnCapaRemover = $("camp_editar_capa_remover");
+    if (btnCapaRemover) btnCapaRemover.addEventListener("click", removeCampaignCover);
 
     // FASE E — Administração: confirmar Remover Jogador
     const btnRemoveJogadorCancelar = $("camp_remove_jogador_cancelar");

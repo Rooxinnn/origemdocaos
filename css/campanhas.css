@@ -398,6 +398,12 @@
   margin:-32px -26px 20px;
   justify-content:center;
 }
+.camp-invite-desc{
+  font-style:italic;
+  color:var(--paper-dim);
+  font-size:13px;
+  margin:2px 0 10px;
+}
 .camp-invite-logo{
   width:52px; height:52px; margin:0 auto 16px;
   box-shadow:0 0 18px rgba(240,168,60,0.4);
@@ -482,9 +488,10 @@
   font-size:10.5px;
   letter-spacing:0.04em;
   color:var(--paper-dim);
-  background:rgba(0,0,0,0.35);
+  background:rgba(0,0,0,0.5);
   border:1px solid var(--line);
-  padding:3px 7px;
+  border-radius:20px;
+  padding:4px 10px;
   white-space:nowrap;
 }
 .camp-status-pill{
@@ -498,13 +505,90 @@
   padding:3px 8px;
   white-space:nowrap;
 }
+/* Nos cards da lista, o selo "ATIVA" some (poluía o visual da capa,
+   status ativo é o padrão esperado); continua aparecendo quando a
+   campanha está pausada/inativa, que é a informação que importa. */
 .camp-status-pill.is-inactive{
   color:var(--paper-dim);
   background:transparent;
   border-color:var(--line);
 }
+.camp-card .camp-status-pill:not(.is-inactive){
+  display:none;
+}
 
-/* ---------- Card da lista (F.3) — vira "arquivo" com capa no topo ---------- */
+/* ---------- Capa real (imagem), quando a campanha tem uma ---------- */
+.camp-capa--tem-imagem{
+  overflow:hidden;
+}
+.camp-capa-img{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  z-index:0;
+  filter:saturate(0.9) contrast(1.05);
+}
+.camp-capa--tem-imagem::before{
+  z-index:1;
+}
+.camp-capa--tem-imagem::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:1;
+  background:linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.45) 100%);
+}
+.camp-capa--tem-imagem .camp-capa-badge,
+.camp-capa--tem-imagem .camp-status-pill{
+  position:relative;
+  z-index:2;
+}
+
+/* ---------- Editor de capa (modal Editar Campanha) ---------- */
+.camp-cover-edit{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.camp-cover-edit-preview{
+  position:relative;
+  height:120px;
+  border:1px dashed var(--line);
+  background:var(--panel-2, var(--panel));
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+}
+.camp-cover-edit-preview img{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+.camp-cover-edit-vazio{
+  font-family:'Oswald',sans-serif;
+  font-size:11px;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  color:var(--sigil);
+}
+.camp-cover-edit-actions{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+
+/* ---------- Card da lista (F.3 + ajuste de referência visual) ----------
+   Estrutura inspirada na referência enviada pelo usuário: capa cheia
+   com cantos arredondados, badge de participantes no canto, título +
+   metadados à esquerda e botão principal alinhado à direita na mesma
+   linha. Paleta e tipografia continuam as do C.R.I.S. (âmbar/escuro,
+   Oswald/Special Elite) — não foi adotado o roxo da referência para
+   não fugir da identidade documental/dossiê do projeto (instrução 8). */
 .camp-cards{
   display:grid;
   grid-template-columns:repeat(auto-fill, minmax(240px, 1fr));
@@ -516,10 +600,32 @@
   gap:0;
   padding:0;
   overflow:hidden;
+  border-radius:10px;
+}
+.camp-card .camp-capa{
+  border-radius:10px 10px 0 0;
+  height:150px;
+  min-height:150px;
+  align-items:flex-start;
 }
 .camp-card-body{
   padding:14px 16px;
   flex:1 1 auto;
+}
+.camp-card-linha{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:10px;
+}
+.camp-card-textos{
+  min-width:0;
+}
+.camp-card-textos .camp-card-name{margin:0 0 3px;}
+.camp-card-textos .camp-card-meta{margin:0;}
+.camp-card-linha .camp-btn-primary{
+  flex:0 0 auto;
+  white-space:nowrap;
 }
 .camp-card-date{
   font-size:11px;
@@ -530,16 +636,13 @@
   padding:0 16px 14px;
 }
 .camp-card .camp-card-actions button{
-  flex:1 1 0;
+  width:100%;
 }
 
 /* ---------- Cabeçalho da campanha (F.2) — metadados de dossiê ---------- */
 .camp-titlebar{
   padding:0;
   overflow:hidden;
-}
-.camp-titlebar .camp-capa{
-  border-left:none; border-right:none; border-top:none;
 }
 .camp-titlebar-inner{
   padding:18px 22px;
@@ -566,16 +669,53 @@
   font-weight:600;
 }
 
+/* Capa num canto + descrição do outro lado, no espírito da referência
+   enviada pelo usuário: imagem quadrada à esquerda, texto do "dossiê"
+   ao lado — em vez da capa ocupar uma faixa inteira no topo. */
+.camp-hero-row{
+  display:flex;
+  align-items:stretch;
+  gap:16px;
+  margin:14px 0 0;
+}
+.camp-hero-capa{
+  flex:0 0 auto;
+  width:240px;
+  align-self:stretch;
+  min-height:170px;
+  position:relative;
+  overflow:hidden;
+}
+.camp-hero-capa .camp-capa{
+  width:100%;
+  height:100%;
+  min-height:100%;
+}
+.camp-hero-capa .camp-capa-badge,
+.camp-hero-capa .camp-status-pill{
+  font-size:9px;
+  padding:2px 6px;
+}
+@media (max-width:520px){
+  .camp-hero-row{flex-direction:column; align-items:stretch;}
+  .camp-hero-capa{width:100%; height:180px; min-height:180px;}
+}
+
 /* Descrição da campanha como um trecho de documento/dossiê, em vez de
    um parágrafo solto (identidade documental — item 9). */
 .camp-link-name{
+  flex:1 1 auto;
+  min-width:0;
   font-family:'Special Elite', monospace;
   font-size:13.5px;
   line-height:1.5;
   color:var(--paper-dim);
   border-left:2px solid var(--amber);
   padding:2px 0 2px 12px;
-  margin:14px 0 0;
+  margin:0;
+  white-space:normal;
+  overflow-wrap:break-word;
+  word-break:break-word;
 }
 
 /* ---------- Cards de personagem (F.3/item 10) — retrato + profissão ---------- */

@@ -2217,10 +2217,6 @@
       <!-- Tela "campanha criada" / detalhes com link de convite -->
       <div id="camp_view_link" style="display:none;">
         <div class="camp-titlebar">
-          <!-- FASE F.2 — "capa" de arquivo (só CSS/status; ver nota em
-               css/campanhas.css sobre por que não existe imagem real
-               ainda). -->
-          <div id="camp_link_capa"></div>
           <div class="camp-titlebar-inner">
             <div class="camp-titlebar-head">
               <div class="camp-titlebar-logo"><img src="img/logo-sol.png" alt=""></div>
@@ -2242,7 +2238,12 @@
               <p class="camp-meta-item" id="camp_link_criada_em"></p>
             </div>
 
-            <p class="camp-link-name" id="camp_link_nome"></p>
+            <!-- Capa (canto) + descrição (ao lado), no espírito da
+                 referência enviada pelo usuário. -->
+            <div class="camp-hero-row">
+              <div id="camp_link_capa" class="camp-hero-capa"></div>
+              <p class="camp-link-name" id="camp_link_nome"></p>
+            </div>
           </div>
         </div>
 
@@ -2296,10 +2297,11 @@
 
           <!-- Estado: convite válido — preview antes de entrar -->
           <div id="camp_convite_preview">
-            <div class="camp-capa"></div>
+            <div class="camp-capa" id="camp_convite_capa"></div>
             <div class="camp-invite-logo"><img src="img/logo-sol.png" alt=""></div>
             <div class="camp-invite-eyebrow">Você foi convidado</div>
             <h3 class="camp-invite-title" id="camp_convite_nome"></h3>
+            <p class="camp-invite-desc" id="camp_convite_descricao" style="display:none;"></p>
             <p class="empty-state" id="camp_convite_mestre" style="margin-bottom:18px;"></p>
             <p class="empty-state" id="camp_convite_carregando" style="display:none;">Entrando na campanha…</p>
             <div class="modal-actions">
@@ -2389,6 +2391,24 @@
 <div class="modal-overlay" id="camp_editar_modal" style="display:none;">
   <div class="modal-box camp-modal-box">
     <h3 style="margin-top:0;">Editar Campanha</h3>
+
+    <!-- Capa da campanha (só Mestre) -->
+    <div class="field" style="margin-bottom:14px;">
+      <label>Capa da Campanha</label>
+      <div class="camp-cover-edit">
+        <div class="camp-cover-edit-preview" id="camp_editar_capa_preview">
+          <span class="camp-cover-edit-vazio" id="camp_editar_capa_vazio">Sem capa</span>
+          <img id="camp_editar_capa_img" style="display:none;" alt="">
+        </div>
+        <div class="camp-cover-edit-actions">
+          <input type="file" id="camp_editar_capa_input" accept="image/png,image/jpeg,image/webp" style="display:none;">
+          <button type="button" id="camp_editar_capa_alterar">+ Adicionar Capa</button>
+          <button type="button" id="camp_editar_capa_remover" class="entry-del" style="display:none;">Remover</button>
+        </div>
+        <p class="empty-state" id="camp_editar_capa_status" style="display:none;"></p>
+      </div>
+    </div>
+
     <div class="field" style="margin-bottom:12px;">
       <label>Nome</label>
       <input type="text" id="camp_editar_nome" maxlength="80">
