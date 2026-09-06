@@ -51,29 +51,71 @@
   var currentCampaign = null;
   var __jogadoresLoadedOnce = false;
 
+  // CONVITE GLOBAL — captura o token de convite de QUALQUER formato em
+  // que ele apareça na URL. O link gerado por buildInviteLink() continua
+  // sendo exatamente o mesmo de sempre (#campanha=TOKEN — nunca mudou);
+  // o suporte extra a "?campanha=TOKEN" (query string) é só para não
+  // perder um convite caso o link chegue nesse formato por algum outro
+  // caminho (ex.: colado manualmente sem o "#"). Não afeta o link oficial.
+  function extractInviteToken() {
+    var hash = window.location.hash || "";
+    var m = hash.match(/^#campanha=(.+)$/);
+    if (m && m[1]) return m[1];
+    try {
+      var qs = new URLSearchParams(window.location.search || "");
+      var q = qs.get("campanha");
+      if (q) return q;
+    } catch (e) { /* URLSearchParams indisponível — ignora */ }
+    return null;
+  }
+
+  // Lê o token (se houver) na URL atual, guarda em sessionStorage
+  // (sobrevive ao redirecionamento de login/cadastro) e limpa a URL
+  // para não reprocessar o mesmo token em reloads futuros da mesma aba.
+  function captureInviteFromLocation() {
+    var raw = extractInviteToken();
+    if (!raw) return false;
+    var token = "";
+    try { token = decodeURIComponent(raw); } catch (e) { token = raw; }
+    if (!token) return false;
+    console.log("[CRIS Campanhas DIAG] token de convite capturado da URL.");
+    try { sessionStorage.setItem(PENDING_INVITE_KEY, token); } catch (e) {
+      // sessionStorage indisponível (ex.: navegação privada) — o
+      // convite simplesmente não sobrevive a um redirecionamento de
+      // login nesse caso; não é um erro fatal para o resto do app.
+    }
+    try {
+      history.replaceState(null, "", window.location.pathname);
+    } catch (e) { /* ignora */ }
+    return true;
+  }
+
   // Roda imediatamente ao carregar o script (não espera
   // DOMContentLoaded) para não perder o token caso o usuário
   // ainda não esteja autenticado.
-  (function captureInviteFromHash() {
-    var hash = window.location.hash || "";
-    console.log("[CRIS Campanhas DIAG] hash bruto da URL:", JSON.stringify(hash));
-    var m = hash.match(/^#campanha=(.+)$/);
-    if (!m || !m[1]) return;
-    var token = "";
-    try { token = decodeURIComponent(m[1]); } catch (e) { token = m[1]; }
-    if (token) {
-      try { sessionStorage.setItem(PENDING_INVITE_KEY, token); } catch (e) {
-        // sessionStorage indisponível (ex.: navegação privada) — o
-        // convite simplesmente não sobrevive a um redirecionamento de
-        // login nesse caso; não é um erro fatal para o resto do app.
-      }
-    }
-    // Remove o hash da URL para não reprocessar o mesmo token em
-    // reloads futuros da mesma aba.
-    try {
-      history.replaceState(null, "", window.location.pathname + window.location.search);
-    } catch (e) { /* ignora */ }
-  })();
+  captureInviteFromLocation();
+
+  // CONVITE GLOBAL — cobre o caso do usuário JÁ estar com o app aberto
+  // (numa aba só) em qualquer área (Agentes/Compêndio/Inventário/
+  // Paranormal/Campanhas/dentro de uma ficha) e clicar num link de
+  // convite que aponta para a MESMA página: o navegador não recarrega o
+  // script neste caso (só troca a URL), então sem isto o convite nunca
+  // seria detectado até um F5 manual. "hashchange" cobre o formato do
+  // link oficial (#campanha=...); para cobrir também alguém colando um
+  // link "?campanha=..." sem recarregar a página não há evento nativo
+  // equivalente — nesse caso raríssimo, um F5 resolve, igual antes desta
+  // mudança.
+  window.addEventListener("hashchange", function () {
+    if (!captureInviteFromLocation()) return;
+    var client = getClient();
+    if (!client) return; // sem Supabase configurado, nada a fazer
+    getCurrentUser().then(function (user) {
+      if (user) checkPendingInvite();
+      // Sem sessão: o token já está em sessionStorage e será detectado
+      // por checkPendingInvite() assim que o login terminar (ver
+      // js/supabase-auth.js -> enterApp()).
+    });
+  });
 
   function getPendingInviteToken() {
     try { return sessionStorage.getItem(PENDING_INVITE_KEY); } catch (e) { return null; }
@@ -1447,7 +1489,14 @@
     return rows[0];
   }
 
+  // Evita abrir o mesmo popup duas vezes se dois listeners diferentes
+  // (checkPendingInvite após login + hashchange, por exemplo) chamarem
+  // showInvitePreview quase ao mesmo tempo para o MESMO token.
+  var __inviteTokenBeingShown = null;
+
   async function showInvitePreview(token) {
+    if (__inviteTokenBeingShown === token) return;
+    __inviteTokenBeingShown = token;
     console.log("[CRIS Campanhas DIAG] showInvitePreview chamado com token:", JSON.stringify(token));
     conviteAtualToken = token;
     openInviteModal();
@@ -1466,14 +1515,27 @@
         // Token inválido OU campanha inexistente — mesma mensagem para
         // os dois casos (Testes 5 e 6), sem revelar qual dos dois é.
         clearPendingInviteToken();
+        __inviteTokenBeingShown = null;
         showInviteModalState("invalido");
         return;
       }
 
       $("camp_convite_nome").textContent = info.campaign_name;
-      $("camp_convite_mestre").textContent = info.master_name
-        ? (info.master_name + " convidou você para participar desta campanha.")
-        : "Você recebeu um convite para participar desta campanha.";
+      // Teste 18 — já é membro (ou o próprio Mestre abrindo o próprio
+      // link): mostra estado apropriado em vez de repetir o convite
+      // como se fosse novo. O clique no botão continua chamando
+      // accept_campaign_invite (idempotente — migration 0003), só o
+      // texto muda; nenhuma membership é duplicada.
+      var btnConfirmar = $("camp_btn_confirmar_entrada");
+      if (info.already_member) {
+        $("camp_convite_mestre").textContent = "Você já participa desta campanha.";
+        if (btnConfirmar) btnConfirmar.textContent = "Ir para a Campanha";
+      } else {
+        $("camp_convite_mestre").textContent = info.master_name
+          ? (info.master_name + " convidou você para participar desta campanha.")
+          : "Você recebeu um convite para participar desta campanha.";
+        if (btnConfirmar) btnConfirmar.textContent = "Entrar na Campanha";
+      }
       var descEl = $("camp_convite_descricao");
       if (descEl) {
         if (info.campaign_description) {
@@ -1512,6 +1574,7 @@
       });
       if (carregandoEl) carregandoEl.style.display = "none";
       clearPendingInviteToken();
+      __inviteTokenBeingShown = null;
       showInviteModalState("invalido");
     }
   }
@@ -1532,10 +1595,17 @@
       var aceita = (res.data && res.data[0]) || null;
       clearPendingInviteToken();
       conviteAtualToken = null;
+      __inviteTokenBeingShown = null;
       closeInviteModal();
       if (typeof window.flashIndicator === "function") {
         window.flashIndicator("Você entrou na campanha!");
       }
+
+      // CONVITE GLOBAL — o convite agora também pode ser aceito a partir
+      // da tela de boas-vindas (gerenciador de fichas), onde #app_screen
+      // (que contém as abas) está com display:none. Sem isto, o clique
+      // simulado na aba Campanhas logo abaixo não teria efeito visível.
+      if (typeof window.showAppScreen === "function") window.showAppScreen();
 
       // Abre a aba CAMPANHAS e mostra a campanha recém-aceita.
       var tabBtn = document.querySelector('.tab-btn[data-tab="campanhas"]');
@@ -1573,17 +1643,20 @@
       // confirmação (ex.: Mestre desativou a campanha nesse meio-tempo).
       showInviteModalState("invalido");
       clearPendingInviteToken();
+      __inviteTokenBeingShown = null;
     }
   }
 
   function cancelarConvite() {
     conviteAtualToken = null;
+    __inviteTokenBeingShown = null;
     clearPendingInviteToken();
     closeInviteModal();
   }
 
   function fecharConviteInvalido() {
     conviteAtualToken = null;
+    __inviteTokenBeingShown = null;
     closeInviteModal();
   }
 
@@ -1597,6 +1670,16 @@
     console.log("[CRIS Campanhas DIAG] token pendente recuperado:", JSON.stringify(token));
     if (!token) return;
     await showInvitePreview(token);
+  }
+
+  // Chamada por js/supabase-auth.js no logout — evita que o token (ou o
+  // popup já aberto) de uma conta vaze para a próxima conta que logar
+  // neste mesmo navegador/aba.
+  function clearPendingInviteState() {
+    clearPendingInviteToken();
+    conviteAtualToken = null;
+    __inviteTokenBeingShown = null;
+    closeInviteModal();
   }
 
   /* ============================================================
@@ -1739,6 +1822,8 @@
   window.CRISCampaigns = {
     checkPendingInvite: checkPendingInvite,
     hasPendingInvite: function () { return !!getPendingInviteToken(); },
+    // NICKNAME/CONVITE GLOBAL — usado por js/supabase-auth.js no logout.
+    clearPendingInviteState: clearPendingInviteState,
     // FASE G — usado por js/campaign-agent-view.js só para voltar à
     // sub-aba Jogadores depois que o Mestre fecha a ficha de terceiro.
     showSubtab: showCampSubtab,

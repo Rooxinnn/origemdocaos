@@ -1038,6 +1038,14 @@
 
     <!-- CADASTRO -->
     <form class="auth-panel" id="auth_panel_signup" data-auth-panel="signup">
+      <!-- NICKNAME (item 1) — apelido de exibição, gravado em
+           public.profiles pelo trigger on_auth_user_created_profile
+           (migration 0008). Nunca substitui o UUID como identidade
+           técnica; é só o que aparece na UI no lugar do e-mail. -->
+      <div class="auth-field">
+        <label for="auth_signup_nickname">Nickname</label>
+        <input type="text" id="auth_signup_nickname" autocomplete="nickname" required maxlength="40" placeholder="como quer ser chamado">
+      </div>
       <div class="auth-field">
         <label for="auth_signup_email">Email</label>
         <input type="email" id="auth_signup_email" autocomplete="username" required placeholder="seu@email.com">
@@ -1575,7 +1583,7 @@
 <div class="modal-overlay" id="delete_modal">
   <div class="modal-box">
     <p><strong>⚠️ Excluir ficha?</strong></p>
-    <p>Esta ficha será removida deste dispositivo e, se estiver sincronizada com sua conta, também será removida da nuvem. Esta ação não poderá ser desfeita pelo C.R.I.S.</p>
+    <p>Esta ficha será removida deste dispositivo e, se estiver sincronizada com sua conta, também será removida da nuvem. Esta ação não poderá ser desfeita.</p>
     <div class="modal-actions">
       <button id="delete_cancel">Cancelar</button>
       <button class="danger" id="delete_confirm">Excluir Ficha</button>
@@ -2283,43 +2291,6 @@
           <h3 class="camp-subheading">Jogadores</h3>
           <p class="empty-state" id="camp_jogadores_carregando">Carregando jogadores…</p>
           <div id="camp_jogadores_cards" class="camp-player-cards"></div>
-        </div>
-      </div>
-
-      <!-- Convite por link (Fase C) — modal central, sem tela cheia e
-           sem campo de colar token: só abre sozinho quando há um
-           convite pendente (link clicado). FASE F.4 — tratamento visual
-           dedicado (eyebrow + nome da campanha em destaque), no espírito
-           do mockup de referência, sem criar um segundo sistema de modal:
-           continua sendo .modal-overlay/.modal-box padrão. -->
-      <div class="modal-overlay" id="camp_invite_modal" style="display:none;">
-        <div class="modal-box camp-invite-box" id="camp_invite_modal_box">
-
-          <!-- Estado: convite válido — preview antes de entrar -->
-          <div id="camp_convite_preview">
-            <div class="camp-capa" id="camp_convite_capa"></div>
-            <div class="camp-invite-logo"><img src="img/logo-sol.png" alt=""></div>
-            <div class="camp-invite-eyebrow">Você foi convidado</div>
-            <h3 class="camp-invite-title" id="camp_convite_nome"></h3>
-            <p class="camp-invite-desc" id="camp_convite_descricao" style="display:none;"></p>
-            <p class="empty-state" id="camp_convite_mestre" style="margin-bottom:18px;"></p>
-            <p class="empty-state" id="camp_convite_carregando" style="display:none;">Entrando na campanha…</p>
-            <div class="modal-actions">
-              <button id="camp_btn_confirmar_entrada" class="camp-btn-primary">Entrar na Campanha</button>
-              <button id="camp_btn_cancelar_convite">Cancelar</button>
-            </div>
-          </div>
-
-          <!-- Estado: convite inválido/expirado (mesma mensagem para
-               token errado E para campanha inexistente — Testes 5 e 6) -->
-          <div id="camp_convite_invalido" style="display:none;">
-            <h3>Convite inválido</h3>
-            <p>Este link de convite é inválido ou expirou. Peça ao Mestre um novo link.</p>
-            <div class="modal-actions">
-              <button id="camp_btn_fechar_invalido">Fechar</button>
-            </div>
-          </div>
-
         </div>
       </div>
 
@@ -7273,6 +7244,10 @@ const ORIGINAL_PDF_BASE64 = "JVBERi0xLjYNJeLjz9MNCjIxMTMgMCBvYmoNPDwvRmlsdGVyL0Z
      nesta fase, apenas leitura/escrita direta no Supabase. -->
 <script src="js/campanhas.js"></script>
 <script src="js/campaign-agent-view.js"></script>
+<!-- NICKNAME/PERFIL — precisa vir depois de js/supabase-auth.js
+     (reaproveita window.CRISAuth.client e os elementos #account_name/
+     #account_email/#account_popover que ele já preenche/controla). -->
+<script src="js/profile.js"></script>
 <!-- ETAPA 6: precisa vir depois de js/supabase-auth.js (reaproveita
      window.CRISAuth.client) e depois do script principal (reaproveita
      storageGet/storageSet/flashIndicator) e ANTES de js/supabase-sync.js
@@ -7319,5 +7294,50 @@ const ORIGINAL_PDF_BASE64 = "JVBERi0xLjYNJeLjz9MNCjIxMTMgMCBvYmoNPDwvRmlsdGVyL0Z
      dados, salvamento, sincronização ou autenticação foi alterada. -->
 <script src="js/action-bar-more.js"></script>
 <script src="js/account-bar-dock.js"></script>
+
+<!-- Convite por link (Fase C) — modal central, sem tela cheia e sem
+     campo de colar token: só abre sozinho quando há um convite
+     pendente (link clicado). FASE F.4 — tratamento visual dedicado
+     (eyebrow + nome da campanha em destaque). CONVITE GLOBAL — este
+     bloco fica como ÚLTIMO filho de <body> de propósito: colocado
+     dentro de #app_screen (ou de #tab-campanhas) ele herdava o
+     "display:none" de qualquer tela/aba que não estivesse ativa no
+     momento — inclusive #welcome_screen (o gerenciador de fichas),
+     que é uma tela irmã de #app_screen, então o popup nunca aparecia
+     lá. Como filho direto de <body>, nenhuma tela (auth/welcome/app)
+     consegue escondê-lo por engano; ele só aparece/some pelo próprio
+     display:none/flex que js/campanhas.js já controla. Nenhum id ou
+     lógica mudou — só a posição no DOM. -->
+<div class="modal-overlay" id="camp_invite_modal" style="display:none;">
+  <div class="modal-box camp-invite-box" id="camp_invite_modal_box">
+
+    <!-- Estado: convite válido — preview antes de entrar -->
+    <div id="camp_convite_preview">
+      <div class="camp-capa" id="camp_convite_capa"></div>
+      <div class="camp-invite-logo"><img src="img/logo-sol.png" alt=""></div>
+      <div class="camp-invite-eyebrow">Você foi convidado</div>
+      <h3 class="camp-invite-title" id="camp_convite_nome"></h3>
+      <p class="camp-invite-desc" id="camp_convite_descricao" style="display:none;"></p>
+      <p class="empty-state" id="camp_convite_mestre" style="margin-bottom:18px;"></p>
+      <p class="empty-state" id="camp_convite_carregando" style="display:none;">Entrando na campanha…</p>
+      <div class="modal-actions">
+        <button id="camp_btn_confirmar_entrada" class="camp-btn-primary">Entrar na Campanha</button>
+        <button id="camp_btn_cancelar_convite">Cancelar</button>
+      </div>
+    </div>
+
+    <!-- Estado: convite inválido/expirado (mesma mensagem para token
+         errado E para campanha inexistente — Testes 5 e 6) -->
+    <div id="camp_convite_invalido" style="display:none;">
+      <h3>Convite inválido</h3>
+      <p>Este link de convite é inválido ou expirou. Peça ao Mestre um novo link.</p>
+      <div class="modal-actions">
+        <button id="camp_btn_fechar_invalido">Fechar</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
 </body>
 </html>

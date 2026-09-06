@@ -269,12 +269,19 @@
     return data;
   }
 
-  async function doSignup(email, password) {
+  async function doSignup(email, password, nickname) {
     const { data, error } = await withTimeout(
       client.auth.signUp({
         email,
         password,
-        options: { emailRedirectTo: window.location.href.split("#")[0] }
+        options: {
+          emailRedirectTo: window.location.href.split("#")[0],
+          // NICKNAME (item 1): vai em user_metadata só para o trigger
+          // on_auth_user_created_profile (migration 0008) conseguir
+          // gravar public.profiles.nickname já na criação da conta —
+          // nenhum outro dado novo é enviado aqui.
+          data: nickname ? { nickname: nickname } : undefined,
+        }
       }),
       15000,
       "Tempo de espera esgotado ao criar a conta. Verifique sua internet e tente novamente."
@@ -426,6 +433,13 @@
     // anterior e nunca rodaria a inicialização de novo (ver comentário em
     // window.crisResetAppState, no index.html).
     if (typeof window.crisResetAppState === "function") window.crisResetAppState();
+    // CONVITE GLOBAL — evita que o token/popup de convite de uma conta
+    // "vaze" para a próxima conta que logar neste mesmo navegador
+    // (sessionStorage não é limpo automaticamente pelo signOut).
+    if (typeof window.CRISCampaigns !== "undefined" &&
+        typeof window.CRISCampaigns.clearPendingInviteState === "function") {
+      window.CRISCampaigns.clearPendingInviteState();
+    }
     clearAccountInfo();
     showAuthScreen();
     showPanel("login");
@@ -469,13 +483,19 @@
         const email = $("auth_signup_email").value.trim();
         const password = $("auth_signup_password").value;
         const password2 = $("auth_signup_password2").value;
+        // NICKNAME (item 1) — campo novo no formulário de cadastro
+        // (ver index.html). Se o elemento não existir por algum motivo,
+        // segue sem nickname em vez de quebrar o cadastro.
+        const nicknameEl = $("auth_signup_nickname");
+        const nickname = nicknameEl ? nicknameEl.value.trim() : "";
         const btn = $("auth_signup_submit");
         setMsg("");
+        if (nicknameEl && !nickname) { setMsg("Escolha um nickname.", "error"); return; }
         if (password.length < 6) { setMsg("A senha deve ter pelo menos 6 caracteres.", "error"); return; }
         if (password !== password2) { setMsg("As senhas não coincidem.", "error"); return; }
         setLoading(btn, true);
         try {
-          const data = await doSignup(email, password);
+          const data = await doSignup(email, password, nickname);
           if (data && data.session) {
             // Projeto sem confirmação de email obrigatória: já entra direto.
           } else {
