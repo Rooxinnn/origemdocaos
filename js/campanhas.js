@@ -609,13 +609,14 @@
     });
   }
 
-  async function uploadCampaignCover(file) {
+  // ETAPA — CROP GLOBAL: ponto de entrada quando o arquivo já foi
+  // escolhido e cortado pelo usuário no editor global (js/image-cropper.js).
+  // Faz só a parte de upload/gravação — o corte e o redimensionamento já
+  // aconteceram no editor, então não chama resizeImageFile() de novo aqui
+  // (evitaria uma segunda recompressão desnecessária da mesma imagem).
+  async function uploadCampaignCoverBlob(blob) {
     if (!currentCampaign || !isCurrentUserMaster()) return;
-    if (CAPA_ACCEPTED_TYPES.indexOf(file.type) === -1) {
-      capaStatus("Formato não suportado. Use JPG, PNG ou WEBP.", true);
-      return;
-    }
-    if (file.size > CAPA_MAX_BYTES) {
+    if (blob.size > CAPA_MAX_BYTES) {
       capaStatus("Arquivo muito grande (máx. 8MB).", true);
       return;
     }
@@ -624,7 +625,6 @@
 
     capaStatus("Enviando capa…", false);
     try {
-      const blob = await resizeImageFile(file);
       const path = currentCampaign.id + "/capa.jpg";
       const { error: upErr } = await client.storage
         .from("campaign-covers")
@@ -662,6 +662,30 @@
       capaStatus(window.CRISFriendlyError
         ? window.CRISFriendlyError(e, "Não foi possível enviar a capa.")
         : "Não foi possível enviar a capa. Tente novamente.", true);
+    }
+  }
+
+  // Caminho antigo (sem crop manual): valida o arquivo e redimensiona
+  // sozinho, exatamente como antes desta etapa. Só é usado como reserva
+  // se o editor global (js/image-cropper.js) não estiver disponível por
+  // algum motivo — o fluxo normal passa por uploadCampaignCoverBlob().
+  async function uploadCampaignCover(file) {
+    if (CAPA_ACCEPTED_TYPES.indexOf(file.type) === -1) {
+      capaStatus("Formato não suportado. Use JPG, PNG ou WEBP.", true);
+      return;
+    }
+    if (file.size > CAPA_MAX_BYTES) {
+      capaStatus("Arquivo muito grande (máx. 8MB).", true);
+      return;
+    }
+    try {
+      const blob = await resizeImageFile(file);
+      await uploadCampaignCoverBlob(blob);
+    } catch (e) {
+      console.error("[CRIS Campanhas] Falha ao processar capa:", e);
+      capaStatus(window.CRISFriendlyError
+        ? window.CRISFriendlyError(e, "Não foi possível processar a capa.")
+        : "Não foi possível processar a capa. Tente novamente.", true);
     }
   }
 
@@ -1757,10 +1781,36 @@
       btnCapaAlterar.addEventListener("click", () => capaInput.click());
     }
     if (capaInput) {
+      // ETAPA — CROP GLOBAL: antes de enviar, abre o editor reutilizável
+      // (js/image-cropper.js) para o Mestre escolher o enquadramento da
+      // capa (formato 16:9), em vez de deixar o object-fit:cover decidir
+      // sozinho o que cortar. Se o editor não estiver disponível, cai no
+      // fluxo antigo (uploadCampaignCover, sem crop manual).
       capaInput.addEventListener("change", () => {
         const file = capaInput.files && capaInput.files[0];
         capaInput.value = ""; // permite escolher o mesmo arquivo de novo depois
-        if (file) uploadCampaignCover(file);
+        if (!file) return;
+        if (window.CRISImageCropper && typeof window.CRISImageCropper.open === "function") {
+          window.CRISImageCropper.open({
+            file: file,
+            aspectRatio: 16 / 9,
+            title: "Capa da Campanha",
+            outputMax: CAPA_MAX_DIMENSION,
+            mimeType: "image/jpeg",
+            quality: CAPA_JPEG_QUALITY,
+            onConfirm: function (result) {
+              result.canvas.toBlob(function (blob) {
+                if (!blob) {
+                  capaStatus("Não foi possível processar a imagem.", true);
+                  return;
+                }
+                uploadCampaignCoverBlob(blob);
+              }, "image/jpeg", CAPA_JPEG_QUALITY);
+            }
+          });
+          return;
+        }
+        uploadCampaignCover(file);
       });
     }
     const btnCapaRemover = $("camp_editar_capa_remover");

@@ -414,7 +414,13 @@
     });
   }
 
-  /* ---------- imagem da criatura ---------- */
+  /* ---------- imagem da criatura ----------
+     ETAPA — CROP GLOBAL: usa o mesmo editor reutilizável de
+     js/image-cropper.js (aspectRatio 1:1, igual ao quadrado de
+     .cr-photo-box) em vez de gravar a imagem crua em #cr_foto sem
+     nenhum controle de enquadramento/tamanho. Se o editor não
+     estiver disponível, cai no comportamento anterior (imagem
+     completa, sem redimensionar) para não travar a funcionalidade. */
   function wireCreaturePhoto(){
     const box = document.getElementById("cr_photo_box");
     const input = document.getElementById("cr_photo_input");
@@ -423,14 +429,29 @@
     box.addEventListener("click", () => input.click());
     input.addEventListener("change", () => {
       const file = input.files && input.files[0];
+      input.value = "";
       if(!file) return;
+      if (window.CRISImageCropper && typeof window.CRISImageCropper.open === "function") {
+        window.CRISImageCropper.open({
+          file: file,
+          aspectRatio: 1,
+          title: "Imagem da Criatura",
+          outputMax: 320,
+          mimeType: "image/jpeg",
+          quality: 0.85,
+          onConfirm: function (result) {
+            foto.value = result.dataUrl;
+            applyPhotoFromField();
+          }
+        });
+        return;
+      }
       const reader = new FileReader();
       reader.onload = () => {
         foto.value = reader.result;
         applyPhotoFromField();
       };
       reader.readAsDataURL(file);
-      input.value = "";
     });
   }
 

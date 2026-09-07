@@ -5,10 +5,12 @@
      - carregar public.profiles.nickname do usuário logado
        (migration 0008/0009 — tabela protegida por RLS: cada
        usuário só lê/edita a própria linha);
-     - mostrar o nickname (em vez do e-mail) em #account_name,
-       dentro do popover de conta já existente (#account_popover,
-       criado em js/supabase-auth.js/index.html — não é recriado
-       nem duplicado aqui);
+     - mostrar o nickname em #account_name (e, desde a ETAPA E-MAIL DA
+       CONTA, também o e-mail somente-leitura em #account_email, que
+       js/supabase-auth.js já preenche/esvazia sozinho), dentro do
+       popover de conta já existente (#account_popover, criado em
+       js/supabase-auth.js/index.html — não é recriado nem duplicado
+       aqui);
      - acrescentar, dentro do MESMO popover, um campo para editar o
        nickname depois ("Configurações" da conta), sem criar uma
        tela nova.
@@ -93,6 +95,52 @@
      ============================================================ */
   var nicknameUiBuilt = false;
 
+  // ETAPA — E-MAIL DA CONTA: acrescenta rótulos "E-MAIL"/"NICKNAME"
+  // dentro do #account_info já existente e reordena os elementos para
+  // E-MAIL aparecer primeiro (mock aprovado), sem recriar #account_name/
+  // #account_email (que continuam sendo os mesmos elementos que
+  // js/supabase-auth.js já lê/escreve — só a POSIÇÃO deles no popover
+  // muda, via DOM, sem tocar em supabase-auth.js).
+  function buildAccountInfoLabels(info) {
+    var accountLabel = $("account_label"); // título "Conta", já existente
+    var nameEl = $("account_name");
+    var emailEl = $("account_email");
+    if (!nameEl || !emailEl) return;
+
+    var emailLabel = $("account_email_label");
+    if (!emailLabel) {
+      emailLabel = document.createElement("div");
+      emailLabel.id = "account_email_label";
+      emailLabel.textContent = "E-mail";
+      info.appendChild(emailLabel);
+    }
+    var nameLabel = $("account_name_label");
+    if (!nameLabel) {
+      nameLabel = document.createElement("div");
+      nameLabel.id = "account_name_label";
+      nameLabel.textContent = "Nickname";
+      info.appendChild(nameLabel);
+    }
+
+    // Ordem final dentro de #account_info: Conta (título) → E-mail →
+    // valor do e-mail → Nickname → valor do nickname. Reordena via DOM
+    // (insertBefore move o próprio elemento, sem clonar/recriar nada
+    // que js/supabase-auth.js ou este arquivo já controlam) — cada
+    // elemento é encaixado logo depois do anterior, em sequência, para
+    // funcionar não importa a ordem em que estivessem antes.
+    function placeAfter(el, ref) {
+      ref.parentNode.insertBefore(el, ref.nextSibling);
+      return el;
+    }
+    var ref = accountLabel || info.firstChild;
+    if (ref) {
+      ref = placeAfter(emailLabel, ref);
+      ref = placeAfter(emailEl, ref);
+      ref = placeAfter(nameLabel, ref);
+      placeAfter(nameEl, ref);
+    }
+  }
+
   function buildNicknameUi() {
     if (nicknameUiBuilt) return;
     var info = $("account_info");
@@ -100,6 +148,8 @@
     var logoutBtn = $("btn_logout");
     if (!info || !popover || !logoutBtn) return; // DOM ainda não pronto
     nicknameUiBuilt = true;
+
+    buildAccountInfoLabels(info);
 
     var wrap = document.createElement("div");
     wrap.id = "account_nickname_edit";
@@ -169,15 +219,14 @@
 
   function renderAccountUi() {
     var nameEl = $("account_name");
-    var emailEl = $("account_email");
     var input = $("account_nickname_input");
 
-    // Item 1 — "exibir nickname no lugar do e-mail": o e-mail some da
-    // conta (fica só internamente, para login/recuperação de senha);
-    // #account_name passa a mostrar o nickname (com fallback pro e-mail
-    // enquanto nenhum nickname tiver sido definido, para o campo nunca
-    // ficar em branco).
-    if (emailEl) emailEl.style.display = "none";
+    // ETAPA — E-MAIL DA CONTA: o e-mail deixou de ficar escondido — agora
+    // aparece sempre (somente leitura) acima do nickname, com seu próprio
+    // rótulo "E-mail" (ver buildAccountInfoLabels). #account_name continua
+    // mostrando o nickname, com o mesmo fallback de sempre para o e-mail
+    // enquanto nenhum nickname tiver sido definido (só para o campo nunca
+    // ficar em branco) — comportamento do nickname 100% preservado.
     if (nameEl) {
       var label = currentNickname || lastSeenEmail || "";
       nameEl.textContent = label;

@@ -134,10 +134,34 @@
     }
   }
 
+  // ETAPA — CROP GLOBAL: em vez de aceitar automaticamente o
+  // enquadramento que o canvas escolher sozinho, abre o editor
+  // reutilizável (js/image-cropper.js) para o usuário escolher a
+  // área quadrada (1:1, mesma proporção da miniatura em
+  // .cimg-picker-thumb/.sheet-card) antes de gravar em #foto. Se o
+  // editor não estiver disponível por algum motivo, cai de volta no
+  // comportamento anterior (redimensiona sozinho, sem crop manual),
+  // para nunca deixar a função de trocar imagem indisponível.
   function handleFileChosen(file) {
     if (!file) return;
     if (!isAcceptedFile(file)) {
       alert("Selecione um arquivo de imagem PNG, JPG ou WebP.");
+      return;
+    }
+    if (window.CRISImageCropper && typeof window.CRISImageCropper.open === "function") {
+      window.CRISImageCropper.open({
+        file: file,
+        aspectRatio: 1,
+        title: "Imagem do Personagem",
+        outputMax: MAX_DIMENSION,
+        mimeType: "image/jpeg",
+        quality: JPEG_QUALITY,
+        onConfirm: function (result) {
+          setCurrentValue(result.dataUrl);
+          updateEditorPreview(result.dataUrl);
+          editorState.lastValue = result.dataUrl;
+        }
+      });
       return;
     }
     resizeImageFile(file).then(function (dataUrl) {

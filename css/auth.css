@@ -152,14 +152,26 @@
   font-family:'Oswald',sans-serif; font-size:9px; letter-spacing:0.24em; color:var(--sigil);
   text-transform:uppercase;
 }
+/* ETAPA — E-MAIL DA CONTA: rótulos pequenos e discretos acima de cada
+   informação (mesmo espírito de #account_label, só um degrau menor),
+   inseridos por js/profile.js dentro deste mesmo #account_info — não
+   criam um estilo visual novo, só reaproveitam esta folha. */
+#account_email_label, #account_name_label{
+  font-family:'Oswald',sans-serif; font-size:8px; letter-spacing:0.2em; color:var(--sigil);
+  text-transform:uppercase; opacity:0.8; margin-top:6px;
+}
 #account_name{
   font-family:'Oswald',sans-serif; font-size:11.5px; letter-spacing:0.03em; color:var(--paper);
   text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-  display:none; /* JS (supabase-auth.js) exibe (display:block) só quando há nome cadastrado — não mudou */
+  display:none; /* JS (js/profile.js) exibe (display:block) só quando há nickname/nome — não mudou */
 }
+/* E-MAIL — somente leitura, sempre visível quando há sessão (item novo
+   desta etapa). Quebra linha em telas estreitas (360–390px) em vez de
+   cortar com reticências, já que aqui não há um valor curto garantido
+   como o nickname. */
 #account_email{
   font-family:'Special Elite', monospace; font-size:10.5px; color:var(--paper-dim);
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  white-space:normal; overflow-wrap:anywhere; word-break:break-word;
 }
 #btn_logout{
   background:var(--panel); color:var(--paper-dim); border:1px solid var(--line);
