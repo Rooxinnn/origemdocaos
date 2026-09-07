@@ -185,17 +185,14 @@
   /* ============================================================
      3) MENSAGENS DE ERRO EM PT-BR + DIAGNÓSTICO
      ------------------------------------------------------------
-     ETAPA 1.1 — antes, qualquer erro não reconhecido virava sempre
-     "Não foi possível concluir a operação. Tente novamente.", sem
-     nada no console — impossível diagnosticar. Duas mudanças:
-       1) logAuthError() sempre manda o erro real pro console (sem
-          senha/chaves), pra quem estiver desenvolvendo conseguir ver
-          a causa de verdade em qualquer situação;
-       2) friendlyError() ganhou mais casos conhecidos do Supabase, e
-          quando NENHUM caso bate, mostra a mensagem técnica original
-          (sanitizada) para o usuário, em vez de esconder atrás de um
-          texto genérico — isso é o que estava mascarando a causa real
-          do erro de cadastro relatado.
+     logAuthError() sempre manda o erro real (sem senha/chaves) pro
+     console, para quem estiver desenvolvendo conseguir diagnosticar.
+     friendlyError() cobre os casos conhecidos do Supabase com frases
+     em português; quando NENHUM caso bate, devolve um texto genérico
+     (nunca a mensagem técnica crua) — ver ETAPA — ERROS/AVISOS: erros
+     técnicos não podem ser mostrados diretamente ao usuário, mesmo
+     como fallback. O console continua tendo o erro real via
+     logAuthError().
      ============================================================ */
   function logAuthError(context, err) {
     // Nunca loga senha (nem os campos de senha são lidos aqui — só err).
@@ -233,13 +230,26 @@
     if (m.indexOf("redirect") !== -1 && (m.indexOf("not allowed") !== -1 || m.indexOf("invalid") !== -1)) {
       return "A URL usada para retorno do email (" + window.location.origin + ") não está na lista de URLs permitidas do projeto Supabase (Authentication → URL Configuration).";
     }
-    if (m.indexOf("user not found") !== -1) return "Não existe conta cadastrada com este email.";
+    // ETAPA — ERROS/AVISOS: "user not found" só ocorre no fluxo de
+    // recuperação de senha. Antes, isto revelava se um email está ou não
+    // cadastrado (falha de segurança — instrução explícita do pedido:
+    // "não mostrar informações que permitam descobrir se determinado
+    // e-mail existe"). Supabase, por padrão, nem chega a devolver este
+    // erro para resetPasswordForEmail (responde sucesso de qualquer
+    // forma) — mas se algum caso ainda cair aqui, a mensagem agora é a
+    // MESMA usada em caso de sucesso, propositalmente.
+    if (m.indexOf("user not found") !== -1) {
+      return "Se este email estiver cadastrado, você receberá um link para redefinir sua senha.";
+    }
     if (m.indexOf("same password") !== -1 || m.indexOf("different from the old") !== -1) return "A nova senha precisa ser diferente da senha atual.";
 
-    // Nenhum padrão conhecido: mostra a mensagem técnica original (em vez de
-    // um texto genérico que esconderia a causa real) para permitir diagnóstico.
-    if (raw) return "Não foi possível concluir a operação (" + raw + "). Veja o console para mais detalhes.";
-    return "Não foi possível concluir a operação. Tente novamente. Veja o console para mais detalhes.";
+    // Nenhum padrão conhecido: NÃO mostra a mensagem técnica crua ao
+    // usuário (instrução "NÃO MOSTRAR ERROS TÉCNICOS DIRETAMENTE" —
+    // mensagens de exceção JS/Supabase não podem ir para a tela). O erro
+    // real já foi para o console via logAuthError() antes de chegar
+    // aqui; um texto amigável genérico é suficiente para o usuário, e
+    // quem precisar diagnosticar tem o console.
+    return "Não foi possível concluir a operação. Tente novamente em instantes.";
   }
 
   /* ============================================================
@@ -319,6 +329,7 @@
   }
 
   async function doLogout() {
+    intentionalSignOut = true;
     try { await client.auth.signOut(); } catch (e) { /* segue o fluxo mesmo se falhar */ }
   }
 
@@ -329,6 +340,13 @@
      existe sessão válida. Nunca mexe em storage/fichas diretamente.
      ============================================================ */
   let appStartedOnce = false;
+  // ETAPA — ERROS/AVISOS: distingue logout intencional (clique em "Sair")
+  // de um SIGNED_OUT inesperado (sessão/token expirou sozinho, ex.:
+  // refresh token revogado ou usuário ficou muito tempo sem abrir a aba).
+  // Só no segundo caso mostramos "Sua sessão terminou. Faça login
+  // novamente." — no logout manual o usuário já sabe por que está na
+  // tela de login, então uma mensagem extra só seria ruído.
+  let intentionalSignOut = false;
 
   // ETAPA 1.1 — CONTA LOGADA: só lê user.user_metadata (nome, quando o
   // usuário tiver algum cadastrado) e user.email — nada é armazenado, nada
@@ -426,7 +444,8 @@
     startAppNow();
   }
 
-  function leaveApp() {
+  function leaveApp(opts) {
+    const unexpected = !!(opts && opts.unexpected);
     appStartedOnce = false;
     // Zera a trava interna de crisStartAppIfNeeded() também — sem isso, um
     // novo login nesta mesma aba encontraria a trava ainda ligada da vez
@@ -443,6 +462,10 @@
     clearAccountInfo();
     showAuthScreen();
     showPanel("login");
+    // Só avisa quando o SIGNED_OUT não foi provocado por um clique em
+    // "Sair" (ver intentionalSignOut) — ou seja, quando a sessão caiu
+    // sozinha e o usuário precisa saber que precisa entrar de novo.
+    if (unexpected) setMsg("Sua sessão terminou. Faça login novamente.", "error");
   }
 
   /* ============================================================
@@ -634,9 +657,12 @@
       if (recoveryInProgress) return;
 
       if (session) {
+        intentionalSignOut = false;
         enterApp(session.user);
       } else if (event === "SIGNED_OUT" || appStartedOnce) {
-        leaveApp();
+        const wasIntentional = intentionalSignOut;
+        intentionalSignOut = false;
+        leaveApp({ unexpected: event === "SIGNED_OUT" && !wasIntentional });
       }
     });
 

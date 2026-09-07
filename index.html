@@ -8,7 +8,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Special+Elite&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/text-view-mode.css">
 <link rel="stylesheet" href="css/auth.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <!-- Supabase Auth (ETAPA 1) — biblioteca oficial via CDN. Ver js/supabase-auth.js
      ETAPA 1.1: trocado para a URL exata recomendada pela documentação oficial
      do Supabase (o caminho anterior, .../dist/umd/supabase.js, era um palpite
@@ -5020,12 +5019,7 @@ async function crisStartAppIfNeeded(){
   // Agora qualquer erro aqui vai pro console (para diagnóstico real, sem
   // esconder a causa) e o "finally" garante que a tela de carregamento
   // sempre é liberada, independentemente do que aconteceu acima.
-  // ETAPA 1.1 — DIAGNÓSTICO TEMPORÁRIO: logs passo a passo pra descobrir
-  // exatamente onde a inicialização trava (não altera nenhum comportamento,
-  // só imprime no console antes/depois de cada etapa). Remover depois que o
-  // travamento pós-login for localizado e corrigido.
   try {
-    console.log("[C.R.I.S. DIAG] 1) iniciando crisStartAppIfNeeded");
     // ETAPA 5.1 — ISOLAMENTO DE CONTAS: precisa rodar ANTES de qualquer
     // leitura das chaves de dados (loadSheetsIndex(), loadParanormal(),
     // Criaturas, XP, Backups, Dice Tray, Rest Points) — decide, sem
@@ -5037,11 +5031,8 @@ async function crisStartAppIfNeeded(){
       try { await window.CRISAccountIsolation.ensureBeforeLoad(); }
       catch (e) { console.error("[C.R.I.S. Isolamento] Erro ao isolar dados locais por conta:", e); }
     }
-    console.log("[C.R.I.S. DIAG] 1.1) CRISAccountIsolation.ensureBeforeLoad OK");
     await loadSheetsIndex();
-    console.log("[C.R.I.S. DIAG] 2) loadSheetsIndex OK");
     await migrateLegacySheetIfNeeded();
-    console.log("[C.R.I.S. DIAG] 3) migrateLegacySheetIfNeeded OK");
     // ETAPA 2 — Supabase (ver js/supabase-sync.js): decide, sem nunca
     // sobrescrever fichas locais automaticamente, se fichas da nuvem
     // devem ser carregadas ou se a faixa de migração deve aparecer
@@ -5050,7 +5041,6 @@ async function crisStartAppIfNeeded(){
       try{ await window.CRISSync.onLogin(); }
       catch(e){ console.error("[C.R.I.S. Sync] Erro ao verificar fichas na nuvem após login:", e); }
     }
-    console.log("[C.R.I.S. DIAG] 3.1) CRISSync.onLogin OK");
     // ETAPA 4.1B — Conexões Personalizadas (ver js/character-connections.js):
     // mesmo ponto de entrada pós-login já usado acima para fichas, só que
     // para a biblioteca de Personalizadas — não mexe em sheetsIndex, em
@@ -5059,7 +5049,6 @@ async function crisStartAppIfNeeded(){
       try{ await window.CRISCustomConnectionsSync.syncAfterLogin(); }
       catch(e){ console.error("[CRIS CUSTOM CONNECTIONS ERROR] Erro ao sincronizar Personalizadas após login:", e); }
     }
-    console.log("[C.R.I.S. DIAG] 3.2) CRISCustomConnectionsSync.syncAfterLogin OK");
     // ETAPA 5.2B — Minhas Criaturas (ver js/creatures-sync.js): mesmo
     // ponto de entrada pós-login já usado acima para fichas e para
     // Personalizadas, só que para a tabela public.creatures. Não mexe
@@ -5073,7 +5062,6 @@ async function crisStartAppIfNeeded(){
       try{ await window.CRISCreaturesSync.onLogin(); }
       catch(e){ console.error("[C.R.I.S. Criaturas Sync] Erro ao verificar criaturas na nuvem após login:", e); }
     }
-    console.log("[C.R.I.S. DIAG] 3.3) CRISCreaturesSync.onLogin OK");
     // ETAPA 6 — só roda DEPOIS de account-isolation, do onLogin/
     // syncAfterLogin de Agentes/Criaturas/Conexões acima: a fila
     // (js/sync-queue.js) já está isolada para a conta certa neste
@@ -5083,7 +5071,6 @@ async function crisStartAppIfNeeded(){
       try{ await window.CRISSyncQueue.onLogin(); }
       catch(e){ console.error("[C.R.I.S. SyncQueue] Erro ao processar fila após login:", e); }
     }
-    console.log("[C.R.I.S. DIAG] 3.4) CRISSyncQueue.onLogin OK");
     // CORREÇÃO (Problema 1) — Realtime: precisa rodar DEPOIS que
     // sheetsIndex já está carregado e isolado por conta (senão a
     // resolução de cloudId/local id, usada para rotear cada evento
@@ -5094,27 +5081,19 @@ async function crisStartAppIfNeeded(){
       try{ await window.CRISAgentsRealtime.start(); }
       catch(e){ console.error("[C.R.I.S. Realtime] Erro ao iniciar subscription de agents:", e); }
     }
-    console.log("[C.R.I.S. DIAG] 3.5) CRISAgentsRealtime.start OK");
     // Inventário não é mais carregado aqui: agora pertence a cada ficha e
     // é carregado por loadInventory(id) dentro de openSheet(). Antes de
     // qualquer ficha ser aberta, permanece vazio.
     renderInventory();
-    console.log("[C.R.I.S. DIAG] 4) renderInventory OK");
     await loadParanormal();
-    console.log("[C.R.I.S. DIAG] 5) loadParanormal OK");
     renderCompendio();
-    console.log("[C.R.I.S. DIAG] 6) renderCompendio OK");
     renderConexoes();
-    console.log("[C.R.I.S. DIAG] 7) renderConexoes OK");
     renderGuiaLivro();
-    console.log("[C.R.I.S. DIAG] 8) renderGuiaLivro OK");
   } catch (e) {
     console.error("[C.R.I.S.] Erro ao inicializar o app após login:", e);
   } finally {
-    console.log("[C.R.I.S. DIAG] 9) finally — escondendo loading e mostrando welcome");
     document.getElementById("loading_screen").style.display = "none";
     showWelcomeScreen();
-    console.log("[C.R.I.S. DIAG] 10) showWelcomeScreen chamado");
   }
 }
 window.crisStartAppIfNeeded = crisStartAppIfNeeded;
@@ -6219,12 +6198,39 @@ function drawExtraPage(pdfDoc, font, fontBold, pageW, pageH, title, lines){
   return page;
 }
 
+// ETAPA — PERFORMANCE SEGURA (7.1): pdf-lib só é necessário para
+// exportar/importar PDF de ficha, não no carregamento inicial. Antes,
+// era carregado via <script> no <head> (bloqueando o carregamento
+// inicial mesmo para quem nunca usa PDF nesta sessão). Agora é
+// injetado sob demanda, na primeira vez que exportAgentPDF() ou a
+// importação de PDF (js/pdf-agent-import.js) realmente precisarem
+// dele — cacheado numa Promise para não injetar o <script> duas vezes
+// se o usuário clicar em exportar/importar mais de uma vez. Nenhuma
+// função que já usa `PDFLib.*` foi alterada; só passou a ser chamada
+// depois de garantir que a biblioteca terminou de carregar.
+var __pdfLibLoadPromise = null;
+function ensurePdfLibLoaded(){
+  if(typeof PDFLib !== "undefined") return Promise.resolve();
+  if(__pdfLibLoadPromise) return __pdfLibLoadPromise;
+  __pdfLibLoadPromise = new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js";
+    s.onload = () => resolve();
+    s.onerror = () => { __pdfLibLoadPromise = null; reject(new Error("pdf-lib failed to load")); };
+    document.head.appendChild(s);
+  });
+  return __pdfLibLoadPromise;
+}
+window.ensurePdfLibLoaded = ensurePdfLibLoaded;
+
 async function exportAgentPDF(){
   if(!currentAgentId){
     alert("Abra uma ficha antes de exportar em PDF.");
     return;
   }
-  if(typeof PDFLib === "undefined"){
+  try{
+    await ensurePdfLibLoaded();
+  }catch(e){
     alert("A biblioteca de PDF (pdf-lib) não carregou. Verifique sua conexão com a internet e tente novamente.");
     return;
   }
@@ -7235,6 +7241,7 @@ const ORIGINAL_PDF_BASE64 = "JVBERi0xLjYNJeLjz9MNCjIxMTMgMCBvYmoNPDwvRmlsdGVyL0Z
 <script src="js/pdf-agent-import.js"></script>
 <!-- ETAPA 1: precisa vir por último, depois que crisStartAppIfNeeded() e
      todos os elementos de #auth_screen/#btn_logout já existem no DOM. -->
+<script src="js/friendly-errors.js"></script>
 <script src="js/supabase-auth.js"></script>
 <!-- FASE B (Sistema de Campanhas): precisa vir depois de
      js/supabase-auth.js (reaproveita window.CRISAuth.client) e depois

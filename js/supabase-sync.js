@@ -68,7 +68,6 @@
   let __generation = 0;
   function currentGeneration() { return __generation; }
   function logGenStale(where) {
-    console.log("[CRIS Sync] geração de sessão mudou durante '" + where + "' — resultado descartado (troca de conta em andamento).");
   }
 
   /* ============================================================
@@ -242,7 +241,6 @@
       return { ok: false, offline: true };
     }
 
-    console.log("[CRIS Sync] Salvando ficha", localId);
     setBadge("syncing");
 
     // O inventário mora dentro da ficha (data.inventario) só na
@@ -271,7 +269,6 @@
 
     try {
       if (meta && meta.cloudId) {
-        console.log("[CRIS Sync] Cloud ID encontrado:", meta.cloudId);
         // ATUALIZAÇÃO (instrução 11) — mas antes verifica se o
         // registro na nuvem ainda existe e não foi alterado por
         // outra sessão desde a última sincronização (instrução 20).
@@ -299,7 +296,6 @@
           // silenciosamente — marca como pendente e para.
           await writeCloudMeta(localId, Object.assign({}, meta, { conflict: true }));
           setBadge("conflict");
-          console.log("[CRIS Sync] conflito detectado ao salvar:", localId);
           // ETAPA 2.3: se a ficha em conflito é a que está aberta agora
           // (é sempre o caso, já que só se chega aqui a partir do botão
           // "Salvar Ficha" da ficha aberta), mostra a interface de
@@ -343,8 +339,6 @@
         if (window.CRISAgentsRealtime && typeof window.CRISAgentsRealtime.markSelfWrite === "function") {
           window.CRISAgentsRealtime.markSelfWrite(updated.id, updated.updated_at);
         }
-        console.log("[CRIS Sync] UPDATE agents concluído");
-        console.log("[CRIS Sync] updated_at recebido:", updated.updated_at);
         setBadge("synced");
         return { ok: true, mode: "update" };
       }
@@ -639,8 +633,6 @@
         if (gen !== currentGeneration()) { logGenStale("downloadCloudAgentList (antes de indexar)"); break; }
         const nome = (agentData.nome || "").trim() || cloudAgent.name || "Ficha sem nome";
         window.sheetsIndex.push({ id: newLocalId, nome: nome, updatedAt: Date.now() });
-        console.log("[CRIS Sync] ficha local criada:", newLocalId);
-        console.log("[CRIS Sync] Download da ficha concluído");
         downloaded++;
       } catch (e) {
         logSyncError("Falha ao carregar ficha da nuvem '" + cloudAgent.id + "'", e);
@@ -654,9 +646,7 @@
     }
     if (downloaded > 0 && typeof window.saveSheetsIndex === "function") {
       await window.saveSheetsIndex();
-      console.log("[CRIS Sync] sheetsIndex atualizado —", downloaded, "ficha(s)");
     }
-    console.log("[CRIS Sync] carregamento concluído");
     return { downloaded: downloaded };
   }
 
@@ -759,7 +749,6 @@
         const ok = await applyCloudAgentToLocalEntry(entry, cloudAgent);
         if (!ok) continue;
         if (gen !== currentGeneration()) { logGenStale("refreshLinkedCloudAgents (pós-gravação)"); break; }
-        console.log("[CRIS Sync] ficha atualizada da nuvem:", entry.id);
         updated++;
       } catch (e) {
         logSyncError("Falha ao atualizar ficha vinculada '" + entry.id + "'", e);
@@ -973,7 +962,6 @@
       setBadge("synced");
       if (typeof window.renderSheetCards === "function") window.renderSheetCards();
       if (typeof window.flashIndicator === "function") window.flashIndicator("☁ Versão da nuvem aplicada.", false, 2500);
-      console.log("[CRIS Sync] conflito resolvido (usou versão da nuvem):", localId);
     } catch (e) {
       logSyncError("Falha ao aplicar versão da nuvem no conflito '" + localId + "'", e);
       if (typeof window.flashIndicator === "function") window.flashIndicator("☁ Não foi possível carregar a versão da nuvem. Tente novamente.", true, 3200);
@@ -1069,7 +1057,6 @@
       clearConflictBadgeUI();
       setBadge("synced");
       if (typeof window.flashIndicator === "function") window.flashIndicator("☁ Sua versão substituiu a versão da nuvem.", false, 2500);
-      console.log("[CRIS Sync] conflito resolvido (manteve versão local):", localId);
     } catch (e) {
       logSyncError("Falha ao substituir a nuvem pela versão local '" + localId + "'", e);
       // Falhou — o conflito continua pendente, exatamente como estava.
@@ -1187,7 +1174,6 @@
         .eq("id", meta.cloudId)
         .eq("user_id", user.id);
       if (error) throw error;
-      console.log("[CRIS Sync] DELETE agents concluído:", meta.cloudId);
       return { ok: true, hadCloud: true };
     } catch (e) {
       logSyncError("Falha ao excluir ficha na nuvem '" + localId + "'", e);
@@ -1230,7 +1216,6 @@
     const genAtLogin = currentGeneration();
 
     hideBanner();
-    console.log("[CRIS Sync] onLogin iniciado");
 
     const client = getClient();
     if (!client) return; // Supabase indisponível — segue 100% local (instrução 21)
@@ -1238,20 +1223,15 @@
     const user = await getCurrentUser();
     if (genAtLogin !== currentGeneration()) { logGenStale("onLogin (getCurrentUser)"); return; }
     if (!user) return;
-    console.log("[CRIS Sync] usuário autenticado: SIM");
-    console.log("[CRIS Sync] user.id:", user.id);
 
-    console.log("[CRIS Sync] buscando agents");
     const cloudAgents = await fetchCloudAgents(user);
     if (genAtLogin !== currentGeneration()) { logGenStale("onLogin (fetchCloudAgents)"); return; }
-    console.log("[CRIS Sync] fichas cloud encontradas:", cloudAgents.length);
     const linked = await linkedCloudIdSet();
     if (genAtLogin !== currentGeneration()) { logGenStale("onLogin (linkedCloudIdSet)"); return; }
     const unlinkedCloud = cloudAgents.filter((a) => !linked.has(a.id));
 
     const localCount = Array.isArray(window.sheetsIndex) ? window.sheetsIndex.length : 0;
     const cloudCount = cloudAgents.length;
-    console.log("[CRIS Sync] fichas locais:", localCount, "| sem vínculo local:", unlinkedCloud.length);
 
     // Etapa 2.2: antes de decidir qual dos 4 casos abaixo se aplica,
     // atualiza as fichas que já estão vinculadas e cuja versão na nuvem
@@ -1262,7 +1242,6 @@
     const refreshRes = await refreshLinkedCloudAgents(cloudAgents, genAtLogin);
     if (genAtLogin !== currentGeneration()) { logGenStale("onLogin (refreshLinkedCloudAgents)"); return; }
     if (refreshRes.updated > 0) {
-      console.log("[CRIS Sync] fichas vinculadas atualizadas da nuvem:", refreshRes.updated);
       if (typeof window.flashIndicator === "function") {
         window.flashIndicator("☁ " + refreshRes.updated + " ficha(s) atualizada(s) da nuvem.", false, 3200);
       }

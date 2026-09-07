@@ -78,7 +78,6 @@
     var token = "";
     try { token = decodeURIComponent(raw); } catch (e) { token = raw; }
     if (!token) return false;
-    console.log("[CRIS Campanhas DIAG] token de convite capturado da URL.");
     try { sessionStorage.setItem(PENDING_INVITE_KEY, token); } catch (e) {
       // sessionStorage indisponível (ex.: navegação privada) — o
       // convite simplesmente não sobrevive a um redirecionamento de
@@ -371,7 +370,9 @@
     } catch (e) {
       console.error("[CRIS Campanhas] Falha ao excluir campanha:", e);
       if (erroEl) {
-        erroEl.textContent = "Falha ao excluir: " + (e && e.message ? e.message : "erro desconhecido");
+        erroEl.textContent = window.CRISFriendlyError
+          ? window.CRISFriendlyError(e, "Não foi possível excluir a campanha.")
+          : "Não foi possível excluir a campanha. Tente novamente.";
         erroEl.style.display = "block";
       }
     }
@@ -436,7 +437,9 @@
       console.error("[CRIS Campanhas] Falha ao carregar campanhas:", e);
       if (loadingEl) loadingEl.style.display = "none";
       if (emptyEl) {
-        emptyEl.textContent = "Falha ao carregar campanhas: " + (e && e.message ? e.message : "erro desconhecido");
+        emptyEl.textContent = window.CRISFriendlyError
+          ? window.CRISFriendlyError(e, "Não foi possível carregar suas campanhas.")
+          : "Não foi possível carregar suas campanhas. Tente novamente.";
         emptyEl.style.display = "block";
       }
     }
@@ -656,7 +659,9 @@
       if (typeof window.flashIndicator === "function") window.flashIndicator("Capa da campanha atualizada!");
     } catch (e) {
       console.error("[CRIS Campanhas] Falha ao enviar capa:", e);
-      capaStatus("Falha ao enviar capa: " + (e && e.message ? e.message : "erro desconhecido"), true);
+      capaStatus(window.CRISFriendlyError
+        ? window.CRISFriendlyError(e, "Não foi possível enviar a capa.")
+        : "Não foi possível enviar a capa. Tente novamente.", true);
     }
   }
 
@@ -695,7 +700,9 @@
       if (typeof window.flashIndicator === "function") window.flashIndicator("Capa removida.");
     } catch (e) {
       console.error("[CRIS Campanhas] Falha ao remover capa:", e);
-      capaStatus("Falha ao remover capa: " + (e && e.message ? e.message : "erro desconhecido"), true);
+      capaStatus(window.CRISFriendlyError
+        ? window.CRISFriendlyError(e, "Não foi possível remover a capa.")
+        : "Não foi possível remover a capa. Tente novamente.", true);
     }
   }
 
@@ -741,7 +748,9 @@
     } catch (e) {
       console.error("[CRIS Campanhas] Falha ao editar campanha:", e);
       if (erroEl) {
-        erroEl.textContent = "Falha ao salvar: " + (e && e.message ? e.message : "erro desconhecido");
+        erroEl.textContent = window.CRISFriendlyError
+          ? window.CRISFriendlyError(e, "Não foi possível salvar a campanha.")
+          : "Não foi possível salvar a campanha. Tente novamente.";
         erroEl.style.display = "block";
       }
     }
@@ -830,7 +839,9 @@
       console.error("[CRIS Campanhas] Falha ao carregar meus personagens:", e);
       if (loadingEl) loadingEl.style.display = "none";
       if (emptyEl) {
-        emptyEl.textContent = "Falha ao carregar personagens: " + (e && e.message ? e.message : "erro desconhecido");
+        emptyEl.textContent = window.CRISFriendlyError
+          ? window.CRISFriendlyError(e, "Não foi possível carregar os personagens.")
+          : "Não foi possível carregar os personagens. Tente novamente.";
         emptyEl.style.display = "block";
       }
     }
@@ -1106,7 +1117,9 @@
         const jaExiste = e && (e.code === "23505");
         erroEl.textContent = jaExiste
           ? "Este personagem já está nesta campanha."
-          : "Falha ao adicionar personagem: " + (e && e.message ? e.message : "erro desconhecido");
+          : (window.CRISFriendlyError
+              ? window.CRISFriendlyError(e, "Não foi possível adicionar o personagem.")
+              : "Não foi possível adicionar o personagem. Tente novamente.");
         erroEl.style.display = "block";
       }
     }
@@ -1145,8 +1158,10 @@
     } catch (e) {
       console.error("[CRIS Campanhas] Falha ao carregar jogadores:", e);
       if (loadingEl) loadingEl.style.display = "none";
-      cardsEl.innerHTML = '<p class="empty-state">Falha ao carregar jogadores: ' +
-        (e && e.message ? e.message : "erro desconhecido") + "</p>";
+      cardsEl.innerHTML = '<p class="empty-state">' +
+        (window.CRISFriendlyError
+          ? window.CRISFriendlyError(e, "Não foi possível carregar os jogadores.")
+          : "Não foi possível carregar os jogadores. Tente novamente.") + "</p>";
     }
   }
 
@@ -1444,7 +1459,9 @@
       loadCampaignList();
     } catch (e) {
       console.error("[CRIS Campanhas] Falha ao criar campanha:", e);
-      erroEl.textContent = "Falha ao criar campanha: " + (e && e.message ? e.message : "erro desconhecido");
+      erroEl.textContent = window.CRISFriendlyError
+        ? window.CRISFriendlyError(e, "Não foi possível criar a campanha.")
+        : "Não foi possível criar a campanha. Tente novamente.";
       erroEl.style.display = "block";
     }
   }
@@ -1482,7 +1499,6 @@
     var client = getClient();
     if (!client) throw new Error("Sem conexão com o Supabase.");
     var res = await client.rpc("get_campaign_invite_info", { p_token: token });
-    console.log("[CRIS Campanhas DIAG] resultado de get_campaign_invite_info:", res);
     if (res.error) throw res.error;
     var rows = res.data;
     if (!rows || rows.length === 0) return null;
@@ -1497,7 +1513,6 @@
   async function showInvitePreview(token) {
     if (__inviteTokenBeingShown === token) return;
     __inviteTokenBeingShown = token;
-    console.log("[CRIS Campanhas DIAG] showInvitePreview chamado com token:", JSON.stringify(token));
     conviteAtualToken = token;
     openInviteModal();
     showInviteModalState("preview");
@@ -1563,8 +1578,7 @@
         }
       }
     } catch (e) {
-      console.error("[CRIS Campanhas] Falha ao buscar convite:", e);
-      console.log("[CRIS Campanhas DIAG] erro real capturado:", {
+      console.error("[CRIS Campanhas] Falha ao buscar convite:", {
         message: e && e.message,
         code: e && e.code,
         details: e && e.details,
@@ -1627,8 +1641,7 @@
         }
       }
     } catch (e) {
-      console.error("[CRIS Campanhas] Falha ao entrar na campanha:", e);
-      console.log("[CRIS Campanhas DIAG] erro real capturado (accept_campaign_invite):", {
+      console.error("[CRIS Campanhas] Falha ao entrar na campanha (accept_campaign_invite):", {
         message: e && e.message,
         code: e && e.code,
         details: e && e.details,
@@ -1667,7 +1680,6 @@
   // de qualquer aba).
   async function checkPendingInvite() {
     var token = getPendingInviteToken();
-    console.log("[CRIS Campanhas DIAG] token pendente recuperado:", JSON.stringify(token));
     if (!token) return;
     await showInvitePreview(token);
   }

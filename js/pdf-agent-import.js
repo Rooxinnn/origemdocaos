@@ -274,6 +274,19 @@
   async function analyzePdf(fileBytes, fileName){
     const report = { fileName, ok: [], revisar: [], naoMapeado: [], agentData: null, nomeFicha: "", errorFatal: null };
 
+    // ETAPA — PERFORMANCE SEGURA (7.1): pdf-lib agora é carregado sob
+    // demanda (ver window.ensurePdfLibLoaded em index.html), não mais
+    // via <script> fixo no <head>. Garante que terminou de carregar
+    // antes de qualquer PDFLib.* ser usado por readPdfTextFields().
+    if(typeof PDFLib === "undefined"){
+      try{
+        await window.ensurePdfLibLoaded();
+      }catch(e){
+        report.errorFatal = "Não foi possível carregar o componente de leitura de PDF. Verifique sua conexão com a internet e tente novamente.";
+        return report;
+      }
+    }
+
     let raw, formOk = true;
     try{
       const res = await readPdfTextFields(fileBytes);

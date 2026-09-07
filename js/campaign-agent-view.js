@@ -75,6 +75,18 @@
      ============================================================ */
   var __foreignDirty = false;
   var __foreignSaveInFlight = false; // evita saves concorrentes (autosave x clique manual), mesmo padrão de __agentSaveInFlight
+  // ETAPA — ERROS/AVISOS: conta falhas consecutivas do AUTOSAVE (não do
+  // clique manual) para não disparar um flashIndicator vermelho a cada
+  // tentativa (ex.: internet caiu por alguns segundos -> autosave tenta
+  // de novo a cada ~700ms -> sem isto, um banner de erro novo apareceria
+  // repetidamente). O indicador discreto no próprio banner da ficha
+  // ("Erro ao salvar — tentando de novo em breve.") já comunica o
+  // problema em tempo real; o flashIndicator só aparece UMA vez, quando
+  // o número de falhas seguidas indica que não é mais um solavanco
+  // passageiro, e não se repete enquanto o problema continuar o mesmo.
+  var __foreignAutosaveFailStreak = 0;
+  var __foreignAutosaveAlerted = false;
+  var FOREIGN_AUTOSAVE_ALERT_THRESHOLD = 3;
   var __foreignSaveDebounced = null; // criado sob demanda (precisa de window.debounce)
 
   function isForeignDirty() { return __foreignActive && __foreignDirty; }
@@ -205,7 +217,9 @@
     } catch (e) {
       console.error("[CRIS CampaignAgentView] Falha ao abrir ficha de terceiro:", e);
       if (typeof window.flashIndicator === "function") {
-        window.flashIndicator("✕ Falha ao abrir ficha: " + (e && e.message ? e.message : "erro desconhecido"), true, 3000);
+        window.flashIndicator("✕ " + (window.CRISFriendlyError
+          ? window.CRISFriendlyError(e, "Não foi possível abrir esta ficha")
+          : "Não foi possível abrir esta ficha. Tente novamente."), true, 3000);
       }
     }
   }
@@ -292,6 +306,8 @@
       }
 
       __foreignDirty = false;
+      __foreignAutosaveFailStreak = 0;
+      __foreignAutosaveAlerted = false;
 
       if (isAutosave) {
         if (textEl) {
@@ -310,10 +326,33 @@
       }
     } catch (e) {
       console.error("[CRIS CampaignAgentView] Falha ao salvar ficha de terceiro:", e);
-      if (typeof window.flashIndicator === "function") {
-        window.flashIndicator("✕ Não foi possível salvar: " + (e && e.message ? e.message : "erro desconhecido"), true, 3000);
+      var friendlySaveMsg = window.CRISFriendlyError
+        ? window.CRISFriendlyError(e, "Não foi possível salvar")
+        : "Não foi possível salvar. Tente novamente.";
+      if (isAutosave) {
+        // Falha em segundo plano (autosave): o indicador discreto no
+        // próprio banner da ficha já avisa a cada tentativa — não soma
+        // um flashIndicator vermelho por tentativa (evitaria a
+        // "avalanche" de banners a cada poucos segundos numa queda de
+        // conexão passageira). Só escala para um alerta visível quando
+        // o número de falhas SEGUIDAS ultrapassa o limite, e só uma vez
+        // (não repete enquanto o mesmo problema persistir).
+        __foreignAutosaveFailStreak++;
+        if (
+          __foreignAutosaveFailStreak >= FOREIGN_AUTOSAVE_ALERT_THRESHOLD &&
+          !__foreignAutosaveAlerted &&
+          typeof window.flashIndicator === "function"
+        ) {
+          __foreignAutosaveAlerted = true;
+          window.flashIndicator("⚠ Suas últimas alterações ainda não foram sincronizadas. O sistema continuará tentando automaticamente.", true, 4200);
+        }
+        if (textEl) textEl.textContent = "Erro ao salvar — tentando de novo em breve.";
+      } else if (typeof window.flashIndicator === "function") {
+        // Clique manual em "Salvar Alterações": é uma ação direta do
+        // usuário que falhou — mostra o erro imediatamente (regra
+        // "ação iniciada pelo usuário falhou" continua se aplicando).
+        window.flashIndicator("✕ " + friendlySaveMsg + ".", true, 3000);
       }
-      if (isAutosave && textEl) textEl.textContent = "Erro ao salvar — tentando de novo em breve.";
     } finally {
       if (!isAutosave && btn) { btn.disabled = false; btn.textContent = originalLabel; }
       __foreignSaveInFlight = false;
