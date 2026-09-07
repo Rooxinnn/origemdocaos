@@ -189,6 +189,13 @@
   // é tratado como já tendo 1 unidade antes de somar.
   function addEquipmentToSheet(id, qtd){
     if (typeof invItems === "undefined") return;
+    // Mesmo guard de saveInventory() em index.html: enquanto o Mestre está
+    // vendo o Inventário de um personagem de terceiro (só leitura), não
+    // deixa este caminho (Compêndio de Equipamentos) mutar invItems.
+    if (window.CRISCampaignAgentView && typeof window.CRISCampaignAgentView.isActive === "function" && window.CRISCampaignAgentView.isActive()){
+      if (typeof flashIndicator === "function") flashIndicator("✕ Edição de Inventário de outro personagem ainda não é permitida — isto é só visualização.", true, 3400);
+      return;
+    }
 
     var addQtd = parseInt(qtd, 10);
     if (isNaN(addQtd) || addQtd < 1) addQtd = 1;
@@ -522,6 +529,12 @@
   // armazenamento novo.
   function decreaseAgenteItemQty(idx){
     if (typeof invItems === "undefined") return;
+    // Mesmo guard de saveInventory() — este painel vive dentro de
+    // #tab-agentes, então fica visível também ao ver a ficha de terceiro.
+    if (window.CRISCampaignAgentView && typeof window.CRISCampaignAgentView.isActive === "function" && window.CRISCampaignAgentView.isActive()){
+      if (typeof flashIndicator === "function") flashIndicator("✕ Edição de Inventário de outro personagem ainda não é permitida — isto é só visualização.", true, 3400);
+      return;
+    }
     var item = invItems[idx];
     if (!item || !item.eqRef) return;
 

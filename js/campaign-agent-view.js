@@ -106,6 +106,54 @@
     });
   }
 
+  /* ============================================================
+     CORREÇÃO — CONEXÕES NÃO APARECIAM PARA O MESTRE
+     ------------------------------------------------------------
+     fillFieldsFrom() já grava o valor certo em #agente_conexoes_ids
+     (esse campo é só mais um input dentro de #tab-agentes, coletado
+     como qualquer outro por agentFieldIds()/fillFieldsFrom()). O que
+     faltava era pedir o redesenho do painel "Conexão" depois disso —
+     js/character-connections.js expõe exatamente isso
+     (window.CharacterConnections.refresh), de propósito, para casos
+     assim ("outros sistemas já existentes [...] depois de alterar o
+     campo oculto por fora"). Nenhum mecanismo novo é criado aqui.
+     ============================================================ */
+  function refreshForeignConnections() {
+    if (window.CharacterConnections && typeof window.CharacterConnections.refresh === "function") {
+      try { window.CharacterConnections.refresh(); } catch (e) { /* melhor esforço — não bloqueia a visualização */ }
+    }
+  }
+
+  /* ============================================================
+     CORREÇÃO — INVENTÁRIO NÃO APARECIA PARA O MESTRE
+     ------------------------------------------------------------
+     O Inventário já chega corretamente até agents.data.inventario
+     (ver js/supabase-sync.js: syncSheetToCloud() já embute isso na
+     nuvem). O que nunca existia era o Mestre carregar esse array no
+     "invItems" (mesma variável global que js/equipamentos-agente.js e
+     a própria tela de Inventário em index.html já usam) e mandar
+     redesenhar — sem isso, a aba Inventário exibia o que já estivesse
+     carregado antes (a ficha do próprio Mestre, tipicamente).
+
+     Aqui é só EXIBIÇÃO: não chama saveInventory() nem
+     inventoryStorageKey() com o id de terceiro — nenhum
+     armazenamento novo, nenhuma gravação. A edição continua
+     bloqueada (ver o guard em saveInventory(), index.html) enquanto
+     __foreignActive, exatamente como já acontece hoje com Inventário
+     dentro do escopo desta etapa.
+     ============================================================ */
+  function loadForeignInventoryReadOnly(data) {
+    if (typeof invItems === "undefined") return;
+    invItems = Array.isArray(data && data.inventario) ? data.inventario : [];
+    if (typeof window.renderInventory === "function") window.renderInventory();
+  }
+
+  function clearForeignInventoryIfNeeded() {
+    if (typeof invItems === "undefined") return;
+    invItems = [];
+    if (typeof window.renderInventory === "function") window.renderInventory();
+  }
+
   function refreshDerivedDisplays() {
     [
       "updateSAN", "updateHP", "updateFatigue", "updateLevelDisplay",
@@ -157,9 +205,16 @@
     if (btnSave) btnSave.style.display = "";
 
     if (__restoreAgentId && typeof window.openSheet === "function") {
+      // openSheet() já restaura Conexões (via wrapSheetFunctions() em
+      // js/character-connections.js, que chama renderAll() depois) e
+      // Inventário (via loadInventory(id), que já roda dentro do
+      // openSheet() original) da ficha do próprio Mestre — nenhuma
+      // chamada extra é necessária neste caminho.
       window.openSheet(__restoreAgentId);
     } else {
       clearFields();
+      refreshForeignConnections();
+      clearForeignInventoryIfNeeded();
     }
     __restoreAgentId = null;
   }
@@ -206,6 +261,8 @@
       clearFields();
       fillFieldsFrom(data);
       refreshDerivedDisplays();
+      refreshForeignConnections();
+      loadForeignInventoryReadOnly(data);
 
       var btnSave = $("btn_save_agent");
       if (btnSave) btnSave.style.display = "none";

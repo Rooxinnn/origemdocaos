@@ -4183,6 +4183,13 @@ function renderInventory(){
   document.getElementById("inv_peso_total").value = total.toFixed(1);
   list.querySelectorAll("[data-del]").forEach(b => {
     b.addEventListener("click", () => {
+      // Mesmo guard de saveInventory(): bloqueia ANTES de mutar invItems,
+      // para o Mestre vendo ficha de terceiro nunca ver a lista mudar
+      // visualmente sem gravar de verdade (ver saveInventory() abaixo).
+      if(window.CRISCampaignAgentView && typeof window.CRISCampaignAgentView.isActive === "function" && window.CRISCampaignAgentView.isActive()){
+        if(typeof flashIndicator === "function") flashIndicator("✕ Edição de Inventário de outro personagem ainda não é permitida — isto é só visualização.", true, 3400);
+        return;
+      }
       invItems.splice(parseInt(b.dataset.del), 1);
       renderInventory();
       saveInventory();
@@ -4203,6 +4210,18 @@ function inventoryStorageKey(id){ return sheetStorageKey(id) + ":inventario"; }
 
 async function saveInventory(){
   if(!currentAgentId) return; // nenhuma ficha aberta: nada a salvar
+  // CORREÇÃO — visualização de Inventário de terceiro pelo Mestre: enquanto
+  // uma ficha de terceiro está carregada (ver js/campaign-agent-view.js),
+  // currentAgentId continua sendo o ID do PRÓPRIO Mestre (nunca é trocado
+  // por aquele arquivo, de propósito). Sem este guard, remover/adicionar um
+  // item aqui gravaria o inventário do JOGADOR na chave local do MESTRE
+  // (inventoryStorageKey(currentAgentId)) — este é só um bloqueio de
+  // segurança (nenhum armazenamento novo), a edição de Inventário de
+  // terceiro continua fora do escopo desta etapa, exatamente como já era.
+  if(window.CRISCampaignAgentView && typeof window.CRISCampaignAgentView.isActive === "function" && window.CRISCampaignAgentView.isActive()){
+    if(typeof flashIndicator === "function") flashIndicator("✕ Edição de Inventário de outro personagem ainda não é permitida — isto é só visualização.", true, 3400);
+    return;
+  }
   await storageSet(inventoryStorageKey(currentAgentId), JSON.stringify(invItems));
   // Backup automático (ver script "BACKUP E RESTAURAÇÃO"): cobre alterações
   // de Inventário. Sujeito a cooldown, para não gerar um backup a cada item
@@ -4223,6 +4242,11 @@ async function loadInventory(id){
   renderInventory();
 }
 document.getElementById("btn_inv_add").addEventListener("click", () => {
+  // Mesmo guard de saveInventory() — ver comentário lá.
+  if(window.CRISCampaignAgentView && typeof window.CRISCampaignAgentView.isActive === "function" && window.CRISCampaignAgentView.isActive()){
+    if(typeof flashIndicator === "function") flashIndicator("✕ Edição de Inventário de outro personagem ainda não é permitida — isto é só visualização.", true, 3400);
+    return;
+  }
   const nome = document.getElementById("inv_nome").value.trim();
   if(!nome) return;
   invItems.push({
