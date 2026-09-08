@@ -158,7 +158,7 @@
     [
       "updateSAN", "updateHP", "updateFatigue", "updateLevelDisplay",
       "renderProgressao", "initAllSkillBaselines", "checkHabilidades50Unlock",
-      "renderAbortoLimbico",
+      "renderAbortoLimbico", "updateAgentVitalStates",
     ].forEach(function (fn) {
       if (typeof window[fn] === "function") {
         try { window[fn](); } catch (e) { /* melhor esforço — não bloqueia a visualização */ }
@@ -215,6 +215,7 @@
       clearFields();
       refreshForeignConnections();
       clearForeignInventoryIfNeeded();
+      if (typeof window.updateAgentVitalStates === "function") window.updateAgentVitalStates();
     }
     __restoreAgentId = null;
   }

@@ -976,6 +976,7 @@
 <link rel="stylesheet" href="css/marcos-infeccao-agente.css">
 <link rel="stylesheet" href="css/limbica-anomalia.css">
 <link rel="stylesheet" href="css/visual-redesign.css">
+<link rel="stylesheet" href="css/vital-states.css">
 <link rel="stylesheet" href="css/equipamentos.css">
 <link rel="stylesheet" href="css/equipamentos-agente.css">
 <link rel="stylesheet" href="css/backup-restauracao.css">
@@ -1907,7 +1908,7 @@
           <div class="combat-col combat-col-surv">
             <div class="combat-col-title">Sobrevivência</div>
             <div class="combat-hero-row">
-              <div class="combat-hero-box"><label>HP</label>
+              <div class="combat-hero-box" id="hp_combat_box"><label>HP</label>
                 <div class="hp-values">
                   <input type="text" inputmode="decimal" id="hp" placeholder="Atual">
                   <span class="hp-sep">/</span>
@@ -1950,7 +1951,7 @@
 
           <div class="combat-col combat-col-estado">
             <div class="combat-col-title">Estado</div>
-            <div class="san-box">
+            <div class="san-box" id="san_combat_box">
               <div>
                 <div class="san-label">SAN</div>
               </div>
@@ -3832,6 +3833,8 @@ async function createNewSheet(){
   // da ficha que estava aberta antes (mesmo padrão dos resets acima).
   invItems = [];
   renderInventory();
+  // Ficha nova começa sem nenhum estado crítico (campos vazios).
+  if(typeof window.updateAgentVitalStates === "function") window.updateAgentVitalStates();
   sheetsIndex.push({ id, nome: "Ficha sem nome", updatedAt: Date.now() });
   await saveSheetsIndex();
   // Backup automático (ver script "BACKUP E RESTAURAÇÃO"): registra o
@@ -3878,6 +3881,9 @@ async function openSheet(id){
   const hpMaxEl = document.getElementById("hp_max");
   if(hpMaxEl && hpMaxEl.value === "") updateHP();
   updateFatigue();
+  // Estado visual de HP/SAN a partir dos valores recém-carregados
+  // (cobre o teste de persistência: recarregar deve manter o estado).
+  if(typeof window.updateAgentVitalStates === "function") window.updateAgentVitalStates();
   // Recalcula NÍVEL + progresso a partir do EXP salvo (também cobre fichas
   // salvas antes deste recurso existir, sem xp_marcos_processados
   // preenchido — tratado como "nenhum marco processado ainda", sem
@@ -4064,6 +4070,11 @@ document.getElementById("tab-agentes").addEventListener("input", (e) => {
   if(SAN_IDS.includes(e.target.id) || e.target.id === "ocultismo") updateSAN();
   if(e.target.id === "saude") updateHP();
   if(FADIGA_IDS.includes(e.target.id)) updateFatigue();
+  // Estados visuais de HP/SAN (100% visual — ver js/vital-states.js).
+  // Reaproveita este mesmo listener central em vez de criar um novo.
+  if(e.target.id === "hp" || e.target.id === "san_atual"){
+    if(typeof window.updateAgentVitalStates === "function") window.updateAgentVitalStates();
+  }
   markAgentDirty();
 });
 
@@ -7249,6 +7260,7 @@ const ORIGINAL_PDF_BASE64 = "JVBERi0xLjYNJeLjz9MNCjIxMTMgMCBvYmoNPDwvRmlsdGVyL0Z
 <script src="js/quick-value-adjustments.js"></script>
 <script src="js/sheet-search.js"></script>
 <script src="js/combat-dice-auto.js"></script>
+<script src="js/vital-states.js"></script>
 <script src="js/limbic-panel-toggle.js"></script>
 <script src="js/sede-skills.js"></script>
 <script src="js/marcos-corrupcao.js"></script>

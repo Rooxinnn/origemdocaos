@@ -1,0 +1,369 @@
+/* ============================================================
+   ESTADOS VISUAIS DE HP E SAN — 100% VISUAL — REVISÃO
+   ------------------------------------------------------------
+   Nenhuma destas regras altera HP, SAN, cálculos ou qualquer
+   mecânica do RPG. Apenas reage às classes que js/vital-states.js
+   aplica em #agent-sheet-capture com base nos valores JÁ
+   EXISTENTES de hp/san_atual:
+
+     .vital-critical-hp   → HP <= 0 (estado contínuo)
+     .vital-critical-san  → SAN <= 0 (estado contínuo)
+     .vital-critical-both → os dois ao mesmo tempo
+     .vital-enter-hp      → só durante a sequência de entrada em HP
+                             crítico (transição positivo → <= 0)
+     .vital-enter-san     → só durante a sequência de entrada em SAN
+                             crítica
+
+   ------------------------------------------------------------
+   REMOVIDO NESTA REVISÃO (implementação visual anterior, não
+   compatível com o restante deste arquivo e completamente
+   substituída — nada abaixo depende disso):
+     .vital-blood, .vital-drip, .vital-drip::after,
+     @keyframes vitalDripFall  (sangue escorrendo)
+     .vital-crack, .vital-static-noise               (tela rachada)
+     @keyframes vitalPulseHp, @keyframes vitalFlickerSan
+     (pulso/flicker antigos aplicados em #hp_combat_box/#san_combat_box)
+   Os elementos #vital_blood / #vital_crack / #vital_static_noise
+   não são mais criados por js/vital-states.js.
+
+   ------------------------------------------------------------
+   NOVA LINGUAGEM VISUAL
+
+   HP  <= 0  → "luz de emergência": vinheta vermelha + sequência
+               de pulsos/flashes irregulares ao entrar em crise
+               (algo como luz de emergência piscando), depois
+               reduzindo para uma pulsação contínua bem discreta.
+
+   SAN <= 0  → "falha de lâmpada": pequenos apagões rápidos e
+               irregulares ao entrar em colapso (às vezes em
+               par, como uma lâmpada falhando), depois apagões
+               ocasionais e sutis. Sem RGB, aberração cromática,
+               neon ou estética cyberpunk — instabilidade mínima,
+               quase imperceptível fora dos apagões em si.
+   ============================================================ */
+
+:root{
+  --vital-danger: #d64d4d;
+  --vital-danger-deep: #6e1414;
+  --vital-collapse: #b7a878;
+}
+
+/* ---------- Indicadores textuais na ficha (estáticos — cumprem o
+   requisito de não depender só de movimento/cor para comunicar o
+   estado) ---------- */
+
+.vital-critical-hp #hp{
+  color: var(--vital-danger) !important;
+  border-bottom-color: var(--vital-danger) !important;
+  text-shadow: 0 0 10px rgba(214,77,77,0.55);
+}
+.vital-critical-hp #hp_combat_box{
+  border-color: var(--vital-danger);
+}
+#hp_combat_box .vital-tag{
+  display: none;
+  font-family: 'Oswald', sans-serif;
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+  color: var(--vital-danger);
+  margin-left: 6px;
+  text-transform: uppercase;
+}
+.vital-critical-hp #hp_combat_box .vital-tag{ display: inline; }
+
+.vital-critical-san #san_atual{
+  color: var(--vital-collapse) !important;
+  border-bottom-color: var(--vital-collapse) !important;
+  text-shadow: 0 0 8px rgba(183,168,120,0.4);
+}
+.vital-critical-san #san_combat_box{
+  border-color: var(--vital-collapse);
+}
+#san_combat_box .vital-tag{
+  display: none;
+  font-family: 'Oswald', sans-serif;
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+  color: var(--vital-collapse);
+  margin-left: 6px;
+  text-transform: uppercase;
+}
+.vital-critical-san #san_combat_box .vital-tag{ display: inline; }
+
+/* ---------- Estado combinado — rótulo textual (sem duplicar as
+   animações de tela cheia abaixo) ---------- */
+.vital-critical-both .combat-col-estado::before{
+  content: "ESTADO CRÍTICO";
+  display: block;
+  text-align: center;
+  font-family: 'Oswald', sans-serif;
+  font-size: 10.5px;
+  letter-spacing: 0.18em;
+  color: var(--paper);
+  background: linear-gradient(90deg, rgba(214,77,77,0.22), rgba(183,168,120,0.18));
+  border: 1px solid var(--line);
+  padding: 4px 0;
+  margin-bottom: 8px;
+  border-radius: 2px;
+}
+
+/* ============================================================
+   VINHETA AMBIENTE — indicação estática de fundo (sem animação
+   própria; só faz fade de opacidade ao entrar/sair do estado).
+   Fica atrás dos overlays de flash/apagão abaixo.
+   ============================================================ */
+.vital-vignette{
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+  opacity: 0;
+  transition: opacity 0.6s ease, background 0.6s ease;
+}
+.vital-critical-hp .vital-vignette{
+  opacity: 1;
+  background: radial-gradient(ellipse at center, transparent 48%, rgba(110,20,20,0.22) 100%);
+}
+.vital-critical-san .vital-vignette{
+  opacity: 1;
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(10,9,7,0.30) 100%);
+}
+.vital-critical-both .vital-vignette{
+  background: radial-gradient(ellipse at center, transparent 44%, rgba(78,24,20,0.26) 100%);
+}
+
+/* ============================================================
+   HP CRÍTICO — LUZ DE EMERGÊNCIA
+   ------------------------------------------------------------
+   #vital_hp_entry: sequência curta e irregular de pulsos fortes,
+   tocada uma única vez ao ENTRAR em HP <= 0 (classe .vital-enter-hp
+   em #agent-sheet-capture, removida por timeout em
+   js/vital-states.js — nenhum setInterval).
+
+   #vital_hp_ambient: depois da entrada, pulsação contínua e MUITO
+   mais discreta enquanto HP permanecer <= 0 — não há mais flashes
+   fortes, só uma respiração lenta e sutil.
+   ============================================================ */
+.vital-hp-entry{
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 7;
+  opacity: 0;
+  background: radial-gradient(ellipse at center, rgba(110,20,20,0.05) 40%, rgba(214,77,77,0.55) 100%);
+}
+.vital-enter-hp .vital-hp-entry{
+  animation: vitalEmergencyHp 2.2s cubic-bezier(.36,.02,.4,1) 1;
+}
+/* Estágios com espaçamentos desiguais entre picos (não é um metrônomo
+   perfeito) — imita uma luz de emergência instável entrando em
+   funcionamento: forte, forte, pausa curta, forte, pausa maior, dois
+   pulsos mais fracos e decrescentes até acomodar no nível ambiente. */
+@keyframes vitalEmergencyHp{
+  0%    { opacity: 0; }
+  4%    { opacity: 0.9; }
+  9%    { opacity: 0.08; }
+  13%   { opacity: 0.75; }
+  19%   { opacity: 0.06; }
+  24%   { opacity: 0.85; }
+  33%   { opacity: 0.05; }
+  46%   { opacity: 0.55; }
+  55%   { opacity: 0.05; }
+  63%   { opacity: 0.4; }
+  70%   { opacity: 0.05; }
+  80%   { opacity: 0.22; }
+  100%  { opacity: 0.1; }
+}
+
+.vital-hp-ambient{
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 7;
+  opacity: 0;
+  background: radial-gradient(ellipse at center, transparent 42%, rgba(214,77,77,0.16) 100%);
+}
+.vital-critical-hp .vital-hp-ambient{
+  animation: vitalAmbientHp 9s ease-in-out infinite;
+  animation-delay: 2.2s; /* só começa quando a entrada termina */
+}
+/* Fica quase parado na maior parte do ciclo (0.03–0.05) e, a cada
+   9s, ecoa a luz de emergência com um pulso duplo bem mais fraco que
+   o da entrada — "o efeito se repete de tempos em tempos, mais leve",
+   em vez de uma respiração contínua. */
+@keyframes vitalAmbientHp{
+  0%    { opacity: 0.035; }
+  86%   { opacity: 0.035; }
+  89%   { opacity: 0.22; }
+  91%   { opacity: 0.04; }
+  94%   { opacity: 0.15; }
+  97%   { opacity: 0.035; }
+  100%  { opacity: 0.035; }
+}
+
+/* ============================================================
+   SAN CRÍTICA — FALHA DE LÂMPADA
+   ------------------------------------------------------------
+   #vital_san_entry: sequência curta de pequenos apagões rápidos e
+   irregulares ao ENTRAR em SAN <= 0 (às vezes em par, como uma
+   lâmpada piscando antes de falhar de vez).
+
+   #vital_san_ambient: depois, apagões ocasionais e bem sutis —
+   nada de tremor constante, RGB, aberração cromática ou glitch
+   digital. A escuridão é a linguagem, não a cor.
+   ============================================================ */
+.vital-san-entry{
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 7;
+  opacity: 0;
+  background: #050403;
+}
+.vital-enter-san .vital-san-entry{
+  animation: vitalLampFailSan 2s steps(1, end) 1;
+}
+/* Apagões curtos e irregulares: um rápido, outro logo em seguida (par),
+   depois um intervalo maior, um apagão mais longo, e um par final bem
+   curto antes de estabilizar. steps(1,end) faz a transição de opacidade
+   ser um corte seco (apagão), não um fade suave. */
+@keyframes vitalLampFailSan{
+  0%    { opacity: 0; }
+  4%    { opacity: 0.8; }
+  7%    { opacity: 0; }
+  16%   { opacity: 0; }
+  19%   { opacity: 0.55; }
+  22%   { opacity: 0; }
+  24%   { opacity: 0.4; }
+  27%   { opacity: 0; }
+  48%   { opacity: 0; }
+  51%   { opacity: 0.85; }
+  57%   { opacity: 0; }
+  74%   { opacity: 0; }
+  76%   { opacity: 0.35; }
+  79%   { opacity: 0; }
+  81%   { opacity: 0.3; }
+  84%   { opacity: 0; }
+  100%  { opacity: 0; }
+}
+
+.vital-san-ambient{
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 7;
+  opacity: 0;
+  background: #050403;
+}
+.vital-critical-san .vital-san-ambient{
+  animation: vitalLampIdleSan 11s steps(1, end) infinite;
+  animation-delay: 2s; /* só começa quando a entrada termina */
+}
+/* Ciclo longo (11s) com apagões breves e espaçados de forma desigual —
+   dá a sensação de falhas ocasionais e imprevisíveis sem precisar de
+   nenhum setInterval em JS monitorando valores. */
+@keyframes vitalLampIdleSan{
+  0%    { opacity: 0; }
+  27%   { opacity: 0; }
+  28%   { opacity: 0.32; }
+  30%   { opacity: 0; }
+  61%   { opacity: 0; }
+  62%   { opacity: 0.22; }
+  63%   { opacity: 0; }
+  64.5% { opacity: 0.28; }
+  66%   { opacity: 0; }
+  100%  { opacity: 0; }
+}
+
+/* Instabilidade mínima e quase imperceptível na leitura dos valores de
+   SAN enquanto crítica — não é glitch, é só uma trepidação sutilíssima
+   de contraste, coerente com "documental + investigativa + sombria". */
+.vital-critical-san #san_atual{
+  animation: vitalSanReadout 6.5s ease-in-out infinite;
+}
+@keyframes vitalSanReadout{
+  0%, 92%, 100% { filter: contrast(1); }
+  94%           { filter: contrast(1.08); }
+}
+
+/* ---------- Estado combinado — a interface "entrando em colapso",
+   sem simplesmente somar as duas linguagens em intensidade total.
+   ---------- */
+.vital-critical-both .vital-hp-ambient{
+  animation-name: vitalAmbientHpDamped;
+}
+@keyframes vitalAmbientHpDamped{
+  0%    { opacity: 0.025; }
+  86%   { opacity: 0.025; }
+  89%   { opacity: 0.15; }
+  91%   { opacity: 0.03; }
+  94%   { opacity: 0.1; }
+  97%   { opacity: 0.025; }
+  100%  { opacity: 0.025; }
+}
+.vital-critical-both .vital-san-ambient{
+  /* desfasado em relação ao pulso de HP para os dois efeitos nunca
+     baterem exatamente juntos e ficarem ilegíveis */
+  animation-delay: 6.5s;
+}
+.vital-critical-both .vital-enter-san .vital-san-entry,
+.vital-critical-both .vital-enter-hp .vital-hp-entry{
+  filter: brightness(0.9);
+}
+
+/* ---------- Mobile: efeitos ainda mais discretos (360–390px) ---------- */
+@media (max-width: 480px){
+  .vital-critical-hp .vital-vignette,
+  .vital-critical-san .vital-vignette{
+    opacity: 0.8;
+  }
+  @keyframes vitalAmbientHp{
+    0%    { opacity: 0.03; }
+    86%   { opacity: 0.03; }
+    89%   { opacity: 0.16; }
+    91%   { opacity: 0.03; }
+    94%   { opacity: 0.11; }
+    97%   { opacity: 0.03; }
+    100%  { opacity: 0.03; }
+  }
+  @keyframes vitalLampIdleSan{
+    0%    { opacity: 0; }
+    27%   { opacity: 0; }
+    28%   { opacity: 0.22; }
+    30%   { opacity: 0; }
+    61%   { opacity: 0; }
+    62%   { opacity: 0.16; }
+    63%   { opacity: 0; }
+    64.5% { opacity: 0.2; }
+    66%   { opacity: 0; }
+    100%  { opacity: 0; }
+  }
+}
+
+/* ---------- Acessibilidade: reduz movimento ----------
+   Remove por completo as sequências de entrada e as animações
+   ambiente (flashes/apagões/pulsos). O estado crítico continua
+   visível de forma ESTÁTICA: vinheta com opacidade fixa e os
+   indicadores textuais/tag acima (#hp, #san_atual, .vital-tag,
+   bordas dos boxes) — nunca dependendo só de movimento ou cor. */
+@media (prefers-reduced-motion: reduce){
+  .vital-hp-entry,
+  .vital-hp-ambient,
+  .vital-san-entry,
+  .vital-san-ambient{
+    animation: none !important;
+    opacity: 0 !important;
+  }
+  .vital-critical-san #san_atual{
+    animation: none !important;
+  }
+  .vital-vignette{
+    transition: none;
+  }
+  .vital-critical-hp .vital-vignette{
+    opacity: 0.85;
+  }
+  .vital-critical-san .vital-vignette{
+    opacity: 0.85;
+  }
+}
