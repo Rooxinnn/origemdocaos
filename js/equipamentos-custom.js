@@ -13,7 +13,13 @@
    alguns campos opcionais e a marca:
 
      { custom: true, nome, categoria, qtd, peso, dano, alcance,
-       desc, propriedades, obs }
+       desc, propriedades, obs, imagem }
+
+   "imagem" (opcional, dataURL) segue o MESMO padrão já usado pelo
+   retrato do personagem (js/character-image.js, campo #foto) e pelas
+   criaturas (js/criaturas.js): recorte via window.CRISImageCropper
+   (js/image-cropper.js, já carregado) e gravação direta do dataURL
+   resultante no próprio item — nenhum Storage/tabela nova.
 
    "desc" é o MESMO nome de campo já usado pelos itens manuais
    existentes (nenhum campo novo é inventado para a descrição — só
@@ -56,6 +62,7 @@
   var editingIdx = null;      // null = criando um item novo; número = editando invItems[idx]
   var pendingDraft = null;    // dados do formulário aguardando confirmação (fluxo de criação)
   var isSubmitting = false;   // trava contra duplo-clique/duplo-submit
+  var formImageValue = "";    // imagem (dataURL) escolhida no formulário aberto no momento
 
   function esc(s){
     if (typeof escapeHtml === "function") return escapeHtml(s);
@@ -137,6 +144,14 @@
         '<h3 id="eqcustom_form_title">Criar Equipamento Personalizado</h3>' +
         '<div class="cx-modal-body">' +
         '<div class="cx-modal-section">' +
+          '<div class="eqcustom-img-row">' +
+            '<div class="eqcustom-img-thumb is-empty" id="eqcustom_f_img_thumb"></div>' +
+            '<div class="cimg-picker-buttons">' +
+              '<label class="cimg-choose-btn" for="eqcustom_f_img_input">Imagem do Equipamento</label>' +
+              '<input type="file" id="eqcustom_f_img_input" class="cimg-file-input" accept="image/png,image/jpeg,image/jpg,image/webp">' +
+              '<button type="button" class="cimg-remove-btn" id="eqcustom_f_img_remove">Remover</button>' +
+            '</div>' +
+          '</div>' +
           '<div class="field" style="margin-bottom:12px;"><label>Nome *</label><input type="text" id="eqcustom_f_nome" maxlength="80"></div>' +
           '<div class="field" style="margin-bottom:12px;"><label>Categoria</label><input type="text" id="eqcustom_f_categoria" maxlength="40" placeholder="Ex.: Arma, Proteção, Item…"></div>' +
           '<div style="display:flex; gap:14px; flex-wrap:wrap;">' +
@@ -167,6 +182,54 @@
       if (e.target.id === "eqcustom_form_modal") onFormCancel();
     });
     document.getElementById("eqcustom_form_next").addEventListener("click", onFormNext);
+
+    // Imagem opcional: reaproveita o MESMO editor de recorte já usado pelo
+    // retrato do personagem (js/image-cropper.js) e pelas criaturas — nenhum
+    // sistema de upload/crop novo é criado. Se o editor não estiver
+    // disponível por algum motivo, cai de volta para o dataURL cru do
+    // arquivo (mesmo comportamento de fallback já usado nos outros lugares).
+    document.getElementById("eqcustom_f_img_input").addEventListener("change", function(){
+      var file = this.files && this.files[0];
+      this.value = "";
+      if (!file) return;
+      if (window.CRISImageCropper && typeof window.CRISImageCropper.open === "function"){
+        window.CRISImageCropper.open({
+          file: file,
+          aspectRatio: 1,
+          title: "Imagem do Equipamento",
+          outputMax: 400,
+          mimeType: "image/jpeg",
+          quality: 0.85,
+          onConfirm: function (result){
+            formImageValue = result.dataUrl;
+            updateFormImageThumb();
+          }
+        });
+        return;
+      }
+      var reader = new FileReader();
+      reader.onload = function(){ formImageValue = reader.result; updateFormImageThumb(); };
+      reader.readAsDataURL(file);
+    });
+    document.getElementById("eqcustom_f_img_remove").addEventListener("click", function(){
+      formImageValue = "";
+      updateFormImageThumb();
+    });
+  }
+
+  function updateFormImageThumb(){
+    var thumb = document.getElementById("eqcustom_f_img_thumb");
+    if (!thumb) return;
+    thumb.innerHTML = "";
+    if (formImageValue){
+      thumb.classList.remove("is-empty");
+      var img = document.createElement("img");
+      img.src = formImageValue;
+      img.alt = "";
+      thumb.appendChild(img);
+    } else {
+      thumb.classList.add("is-empty");
+    }
   }
 
   // item: null (criação em branco) ou o item já existente (edição) —
@@ -187,6 +250,8 @@
     document.getElementById("eqcustom_f_desc").value = (item && item.desc) || "";
     document.getElementById("eqcustom_f_propriedades").value = (item && item.propriedades) || "";
     document.getElementById("eqcustom_f_obs").value = (item && item.obs) || "";
+    formImageValue = (item && item.imagem) || "";
+    updateFormImageThumb();
 
     // Botão de avançar: "Avançar" (vai para a confirmação) na criação,
     // "Salvar" (aplica direto no item já existente) na edição — o
@@ -208,6 +273,7 @@
   function onFormCancel(){
     editingIdx = null;
     pendingDraft = null;
+    formImageValue = "";
     closeFormModal();
   }
 
@@ -232,7 +298,8 @@
       alcance: document.getElementById("eqcustom_f_alcance").value.trim(),
       desc: document.getElementById("eqcustom_f_desc").value.trim(),
       propriedades: document.getElementById("eqcustom_f_propriedades").value.trim(),
-      obs: document.getElementById("eqcustom_f_obs").value.trim()
+      obs: document.getElementById("eqcustom_f_obs").value.trim(),
+      imagem: formImageValue || ""
     };
     return draft;
   }
@@ -265,10 +332,12 @@
       target.desc = draft.desc;
       target.propriedades = draft.propriedades;
       target.obs = draft.obs;
+      target.imagem = draft.imagem;
       target.custom = true;
 
       closeFormModal();
       editingIdx = null;
+      formImageValue = "";
       if (typeof renderInventory === "function") renderInventory();
       if (typeof saveInventory === "function") saveInventory();
       if (typeof flashIndicator === "function") flashIndicator("✓ Equipamento atualizado.", false, 1800);
@@ -297,15 +366,16 @@
       '<div class="modal-box cx-modal-box eqcustom-confirm-box" id="eqcustom_confirm_box">' +
         '<h3 id="eqcustom_confirm_title"></h3>' +
         '<div class="cx-modal-body">' +
+        '<img class="eqcustom-modal-img" id="eqcustom_confirm_img" style="display:none;" alt="">' +
         '<div class="cx-modal-dim" id="eqcustom_confirm_cat"></div>' +
         '<div class="eqinv-dano-destaque" id="eqcustom_confirm_dano_wrap" style="display:none;">' +
           '<div class="eqinv-dano-label">Dano</div>' +
           '<div class="eqinv-dano-valor" id="eqcustom_confirm_dano_valor"></div>' +
         '</div>' +
         '<div class="cx-modal-section" id="eqcustom_confirm_stats"></div>' +
-        '<div class="cx-modal-section" id="eqcustom_confirm_desc_wrap" style="display:none;"><h5>Descrição</h5><p id="eqcustom_confirm_desc"></p></div>' +
-        '<div class="cx-modal-section" id="eqcustom_confirm_prop_wrap" style="display:none;"><h5>Propriedades</h5><p id="eqcustom_confirm_prop"></p></div>' +
-        '<div class="cx-modal-section" id="eqcustom_confirm_obs_wrap" style="display:none;"><h5>Observações</h5><p id="eqcustom_confirm_obs"></p></div>' +
+        '<div class="cx-modal-section" id="eqcustom_confirm_desc_wrap" style="display:none;"><h5>Descrição</h5><p id="eqcustom_confirm_desc" style="white-space:pre-wrap;"></p></div>' +
+        '<div class="cx-modal-section" id="eqcustom_confirm_prop_wrap" style="display:none;"><h5>Propriedades</h5><p id="eqcustom_confirm_prop" style="white-space:pre-wrap;"></p></div>' +
+        '<div class="cx-modal-section" id="eqcustom_confirm_obs_wrap" style="display:none;"><h5>Observações</h5><p id="eqcustom_confirm_obs" style="white-space:pre-wrap;"></p></div>' +
         '</div>' +
         '<div class="modal-actions" style="margin-top:14px; flex-wrap:wrap; flex:0 0 auto;">' +
           '<button type="button" id="eqcustom_confirm_cancel">Cancelar</button>' +
@@ -332,6 +402,10 @@
   function fillConfirmModal(it){
     document.getElementById("eqcustom_confirm_title").textContent = it.nome;
     document.getElementById("eqcustom_confirm_cat").textContent = it.categoria || "Item personalizado";
+
+    var imgEl = document.getElementById("eqcustom_confirm_img");
+    if (it.imagem){ imgEl.src = it.imagem; imgEl.style.display = ""; }
+    else { imgEl.removeAttribute("src"); imgEl.style.display = "none"; }
 
     // Dano em destaque visual próprio — só quando preenchido (item 6 do
     // pedido: "equipamentos sem dano simplesmente não devem mostrar uma
@@ -397,6 +471,7 @@
 
     invItems.push(pendingDraft);
     pendingDraft = null;
+    formImageValue = "";
 
     if (typeof renderInventory === "function") renderInventory();
     if (typeof saveInventory === "function") saveInventory();
@@ -423,15 +498,16 @@
       '<div class="modal-box cx-modal-box eqcustom-confirm-box" id="eqcustom_view_box">' +
         '<h3 id="eqcustom_view_title"></h3>' +
         '<div class="cx-modal-body">' +
+        '<img class="eqcustom-modal-img" id="eqcustom_view_img" style="display:none;" alt="">' +
         '<div class="cx-modal-dim" id="eqcustom_view_cat"></div>' +
         '<div class="eqinv-dano-destaque" id="eqcustom_view_dano_wrap" style="display:none;">' +
           '<div class="eqinv-dano-label">Dano</div>' +
           '<div class="eqinv-dano-valor" id="eqcustom_view_dano_valor"></div>' +
         '</div>' +
         '<div class="cx-modal-section" id="eqcustom_view_stats"></div>' +
-        '<div class="cx-modal-section" id="eqcustom_view_desc_wrap" style="display:none;"><h5>Descrição</h5><p id="eqcustom_view_desc"></p></div>' +
-        '<div class="cx-modal-section" id="eqcustom_view_prop_wrap" style="display:none;"><h5>Propriedades</h5><p id="eqcustom_view_prop"></p></div>' +
-        '<div class="cx-modal-section" id="eqcustom_view_obs_wrap" style="display:none;"><h5>Observações</h5><p id="eqcustom_view_obs"></p></div>' +
+        '<div class="cx-modal-section" id="eqcustom_view_desc_wrap" style="display:none;"><h5>Descrição</h5><p id="eqcustom_view_desc" style="white-space:pre-wrap;"></p></div>' +
+        '<div class="cx-modal-section" id="eqcustom_view_prop_wrap" style="display:none;"><h5>Propriedades</h5><p id="eqcustom_view_prop" style="white-space:pre-wrap;"></p></div>' +
+        '<div class="cx-modal-section" id="eqcustom_view_obs_wrap" style="display:none;"><h5>Observações</h5><p id="eqcustom_view_obs" style="white-space:pre-wrap;"></p></div>' +
         '</div>' +
         '<div class="modal-actions" style="margin-top:14px; justify-content:flex-end; flex:0 0 auto;">' +
           '<button type="button" id="eqcustom_view_close">Fechar</button>' +
@@ -453,6 +529,10 @@
 
     document.getElementById("eqcustom_view_title").textContent = it.nome;
     document.getElementById("eqcustom_view_cat").textContent = it.categoria || "Item personalizado";
+
+    var imgEl = document.getElementById("eqcustom_view_img");
+    if (it.imagem){ imgEl.src = it.imagem; imgEl.style.display = ""; }
+    else { imgEl.removeAttribute("src"); imgEl.style.display = "none"; }
 
     var danoWrap = document.getElementById("eqcustom_view_dano_wrap");
     if (it.dano){

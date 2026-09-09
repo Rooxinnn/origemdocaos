@@ -1,0 +1,143 @@
+/* ==========================================================
+   DIMENSÕES MÚLTIPLAS — INTEGRAÇÃO COM A FICHA (AGENTES)
+   Arquivo isolado: não redefine nenhuma classe já existente do
+   projeto (.combat-dimension-box, .modal-overlay, .modal-box,
+   .modal-actions, etc.) — apenas soma classes novas prefixadas com
+   "dim-", reaproveitando as variáveis de cor já definidas em :root
+   para herdar a mesma identidade visual (fundo escuro, bordas
+   douradas, tipografia Oswald) já usada pelo resto da ficha.
+   ========================================================== */
+
+.dim-chips-list{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  margin-top:2px;
+}
+
+.dim-empty-note{
+  font-size:11px;
+  color:var(--sigil);
+  font-style:italic;
+  padding:2px 0;
+}
+
+.dim-chip{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  background:var(--panel-2);
+  border:1px solid var(--line);
+  border-left:3px solid var(--amber);
+  padding:8px 10px;
+}
+
+.dim-chip-label{
+  font-family:'Oswald', sans-serif;
+  font-size:14px;
+  font-weight:600;
+  letter-spacing:0.02em;
+  color:var(--amber-bright);
+  text-transform:uppercase;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+/* Área de toque adequada em mobile (>=30px) para o botão de remover. */
+.dim-chip-remove{
+  flex:0 0 auto;
+  width:30px;
+  height:30px;
+  min-width:30px;
+  min-height:30px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:transparent;
+  border:1px solid var(--line);
+  color:var(--paper-dim);
+  font-size:16px;
+  line-height:1;
+  cursor:pointer;
+}
+.dim-chip-remove:hover,
+.dim-chip-remove:active{
+  color:var(--amber-bright);
+  border-color:var(--amber);
+}
+
+.dim-add-btn{
+  margin-top:8px;
+  width:100%;
+  background:transparent;
+  border:1px dashed var(--amber);
+  color:var(--amber-bright);
+  font-family:'Oswald', sans-serif;
+  font-size:11.5px;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  padding:9px 10px;
+  cursor:pointer;
+  min-height:38px;
+}
+.dim-add-btn:hover{ background:rgba(184,121,26,0.12); }
+
+.dim-limit-note{
+  margin-top:6px;
+  font-size:10.5px;
+  color:var(--sigil);
+  font-style:italic;
+}
+
+/* ---------- Modal "Adicionar Dimensão" (mesma estrutura genérica de modal) ---------- */
+.dim-picker-box{
+  max-width:360px;
+}
+.dim-picker-list{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  margin-top:10px;
+  max-height:50vh;
+  overflow-y:auto;
+}
+.dim-picker-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  background:var(--panel-2);
+  border:1px solid var(--line);
+  padding:8px 10px;
+}
+.dim-picker-row-title{
+  font-family:'Oswald', sans-serif;
+  font-size:13px;
+  color:var(--paper);
+  text-transform:uppercase;
+}
+.dim-picker-add-btn{
+  flex:0 0 auto;
+  background:transparent;
+  border:1px solid var(--amber);
+  color:var(--amber-bright);
+  font-size:11px;
+  text-transform:uppercase;
+  padding:6px 10px;
+  min-height:32px;
+  cursor:pointer;
+}
+.dim-picker-empty{
+  font-size:11px;
+  color:var(--sigil);
+  font-style:italic;
+  padding:6px 0;
+}
+
+/* ---------- Mobile (360–430px): nada pode ultrapassar a viewport ---------- */
+@media(max-width:480px){
+  .dim-chip-label{ font-size:12.5px; }
+  .dim-add-btn{ font-size:10.5px; }
+}

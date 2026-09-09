@@ -705,6 +705,8 @@
     overlay.innerHTML =
       '<div class="modal-box cx-modal-box eqinv-custom-modal-box">' +
         '<h3 id="eqinv_custom_modal_title"></h3>' +
+        '<div class="cx-modal-body">' +
+        '<img class="eqcustom-modal-img" id="eqinv_custom_modal_img" style="display:none;" alt="">' +
         '<div class="cx-modal-dim" id="eqinv_custom_modal_cat" style="display:none;"></div>' +
         '<div class="eqinv-dano-destaque" id="eqinv_custom_modal_dano_wrap" style="display:none;">' +
           '<div class="eqinv-dano-label">Dano</div>' +
@@ -714,6 +716,7 @@
         '<div class="cx-modal-section" id="eqinv_custom_modal_desc_wrap" style="display:none;"><h5>Descrição</h5><p id="eqinv_custom_modal_desc" style="white-space:pre-wrap;"></p></div>' +
         '<div class="cx-modal-section" id="eqinv_custom_modal_prop_wrap" style="display:none;"><h5>Propriedades</h5><p id="eqinv_custom_modal_prop" style="white-space:pre-wrap;"></p></div>' +
         '<div class="cx-modal-section" id="eqinv_custom_modal_obs_wrap" style="display:none;"><h5>Observações</h5><p id="eqinv_custom_modal_obs" style="white-space:pre-wrap;"></p></div>' +
+        '</div>' +
         '<div class="modal-actions" style="margin-top:14px; justify-content:flex-end;">' +
           '<button type="button" id="eqinv_custom_modal_close">Fechar</button>' +
         '</div>' +
@@ -728,6 +731,10 @@
   function openCustomItemModal(item){
     ensureCustomItemModal();
     document.getElementById("eqinv_custom_modal_title").textContent = item.nome || "Item";
+
+    var imgEl = document.getElementById("eqinv_custom_modal_img");
+    if (item.imagem){ imgEl.src = item.imagem; imgEl.style.display = ""; }
+    else { imgEl.removeAttribute("src"); imgEl.style.display = "none"; }
 
     var catEl = document.getElementById("eqinv_custom_modal_cat");
     if (item.categoria){

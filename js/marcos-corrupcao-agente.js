@@ -117,17 +117,20 @@
   }
 
   /* ---------------------------------------------------------
-     Campo #dimensao — preenchimento do <select> (uma única vez).
+     Dimensões selecionadas — Dupla Dimensão (js/agente-dimensoes.js).
+     Reaproveita window.CRISAgenteDimensoes.getSelected() (até 2
+     chaves) já exposto por aquele módulo; se por algum motivo ele
+     ainda não tiver carregado, cai no campo legado #dimensao (uma
+     única Dimensão) para não quebrar a tela. Nenhuma lista/array
+     novo de Dimensões é criado aqui.
      --------------------------------------------------------- */
-  function ensureDimensaoOptions() {
+  function selectedDims() {
+    if (window.CRISAgenteDimensoes && typeof window.CRISAgenteDimensoes.getSelected === "function") {
+      return window.CRISAgenteDimensoes.getSelected();
+    }
     var sel = document.getElementById(DIM_FIELD_ID);
-    if (!sel || sel.tagName !== "SELECT" || sel.dataset.mcaBuilt) return;
-    var html = '<option value="">— Selecionar —</option>';
-    dimKeys().forEach(function (key) {
-      html += '<option value="' + esc(key) + '">' + esc((DIM_EMOJI[key] || "") + " " + dimLabel(key)) + '</option>';
-    });
-    sel.innerHTML = html;
-    sel.dataset.mcaBuilt = "1";
+    var v = sel ? sel.value : "";
+    return (v && !NON_CORRUPTION_DIMS[v]) ? [v] : [];
   }
 
   /* ---------------------------------------------------------
@@ -237,33 +240,38 @@
     // agora + valor atual de Corrupção agora. Isso cobre automaticamente
     // aumento, diminuição e troca de Dimensão, sem herdar nada de outra
     // ficha nem de uma leitura anterior.
-    var sel = document.getElementById(DIM_FIELD_ID);
-    var dimKey = sel ? sel.value : "";
+    var dims = selectedDims();
     var atual = corrupcaoAtual();
 
-    var marcos = [];
-    if (dimKey && !NON_CORRUPTION_DIMS[dimKey] && atual !== null) {
-      marcos = marcosDaDimensao(dimKey).filter(function (m) { return m.corrupcao <= atual; });
-      marcos.sort(function (a, b) { return a.corrupcao - b.corrupcao; });
+    var grupos = [];
+    if (atual !== null) {
+      dims.forEach(function (dimKey) {
+        var marcos = marcosDaDimensao(dimKey).filter(function (m) { return m.corrupcao <= atual; });
+        marcos.sort(function (a, b) { return a.corrupcao - b.corrupcao; });
+        if (marcos.length) grupos.push({ dimKey: dimKey, marcos: marcos });
+      });
     }
 
-    if (marcos.length === 0) {
+    if (grupos.length === 0) {
       list.innerHTML = '<div class="empty-state">Nenhum Marco de Corrupção alcançado ainda.</div>';
       return;
     }
 
-    var html = '<div class="mca-group cx-' + esc(dimKey) + '">';
-    html += '<div class="mca-group-title">' + esc((DIM_EMOJI[dimKey] || "") + " " + dimLabel(dimKey).toUpperCase()) + '</div>';
-    marcos.forEach(function (m) {
-      html += '<button type="button" class="mca-row" data-mca-id="' + esc(m.id) + '">' +
-        '<span class="mca-row-star">★</span>' +
-        '<span class="mca-row-body">' +
-          '<span class="mca-row-title">' + esc(m.titulo) + '</span>' +
-          '<span class="mca-row-corrupcao">Corrupção: ' + esc(m.corrupcao) + '</span>' +
-        '</span>' +
-      '</button>';
+    var html = "";
+    grupos.forEach(function (g) {
+      html += '<div class="mca-group cx-' + esc(g.dimKey) + '">';
+      html += '<div class="mca-group-title">' + esc((DIM_EMOJI[g.dimKey] || "") + " " + dimLabel(g.dimKey).toUpperCase()) + '</div>';
+      g.marcos.forEach(function (m) {
+        html += '<button type="button" class="mca-row" data-mca-id="' + esc(m.id) + '">' +
+          '<span class="mca-row-star">★</span>' +
+          '<span class="mca-row-body">' +
+            '<span class="mca-row-title">' + esc(m.titulo) + '</span>' +
+            '<span class="mca-row-corrupcao">Corrupção: ' + esc(m.corrupcao) + '</span>' +
+          '</span>' +
+        '</button>';
+      });
+      html += '</div>';
     });
-    html += '</div>';
 
     list.innerHTML = html;
     list.querySelectorAll("[data-mca-id]").forEach(function (btn) {
@@ -356,9 +364,8 @@
      repetido (instrução 6/8/13).
      ========================================================== */
   function checkForNewMarcos() {
-    var sel = document.getElementById(DIM_FIELD_ID);
-    var dimKey = sel ? sel.value : "";
-    if (!dimKey || NON_CORRUPTION_DIMS[dimKey]) return; // sem Dimensão válida selecionada: nada a checar
+    var dims = selectedDims();
+    if (dims.length === 0) return; // sem Dimensão válida selecionada: nada a checar
 
     var atual = corrupcaoAtual();
     if (atual === null) return; // sem Corrupção numérica preenchida: nada a checar
@@ -367,8 +374,11 @@
     var achievedSet = {};
     achieved.forEach(function (id) { achievedSet[id] = true; });
 
-    var novos = marcosDaDimensao(dimKey).filter(function (m) {
-      return m.corrupcao <= atual && !achievedSet[m.id];
+    var novos = [];
+    dims.forEach(function (dimKey) {
+      marcosDaDimensao(dimKey).forEach(function (m) {
+        if (m.corrupcao <= atual && !achievedSet[m.id]) novos.push(m);
+      });
     });
     if (novos.length === 0) return;
 
@@ -381,11 +391,10 @@
   /* ---------- polling: adapta-se a qualquer forma de alteração ---------- */
   var lastSnapshot = null;
   function snapshot() {
-    var selEl = document.getElementById(DIM_FIELD_ID);
     var corEl = document.getElementById(CORRUPCAO_FIELD_ID);
     var achEl = document.getElementById(ACHIEVED_FIELD_ID);
     return [
-      selEl ? selEl.value : "",
+      selectedDims().join(","),
       corEl ? corEl.value : "",
       achEl ? achEl.value : ""
     ].join("|");
@@ -393,7 +402,6 @@
 
   function poll() {
     if (!document.getElementById("tab-agentes")) return;
-    ensureDimensaoOptions();
     ensurePanel();
     var snap = snapshot();
     if (snap === lastSnapshot) return;
@@ -405,7 +413,6 @@
   /* ---------- boot ---------- */
   function init() {
     if (!document.getElementById("tab-agentes")) return; // estrutura inesperada: não faz nada
-    ensureDimensaoOptions();
     ensurePanel();
     renderPanel();
     poll();

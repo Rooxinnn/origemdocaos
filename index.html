@@ -979,6 +979,8 @@
 <link rel="stylesheet" href="css/vital-states.css">
 <link rel="stylesheet" href="css/equipamentos.css">
 <link rel="stylesheet" href="css/equipamentos-agente.css">
+<link rel="stylesheet" href="css/equipamentos-custom-destaque.css">
+<link rel="stylesheet" href="css/agente-dimensoes.css">
 <link rel="stylesheet" href="css/backup-restauracao.css">
 <link rel="stylesheet" href="css/condicoes-ativas-agente.css">
 <link rel="stylesheet" href="css/criaturas.css">
@@ -1992,17 +1994,21 @@
               <div class="threshold-box"><label>Corrupção /200</label><input type="text" id="corrupcao" placeholder="ex: 100/200"></div>
             </div>
             <div class="combat-dimension-box"><label>Dimensão</label>
-              <!-- Etapa 2 dos Marcos de Corrupção (js/marcos-corrupcao-agente.js):
-                   o campo passou de texto livre para <select>, com as opções
-                   preenchidas via JS reaproveitando EXATAMENTE as mesmas chaves/
-                   nomes já usados em CONEXOES_DIM_ORDER/CONEXOES_DIM_LABELS
-                   (nenhuma lista nova de Dimensões foi criada). O id "dimensao"
-                   foi mantido, então continua sendo salvo/carregado pelo mesmo
-                   mecanismo genérico (agentFieldIds()) — só foi necessário somar
-                   "select" ao seletor desse mecanismo (ver agentFieldIds() e os
-                   listeners de "dirty" mais abaixo), já que este era o único
-                   <select> dentro de #tab-agentes até agora. -->
-              <select id="dimensao"></select>
+              <!-- Dupla Dimensão (js/agente-dimensoes.js): o antigo <select
+                   id="dimensao"> (única Dimensão) foi substituído pela lista de
+                   chips abaixo, que permite escolher até 2 Dimensões. #dimensoes
+                   (novo, oculto) é a fonte da verdade; #dimensao (legado, agora
+                   oculto em vez de <select>) continua existindo e é mantido pelo
+                   próprio js/agente-dimensoes.js sempre espelhando a PRIMEIRA
+                   Dimensão de #dimensoes — necessário para quem ainda lê esse
+                   campo isoladamente (Exportar PDF). Nenhum dos dois ids muda,
+                   então continuam sendo salvos/carregados pelo mesmo mecanismo
+                   genérico de sempre (agentFieldIds()). -->
+              <input type="hidden" id="dimensoes" value="[]">
+              <input type="hidden" id="dimensao">
+              <div id="dim_chips_list" class="dim-chips-list"></div>
+              <button type="button" id="dim_add_btn" class="dim-add-btn">+ Adicionar Dimensão</button>
+              <div id="dim_limit_note" class="dim-limit-note" style="display:none;">Limite de 2 Dimensões atingido.</div>
             </div>
             <!-- Campo interno (oculto), salvo junto da ficha pelo mesmo mecanismo
                  genérico acima, que guarda os IDs dos Marcos de Corrupção já
@@ -7599,6 +7605,7 @@ const ORIGINAL_PDF_BASE64 = "JVBERi0xLjYNJeLjz9MNCjIxMTMgMCBvYmoNPDwvRmlsdGVyL0Z
 <script src="js/limbic-panel-toggle.js"></script>
 <script src="js/sede-skills.js"></script>
 <script src="js/marcos-corrupcao.js"></script>
+<script src="js/agente-dimensoes.js"></script>
 <script src="js/marcos-corrupcao-agente.js"></script>
 <script src="js/marcos-infeccao.js"></script>
 <script src="js/marcos-infeccao-agente.js"></script>
@@ -7607,6 +7614,7 @@ const ORIGINAL_PDF_BASE64 = "JVBERi0xLjYNJeLjz9MNCjIxMTMgMCBvYmoNPDwvRmlsdGVyL0Z
 <script src="js/equipamentos.js"></script>
 <script src="js/equipamentos-agente.js"></script>
 <script src="js/equipamentos-custom.js"></script>
+<script src="js/equipamentos-custom-destaque.js"></script>
 <script src="js/condicoes-ativas-agente.js"></script>
 <script src="js/criaturas.js"></script>
 <script src="js/criaturas-compendio.js"></script>

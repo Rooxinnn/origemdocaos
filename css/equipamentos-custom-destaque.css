@@ -1,0 +1,116 @@
+/* ==========================================================
+   EQUIPAMENTOS PERSONALIZADOS — DESTAQUE VISUAL
+   Arquivo isolado: não redefine nenhuma classe já existente do
+   projeto (.entry-card, .entry-title, .cx-modal-body, .cimg-*
+   etc.) — apenas soma classes novas prefixadas com "eqinv-custom-"
+   e "eqcustom-", reaproveitando as variáveis de cor já definidas em
+   :root (mesma identidade âmbar/documento do restante do projeto —
+   o mesmo brilho já usado pela logo do topo, .topbar-logo).
+   ========================================================== */
+
+/* ---------- card do item personalizado no Inventário (#inv_list) ---------- */
+.eqinv-custom-destaque{
+  background:linear-gradient(135deg, rgba(240,168,60,0.08), var(--panel-2) 60%);
+  border:1px solid var(--amber);
+  border-left:3px solid var(--amber-bright);
+  box-shadow:0 0 14px rgba(240,168,60,0.16);
+}
+
+.eqinv-custom-badge{
+  display:inline-block;
+  font-family:'Oswald', sans-serif;
+  font-size:9px;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  color:var(--ink);
+  background:var(--amber-bright);
+  padding:2px 7px;
+  line-height:1.6;
+}
+
+.eqinv-custom-thumb{
+  width:56px;
+  height:56px;
+  flex:0 0 auto;
+  border:1px solid var(--amber);
+  background:var(--panel);
+  overflow:hidden;
+  box-shadow:0 0 10px rgba(240,168,60,0.25);
+}
+.eqinv-custom-thumb img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+}
+
+@media (max-width:640px){
+  .eqinv-custom-thumb{ width:44px; height:44px; }
+}
+
+/* ---------- seletor de imagem no formulário de criação/edição ----------
+   Mesmo padrão visual do seletor de retrato do personagem (.cimg-picker-*,
+   css/character-image.css) — só o tamanho da miniatura é próprio daqui,
+   um pouco maior por ser o destaque principal do formulário. */
+.eqcustom-img-row{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin-bottom:14px;
+}
+.eqcustom-img-thumb{
+  width:64px;
+  height:64px;
+  flex:0 0 auto;
+  border:1px solid var(--line);
+  background:var(--panel-2);
+  overflow:hidden;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.eqcustom-img-thumb img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+}
+.eqcustom-img-thumb.is-empty::after{
+  content:"";
+  width:22px;
+  height:22px;
+  border:1px dashed var(--sigil);
+  border-radius:50%;
+}
+
+/* ---------- imagem exibida nos modais de detalhes/confirmação ----------
+   Usada tanto pelo popup do Inventário (js/equipamentos-custom.js) quanto
+   pelo popup de "Itens do Agente" (js/equipamentos-agente.js) — mesma
+   classe, para não duplicar estilo entre os dois. */
+.eqcustom-modal-img{
+  display:block;
+  width:100%;
+  max-height:220px;
+  object-fit:cover;
+  border:1px solid var(--amber);
+  margin:0 0 12px;
+}
+
+@media (max-width:640px){
+  .eqcustom-modal-img{ max-height:170px; }
+}
+
+/* ---------- correção de rolagem nos popups de equipamento personalizado ----------
+   ".cx-modal-body" (regra global, index.html) usa "overflow-y:auto" dentro
+   de um pai flex ("display:flex; flex-direction:column"), mas por padrão
+   um item flex nunca encolhe abaixo do tamanho do próprio conteúdo
+   ("min-height:auto" implícito) — por isso, com bastante conteúdo (como a
+   imagem do equipamento + descrição/propriedades/observações), o corpo do
+   popup passava a "vazar" para fora da caixa em vez de rolar por dentro
+   dela. Aqui só destravamos o encolhimento (min-height:0) nos popups de
+   equipamento personalizado — nenhuma outra caixa do projeto é afetada. */
+.eqcustom-form-box .cx-modal-body,
+.eqcustom-confirm-box .cx-modal-body,
+.eqinv-custom-modal-box .cx-modal-body{
+  min-height:0;
+}
