@@ -97,6 +97,10 @@
 .eqinv-picker-row-body{
   flex:1 1 auto;
   min-width:0;
+  cursor:pointer;
+}
+.eqinv-picker-row-body:hover .eqinv-picker-row-title{
+  color:var(--amber-bright);
 }
 
 .eqinv-picker-row-title{
@@ -230,4 +234,33 @@
 /* ---------- popup do item personalizado (sem equivalente no Compêndio) ---------- */
 .eqinv-custom-modal-box{
   max-width:420px;
+}
+
+/* ---------- modal "Detalhes do Item" (picker → antes de adicionar) ----------
+   Reaproveita .cx-modal-box/.cx-modal-section/.modal-actions/.fonte-tag já
+   existentes (mesmo padrão do modal do Compêndio, css/equipamentos.css) —
+   aqui só o destaque de DANO é uma classe nova (ETAPA 7 do pedido: o dano
+   não pode ficar "escondido" dentro da descrição/stats). Segue a mesma
+   identidade âmbar/documento do restante do projeto — nada de card de
+   loja/marketplace. */
+.eqinv-dano-destaque{
+  margin:10px 0 4px;
+  padding:10px 14px;
+  background:var(--panel-2);
+  border:1px solid var(--amber-bright);
+  border-left:3px solid var(--amber-bright);
+}
+.eqinv-dano-label{
+  font-family:'Oswald', sans-serif;
+  font-size:10.5px;
+  text-transform:uppercase;
+  letter-spacing:0.08em;
+  color:var(--sigil);
+}
+.eqinv-dano-valor{
+  font-family:'Oswald', sans-serif;
+  font-size:20px;
+  letter-spacing:0.02em;
+  color:var(--amber-bright);
+  margin-top:2px;
 }

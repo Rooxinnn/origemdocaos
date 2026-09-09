@@ -319,9 +319,132 @@
         e.stopPropagation();
         openQtyPopup(it);
       });
+      // Clicar na linha (fora do botão "Adicionar") abre os detalhes
+      // do item antes de qualquer inclusão na ficha — o clique NUNCA
+      // adiciona sozinho; só o botão "Adicionar" dentro do modal de
+      // detalhes (ou o botão "Adicionar" já existente na própria
+      // linha, mantido por compatibilidade) leva ao popup de
+      // quantidade.
+      row.querySelector(".eqinv-picker-row-body").addEventListener("click", function(){
+        openDetailsModal(it);
+      });
 
       list.appendChild(row);
     });
+  }
+
+  /* ==========================================================
+     MODAL "DETALHES DO ITEM" (antes de adicionar)
+     Aberto ao clicar numa linha do picker "Adicionar Equipamento".
+     Mostra as informações oficiais do item (mesmos dados de
+     EQUIPAMENTOS_DATA, via window.Equipamentos — nenhum dado novo,
+     nenhuma segunda fonte) e só adiciona à ficha se o usuário
+     confirmar em "Adicionar ao Inventário"; "Voltar" fecha os
+     detalhes e volta para a lista, sem adicionar nada. Reaproveita
+     a MESMA estrutura genérica de modal (".modal-overlay"/
+     ".modal-box"/".cx-modal-box"/".cx-modal-section"/
+     ".modal-actions"/".fonte-tag") já usada pelo resto do projeto,
+     e window.Equipamentos.buildStatsHtml() para não duplicar a
+     lógica de montagem dos stats já usada pelo Compêndio.
+     ========================================================== */
+
+  function ensureDetailsModal(){
+    if (document.getElementById("eqinv_details_modal")) return;
+    var overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    overlay.id = "eqinv_details_modal";
+    overlay.innerHTML =
+      '<div class="modal-box cx-modal-box cx-equipamento" id="eqinv_details_box">' +
+        '<h3 id="eqinv_details_title"></h3>' +
+        '<div class="cx-modal-dim" id="eqinv_details_cat"></div>' +
+        '<div class="eqinv-dano-destaque" id="eqinv_details_dano_wrap" style="display:none;">' +
+          '<div class="eqinv-dano-label">Dano</div>' +
+          '<div class="eqinv-dano-valor" id="eqinv_details_dano_valor"></div>' +
+        '</div>' +
+        '<div class="cx-modal-section" id="eqinv_details_stats"></div>' +
+        '<div class="cx-modal-section" id="eqinv_details_detalhes_wrap" style="display:none;"><p id="eqinv_details_detalhes" style="white-space:pre-wrap;"></p></div>' +
+        '<div class="cx-modal-section" id="eqinv_details_obs_wrap" style="display:none;"><p id="eqinv_details_obs" style="white-space:pre-wrap; font-style:italic;"></p></div>' +
+        '<div class="fonte-tag" id="eqinv_details_page" style="margin-top:10px;"></div>' +
+        '<div class="modal-actions" style="margin-top:14px;">' +
+          '<button type="button" id="eqinv_details_back">Voltar</button>' +
+          '<button type="button" id="eqinv_details_add">Adicionar ao Inventário</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(overlay);
+
+    document.getElementById("eqinv_details_back").addEventListener("click", function(){ closeDetailsModal(false); });
+    overlay.addEventListener("click", function(e){
+      if (e.target.id === "eqinv_details_modal") closeDetailsModal(false);
+    });
+  }
+
+  function openDetailsModal(it){
+    if (!window.Equipamentos) return;
+    ensureDetailsModal();
+
+    document.getElementById("eqinv_details_title").textContent = it.nome;
+    var catLabel = window.Equipamentos.catLabel || function(k){ return k; };
+    document.getElementById("eqinv_details_cat").textContent = catLabel(it.categoria) + (it.subtipo ? " · " + it.subtipo : "");
+
+    // DANO em destaque visual próprio (ETAPA 7) — só quando o item
+    // tiver dano cadastrado (é assim que uma "arma" é identificada
+    // aqui: não existe campo booleano "é arma" em EQUIPAMENTOS_DATA,
+    // então nenhum novo campo foi inventado; usa-se o próprio dano,
+    // exatamente como já vem do livro). O restante dos stats
+    // (omitDano=true) evita repetir a mesma informação duas vezes.
+    var danoWrap = document.getElementById("eqinv_details_dano_wrap");
+    if (it.dano){
+      document.getElementById("eqinv_details_dano_valor").textContent = it.dano;
+      danoWrap.style.display = "";
+    } else {
+      danoWrap.style.display = "none";
+    }
+
+    var statsHtml = window.Equipamentos.buildStatsHtml ? window.Equipamentos.buildStatsHtml(it, !!it.dano) : "";
+    document.getElementById("eqinv_details_stats").innerHTML = statsHtml;
+
+    var detalhesWrap = document.getElementById("eqinv_details_detalhes_wrap");
+    if (it.detalhes){
+      document.getElementById("eqinv_details_detalhes").textContent = it.detalhes;
+      detalhesWrap.style.display = "";
+    } else {
+      detalhesWrap.style.display = "none";
+    }
+
+    var obsWrap = document.getElementById("eqinv_details_obs_wrap");
+    if (it.obs){
+      document.getElementById("eqinv_details_obs").textContent = "OBS.: " + it.obs;
+      obsWrap.style.display = "";
+    } else {
+      obsWrap.style.display = "none";
+    }
+
+    document.getElementById("eqinv_details_page").textContent = it.pagina ? ("Sistema de OdC — pág. " + it.pagina) : "";
+
+    var addBtn = document.getElementById("eqinv_details_add");
+    addBtn.onclick = function(){
+      closeDetailsModal(/*keepPicker*/ true);
+      openQtyPopup(it);
+    };
+
+    var pickerModal = document.getElementById("eqinv_picker_modal");
+    if (pickerModal) pickerModal.style.display = "none";
+    document.getElementById("eqinv_details_modal").style.display = "flex";
+  }
+
+  // Fecha o modal de detalhes e volta a mostrar o picker por trás
+  // (mesmo padrão de closeQtyPopup/openQtyPopup) — "Voltar" chama
+  // isto sem adicionar nada; ao confirmar "Adicionar ao Inventário",
+  // o picker por trás fica escondido, pois openQtyPopup() assume
+  // esse controle em seguida (mesmo comportamento de antes, quando
+  // o botão "Adicionar" ficava direto na linha).
+  function closeDetailsModal(keepPickerHidden){
+    var m = document.getElementById("eqinv_details_modal");
+    if (m) m.style.display = "none";
+    if (!keepPickerHidden){
+      var pickerModal = document.getElementById("eqinv_picker_modal");
+      if (pickerModal) pickerModal.style.display = "flex";
+    }
   }
 
   function openPickerModal(){
@@ -561,6 +684,17 @@
      criado. Só é usada para itens do Inventário que NÃO vieram do
      Compêndio (sem eqRef): equipamentos com eqRef continuam abrindo
      window.Equipamentos.openItemModal(), como já acontecia.
+
+     Campos de categoria/dano/alcance/propriedades/observações (só
+     existem em itens criados pelo formulário de Equipamentos
+     Personalizados, js/equipamentos-custom.js — item.custom===true)
+     passaram a ser exibidos aqui também, reaproveitando o MESMO
+     destaque visual de Dano (".eqinv-dano-destaque") já usado pelo
+     modal de detalhes do picker do Compêndio, logo acima neste mesmo
+     arquivo. Itens manuais "simples" antigos (sem esses campos)
+     continuam mostrando só Quantidade/Peso/Descrição, exatamente
+     como antes — cada bloco novo só aparece quando o campo
+     correspondente existe no item.
      ========================================================== */
 
   function ensureCustomItemModal(){
@@ -571,8 +705,15 @@
     overlay.innerHTML =
       '<div class="modal-box cx-modal-box eqinv-custom-modal-box">' +
         '<h3 id="eqinv_custom_modal_title"></h3>' +
+        '<div class="cx-modal-dim" id="eqinv_custom_modal_cat" style="display:none;"></div>' +
+        '<div class="eqinv-dano-destaque" id="eqinv_custom_modal_dano_wrap" style="display:none;">' +
+          '<div class="eqinv-dano-label">Dano</div>' +
+          '<div class="eqinv-dano-valor" id="eqinv_custom_modal_dano_valor"></div>' +
+        '</div>' +
         '<div class="cx-modal-section" id="eqinv_custom_modal_stats"></div>' +
-        '<div class="cx-modal-section" id="eqinv_custom_modal_desc_wrap" style="display:none;"><p id="eqinv_custom_modal_desc" style="white-space:pre-wrap;"></p></div>' +
+        '<div class="cx-modal-section" id="eqinv_custom_modal_desc_wrap" style="display:none;"><h5>Descrição</h5><p id="eqinv_custom_modal_desc" style="white-space:pre-wrap;"></p></div>' +
+        '<div class="cx-modal-section" id="eqinv_custom_modal_prop_wrap" style="display:none;"><h5>Propriedades</h5><p id="eqinv_custom_modal_prop" style="white-space:pre-wrap;"></p></div>' +
+        '<div class="cx-modal-section" id="eqinv_custom_modal_obs_wrap" style="display:none;"><h5>Observações</h5><p id="eqinv_custom_modal_obs" style="white-space:pre-wrap;"></p></div>' +
         '<div class="modal-actions" style="margin-top:14px; justify-content:flex-end;">' +
           '<button type="button" id="eqinv_custom_modal_close">Fechar</button>' +
         '</div>' +
@@ -588,7 +729,27 @@
     ensureCustomItemModal();
     document.getElementById("eqinv_custom_modal_title").textContent = item.nome || "Item";
 
+    var catEl = document.getElementById("eqinv_custom_modal_cat");
+    if (item.categoria){
+      catEl.textContent = item.categoria;
+      catEl.style.display = "";
+    } else {
+      catEl.style.display = "none";
+    }
+
+    // Dano em destaque visual próprio (mesmo padrão já usado pelo modal de
+    // detalhes do picker do Compêndio, acima neste arquivo) — só quando o
+    // item tiver dano cadastrado.
+    var danoWrap = document.getElementById("eqinv_custom_modal_dano_wrap");
+    if (item.dano){
+      document.getElementById("eqinv_custom_modal_dano_valor").textContent = item.dano;
+      danoWrap.style.display = "";
+    } else {
+      danoWrap.style.display = "none";
+    }
+
     var statsHtml = "";
+    if (item.alcance) statsHtml += '<p><strong>Alcance:</strong> ' + esc(item.alcance) + '</p>';
     if (item.qtd) statsHtml += '<p><strong>Quantidade:</strong> ' + esc(item.qtd) + '</p>';
     if (item.peso) statsHtml += '<p><strong>Peso:</strong> ' + esc(item.peso) + ' kg</p>';
     document.getElementById("eqinv_custom_modal_stats").innerHTML = statsHtml;
@@ -599,6 +760,22 @@
       descWrap.style.display = "";
     } else {
       descWrap.style.display = "none";
+    }
+
+    var propWrap = document.getElementById("eqinv_custom_modal_prop_wrap");
+    if (item.propriedades){
+      document.getElementById("eqinv_custom_modal_prop").textContent = item.propriedades;
+      propWrap.style.display = "";
+    } else {
+      propWrap.style.display = "none";
+    }
+
+    var obsWrap = document.getElementById("eqinv_custom_modal_obs_wrap");
+    if (item.obs){
+      document.getElementById("eqinv_custom_modal_obs").textContent = item.obs;
+      obsWrap.style.display = "";
+    } else {
+      obsWrap.style.display = "none";
     }
 
     document.getElementById("eqinv_custom_modal").style.display = "flex";

@@ -603,6 +603,28 @@
     });
   }
 
+  /* ---------------------------------------------------------
+     Monta o HTML dos "stats" (dano/proteção/munição/distância/
+     porte/peso) de um item — extraído de openItemModal() para
+     poder ser reaproveitado por outros pontos do projeto (ex.:
+     modal de detalhes do picker do Inventário, em
+     js/equipamentos-agente.js) sem duplicar esta lógica nem os
+     dados. Não muda nada do comportamento já existente aqui.
+     omitDano: quando true, não inclui a linha de Dano no bloco de
+     stats (usado quando o chamador exibe o Dano num destaque visual
+     separado, para não repetir a informação duas vezes).
+     --------------------------------------------------------- */
+  function buildStatsHtml(it, omitDano){
+    var statsHtml = "";
+    if (it.dano && !omitDano) statsHtml += '<p><strong>Dano:</strong> ' + esc(it.dano) + '</p>';
+    if (it.protecao) statsHtml += '<p><strong>Proteção:</strong> ' + esc(it.protecao) + '</p>';
+    if (it.municao) statsHtml += '<p><strong>Munição:</strong> ' + esc(it.municao) + '</p>';
+    if (it.distancia) statsHtml += '<p><strong>Distância:</strong> ' + esc(it.distancia) + '</p>';
+    if (it.porte) statsHtml += '<p><strong>Porte:</strong> ' + esc(it.porte) + '</p>';
+    if (it.peso) statsHtml += '<p><strong>Peso:</strong> ' + esc(it.peso) + '</p>';
+    return statsHtml;
+  }
+
   function openItemModal(id){
     var it = findItemById(id);
     if (!it) return;
@@ -610,14 +632,7 @@
     document.getElementById("eq_modal_title").textContent = it.nome;
     document.getElementById("eq_modal_cat").textContent = catLabel(it.categoria) + (it.subtipo ? " · " + it.subtipo : "");
 
-    var statsHtml = "";
-    if (it.dano) statsHtml += '<p><strong>Dano:</strong> ' + esc(it.dano) + '</p>';
-    if (it.protecao) statsHtml += '<p><strong>Proteção:</strong> ' + esc(it.protecao) + '</p>';
-    if (it.municao) statsHtml += '<p><strong>Munição:</strong> ' + esc(it.municao) + '</p>';
-    if (it.distancia) statsHtml += '<p><strong>Distância:</strong> ' + esc(it.distancia) + '</p>';
-    if (it.porte) statsHtml += '<p><strong>Porte:</strong> ' + esc(it.porte) + '</p>';
-    if (it.peso) statsHtml += '<p><strong>Peso:</strong> ' + esc(it.peso) + '</p>';
-    document.getElementById("eq_modal_stats").innerHTML = statsHtml;
+    document.getElementById("eq_modal_stats").innerHTML = buildStatsHtml(it, false);
 
     var detalhesWrap = document.getElementById("eq_modal_detalhes_wrap");
     if (it.detalhes){
@@ -665,7 +680,8 @@
     findItemById: findItemById,
     catOrder: EQ_CAT_ORDER,
     catLabels: EQ_CAT_LABELS,
-    catLabel: catLabel
+    catLabel: catLabel,
+    buildStatsHtml: buildStatsHtml
   };
 
   if (document.readyState === "loading"){

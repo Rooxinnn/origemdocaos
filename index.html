@@ -986,6 +986,7 @@
 <link rel="stylesheet" href="css/creature-features.css">
 <link rel="stylesheet" href="css/pdf-agent-import.css">
 <link rel="stylesheet" href="css/campanhas.css">
+<link rel="stylesheet" href="css/profissao-autocomplete.css">
 </head>
 <body>
 
@@ -1834,7 +1835,23 @@
         </div>
         <div class="field-row">
           <div class="field" style="flex:2 1 260px;"><label>Nome do Agente</label><input type="text" id="nome"></div>
-          <div class="field" style="flex:2 1 220px;"><label>Profissão</label><input type="text" id="profissao"></div>
+          <div class="field" style="flex:2 1 220px;">
+            <label>Profissão</label>
+            <div style="display:flex; gap:6px;">
+              <div class="profissao-autocomplete-wrap" style="flex:1;">
+                <input type="text" id="profissao" style="width:100%;" autocomplete="off">
+                <div class="profissao-sugestoes" id="profissao_sugestoes"></div>
+              </div>
+              <button type="button" id="btn_aplicar_profissao" title="Aplica as pontuações, itens e dinheiro desta Profissão (Compêndio > Criação de Personagem) na ficha">🎯 Aplicar</button>
+            </div>
+          </div>
+          <!-- Campo interno (oculto), salvo junto da ficha, que guarda a última Profissão
+               aplicada automaticamente por btn_aplicar_profissao (nome + pontuações + itens +
+               dinheiro concedidos) — usado só para permitir reverter o bônus antes de aplicar
+               uma nova Profissão. Segue o mesmo padrão de xp_marcos_processados/xp_level_rewards:
+               fichas antigas não têm este campo ainda, tratado como "nenhuma profissão aplicada
+               ainda" (compatível, não quebra fichas existentes). -->
+          <input type="hidden" id="profissao_aplicada_dados" value="">
           <div class="field" style="flex:1 1 100px;"><label>Idade</label><input type="text" id="idade"></div>
           <div class="field" style="flex:1 1 100px;"><label>EXP</label><input type="text" id="exp"></div>
           <div class="field" style="flex:1 1 100px;"><label>Nível</label><input type="text" id="nivel" readonly></div>
@@ -4528,16 +4545,329 @@ const COMP_COMBATE = [
   {nome:"Corrente de TE", desc:"Versão avançada do Trabalho em Equipe: o jogador da vez ativa o pedido, e se o jogador que adianta a rodada também tiver pontos de Trabalho em Equipe, pode repassar o convite, formando uma corrente de até 4 atacantes. Apenas o elo principal (solicitante) rola os dados de ATK contra uma única rolagem de defesa do alvo, podendo rerrolar até a quantia de elos da corrente. Quem não participou da corrente ganha ações duplas (2 de movimento e 2 principais) no próximo turno.", fonte:"OdC v1.0.3 — pág. 261–262"},
   {nome:"Ataque de Oportunidade", desc:"Quando um personagem se movimenta perto de outro em combate, o Mestre pode conceder ao personagem mais próximo um ataque de oportunidade contra ele antes que o movimento se complete; se acertado, o movimento é perdido. Distância que gera o ataque depende da altura/arma do atacante: personagem de 1,50m a 2m = 1m; +2m de altura = 2m; arma branca com alcance descrito = altura + alcance; arma de fogo ou flechas = 5m. O alvo sofre Desvantagem na reação, que só pode ser DEF N, DEF AB, DEF C, DESV N ou DESV O. Só pode ser feito corpo a corpo, com arma branca, ou arma de fogo de porte pequeno/médio; apenas um personagem por vez pode realizar o ataque, e ele não pode ser uma Ativação.", fonte:"OdC v1.0.3 — pág. 262"}
 ];
-/* Modificadores — Cap. II "Modificadores e Itens" (pág. 77-84). Os modificadores de Profissão
-   cobrem ~16 profissões com dezenas de bônus/penalidades cada — catálogo extenso demais para
-   transcrição integral, seguindo o mesmo tratamento de RESUMO + REFERÊNCIA usado nas tabelas
-   de Doença Psicológica/Fobias. Idade e Sede/Continente são compactos e ficam completos. */
+/* Modificadores — Cap. II "Modificadores e Itens" (pág. 77-84).
+   MOD_IDADE é a fonte única do modificador de idade: o mesmo objeto é usado tanto na categoria
+   "Modificadores" quanto na categoria "Criação de Personagem" (sem duplicar o texto no código). */
+const MOD_IDADE = {nome:"Modificador de Idade", desc:"Aplicado apenas depois que todas as fichas forem entregues ao Mestre (para evitar metagame). Afeta os Atributos: Fôlego, Resistência, Percepção, Lógica, Assimilação e Resistência Psíquica.\n\n18 A 22 ANOS\n• Fôlego +2P\n• Resistência +1P\n• Assimilação -2P\n• Lógica -1P\n\n23 A 30 ANOS\n• Fôlego +2P\n• Resistência +2P\n• Percepção +1P\n• Lógica +1P\n• Resistência Psíquica -1P\n\n31 A 40 ANOS\n• Fôlego -1P\n• Resistência -1P\n• Lógica +2P\n• Assimilação +2P\n• Resistência Psíquica +1P\n\n41 A 50+ ANOS\n• Fôlego -1P\n• Resistência -1P\n• Lógica +2P\n• Assimilação +2P\n• Resistência Psíquica +1P\n• Referência +1P\n• Carisma +1P\n• Velocidade -1P\n• Agilidade -1P\n\nCOMO UTILIZAR: o jogador escolhe a idade do personagem (18 a 50+ anos) na criação; o Mestre só aplica o modificador correspondente depois que todas as fichas forem entregues.", fonte:"OdC v1.0.3 — pág. 77"};
 const COMP_MODIFICADORES = [
-  {nome:"Modificador de Idade", desc:"Aplicado apenas depois que todas as fichas forem entregues ao Mestre (para evitar metagame). 18-22 anos: Fôlego +2, Resistência +1, Assimilação -2, Lógica -1. 23-30 anos: Fôlego +2, Resistência +2, Percepção +1, Lógica +1, Resistência Psíquica -1. 31-40 anos: Fôlego -1, Resistência -1, Lógica +2, Assimilação +2, Resistência Psíquica +1. 41-50+ anos: Fôlego -1, Resistência -1, Lógica +2, Assimilação +2, Resistência Psíquica +1, Referência +1, Carisma +1, Velocidade -1, Agilidade -1.", fonte:"OdC v1.0.3 — pág. 77"},
-  {nome:"Modificador de Profissão", desc:"RESUMO: cada Profissão (Artista, Policial/Militar, Hacker, Político, Médico, Perito Criminal/Detetive, Caçador Paranormal, Historiador, Cientista, Repórter/Profissional de Internet, Professor, Agente Novato, Agente de Campo, Agente Médico, Agente Exterminador, entre outras) concede uma lista própria de bônus e penalidades (formato +XP/-XP) espalhados por várias Habilidades, Talentos, Atributos e Perícias — por exemplo, Hacker ganha Computação/Perícia Tecnológica/Perícia em TI, mas perde Combate e Marcial; Policial/Militar ganha Atletismo/Arrombamento/Intimidação, mas perde Roubo. COMO UTILIZAR: ao aplicar os modificadores da ficha (depois de entregue ao Mestre), consulte a lista completa da Profissão escolhida no PDF e ajuste os pontos correspondentes.", fonte:"OdC v1.0.3 — pág. 78–82"},
+  MOD_IDADE,
+  {nome:"Modificador de Profissão", desc:"Cada Profissão concede uma lista própria de bônus e penalidades (formato +XP/-XP) espalhados por Habilidades, Talentos, Atributos e Perícias, além de itens iniciais e, em alguns casos, outros benefícios (ex.: bônus de dinheiro). A lista completa e individual de cada Profissão — sem resumir — está na seção CRIAÇÃO DE PERSONAGEM > Profissões (mesma fonte do PDF, não duplicada aqui).", fonte:"OdC v1.0.3 — pág. 77–83"},
   {nome:"Modificador de Continente (habilidade especial)", desc:"O Continente de origem do personagem concede uma habilidade especial única, disponível uma vez por cena ou sessão: América do Norte — Patriotismo Existencial (Vantagem no primeiro ataque após Intimidar com sucesso antes do combate; +5 se o personagem for intimidado). África — Raízes Verdadeiras (Vantagem na próxima ação principal após uma Defesa de sucesso; Vantagem ao tentar se soltar de um Agarrão). América do Sul — Sobreviventes Calorosos (dano de Sanidade reduzido em -2; recupera 1d4 de SAN ao curar HP/SAN de outro, uma vez por cena). Europa — Investigadores Tradicionais (corta a DT de investigação pela metade uma vez por sessão; ou gasta 10 pontos de rolagem de Perícia Investigativa para sucesso automático). Ásia — Tecnologia Avançada (dobra o valor de uma rolagem de Computação uma vez por sessão; +5 em Computação/Perícia em TI uma vez por cena).", fonte:"OdC v1.0.3 — pág. 82–83"},
   {nome:"Modificador de Sede (habilidade especial)", desc:"Para agentes da Ordem, a Sede regional concede uma habilidade própria: Alasca — Paranormal Aprimorado (Extremo em Ocultismo em ATK C/DEF C reduz o consumo da Conexão pela metade). New York — Perícia Perfeita (rerrola uma Perícia com valor até 1/3 do máximo, ou rerrola um ATK/DEF uma vez por ação). Texas — Atirador do Oeste (Extremo em Perícia em Armas de Fogo dobra o dano do ATK AF). Brasil — Amizade Indestrutível (Extremo em Trabalho em Equipe dobra o valor da ação de ajuda). Nigéria — Resistência Absoluta (Extremo em Força Física/Agilidade na DEF garante que ela ocorra tomando só 1/3 do dano, mesmo sem superar o ataque). Inglaterra — Punição da Realeza (ao menos 1 Extremo em dano de Sanidade dobra o dano). Japão — Corte Ágil (Extremo em Perícia em Armas Brancas concede +1 ação com armas brancas).", fonte:"OdC v1.0.3 — pág. 83–84"}
 ];
+/* CRIAÇÃO DE PERSONAGEM — Profissões (pág. 77-83) e referência ao Modificador de Idade (MOD_IDADE, mesma
+   fonte de dados usada em COMP_MODIFICADORES). Cada Profissão traz Pontuações Ganhas (bônus/penalidade nas
+   Habilidades/Talentos/Atributos/Perícias), Itens Ganhos e, quando existir no PDF, Outros Benefícios.
+   Agente Novato / Agente de Campo / Agente Médico / Agente Exterminador compartilham o mesmo pacote de itens
+   iniciais ("Kit de Agente da Ordem", pág. 82-83) — por isso o kit é um card único referenciado pelas 4,
+   em vez de repetir o mesmo texto 4 vezes. */
+const KIT_AGENTE_ORDEM_NOME = "Kit de Agente da Ordem (Novato / Campo / Médico / Exterminador)";
+const COMP_PROFISSOES = [
+  {nome:"Artista", desc:"PONTUAÇÕES GANHAS\n• Criatividade +4P\n• Sentido Paranormal +1P\n• Computação -1P\n• Perícia Tecnológica -1P\n• Idiomas Antigos +1P\n• Perícia Investigativa +1P\n\nITENS GANHOS\nEquipamento de Carga: Bolsa tiracolo {2/10 itens máximos} Peso: 0.5\n• 1x Câmera Fotográfica {com alça de ombro lateral; 100/100 Fotos; 100% de Bateria} Peso: 1.5\n• 1x Caderno {50/50 Folhas} Peso: 0.2\n• 1x Caneta {não ocupa espaço} Peso: 0.01\n\nCOMO UTILIZAR: aplicar as pontuações e entregar os itens ao montar a ficha, antes da entrega ao Mestre.", fonte:"OdC v1.0.3 — pág. 77, 81"},
+  {nome:"Policial / Militar", desc:"PONTUAÇÕES GANHAS\n• Atletismo +2P\n• Arrombamento +2P\n• Perícia Investigativa +2P\n• Detecção de Mentiras +1P\n• Sentido Paranormal -1P\n• Roubo -3P\n• Intimidação +2P\n• Perícia em Armas de Fogo +2P\n• Perícia em Armas Brancas +1P\n\nITENS GANHOS\nEquipamento de Carga: 1x Cinto {2/2 itens máximos} Peso: 0.02; 1x Coldre {1/1 item máximo} Peso: 0.01\n• 1x Pistola (veja a lista de armamentos no Capítulo 5 e selecione a Pistola inicial do personagem)\n• 1x Algema {para escapar, o preso deverá obter rolagem com valor igual ou superior a 20} Peso: 0.2\n• 1x Chave da Algema {não ocupa espaço} Peso: 0.01\n• 1x Faca de Caça {1d12 de dano} Peso: 0.35\n\nCOMO UTILIZAR: aplicar as pontuações e entregar os itens ao montar a ficha, antes da entrega ao Mestre.", fonte:"OdC v1.0.3 — pág. 77, 81"},
+  {nome:"Hacker", desc:"PONTUAÇÕES GANHAS\n• Computação +3P\n• Perícia Tecnológica +3P\n• Perícia em TI +3P\n• Idioma +1P\n• Perícia Investigativa +1P\n• Atletismo -1P\n• Flexibilidade -2P\n• Combate -2P\n• Marcial -1P\n\nITENS GANHOS\nEquipamento de Carga: 1x Mochila {3/12 itens máximos} Peso: 0.8\n• 1x USB com programa para Hackear {+1d6 em testes de Computação ou Perícia em TI} Peso: 0.05\n• 1x Notebook {+3 Pontos em ações de hackeamento; 100% de Bateria} Peso: 2.0\n• 1x Óculos {+1 Ponto em testes de Inteligência e Observador} Peso: 0.02\n\nCOMO UTILIZAR: aplicar as pontuações e entregar os itens ao montar a ficha, antes da entrega ao Mestre.", fonte:"OdC v1.0.3 — pág. 77, 81"},
+  {nome:"Político", desc:"PONTUAÇÕES GANHAS\n• Manipulação +2P\n• Elogio +2P\n• Criatividade +1P\n• Aparência +2P\n• Idioma +1P\n• Arrombamento -1P\n• Ferramentas -1P\n• Combate -2P\n• Marcial -2P\n• Força Física -1P\n\nITENS GANHOS\nEquipamento de Carga: Mala Pequena {1/8 itens máximos} Peso: 1.0\n• 1x Comprovante de Cargo {concede Vantagem em rolagens que envolvam manipulação contra humanos com 4 ou menos de Inteligência}\n\nOUTROS BENEFÍCIOS\n• Bônus de dinheiro inicial: +$1000\n\nCOMO UTILIZAR: aplicar as pontuações, entregar os itens e somar o bônus de dinheiro ao montar a ficha, antes da entrega ao Mestre.", fonte:"OdC v1.0.3 — pág. 78, 81"},
+  {nome:"Médico", desc:"PONTUAÇÕES GANHAS\n• Medicina +3P\n• Sentido Paranormal +2P\n• Perícia Médica +3P\n• Idioma +1P\n• Criatividade +2P\n• Psicologia -2P\n• Empatia -2P\n\nITENS GANHOS\nEquipamento de Carga: Mala Pequena {6/8 itens máximos} Peso: 1.0\n• 5x Bandagens {+2HP para cada Bandagem utilizada} Peso: 0.01 cada\n• 1x Álcool {ajuda a impedir uma piora ou infecção dos ferimentos, evitando o personagem de adoecer; +1 em resultado de rolagens de Medicina e Perícia Médica | 20 usos} Peso: 0.15\n\nCOMO UTILIZAR: aplicar as pontuações e entregar os itens ao montar a ficha, antes da entrega ao Mestre.", fonte:"OdC v1.0.3 — pág. 78, 81"},
+  {nome:"Perito Criminal / Detetive", desc:"PONTUAÇÕES GANHAS\n• Perícia Investigativa +2P\n• Psicologia +2P\n• Medicina +1P\n• Detecção de Mentira +1P\n• Perícia em Armas de Fogo +1P\n• Perícia em Explosivos +1P\n• Rastrear +1P\n• Perícia Química +1P\n• Perícia em Tortura +1P\n• Sentido Paranormal -3P\n• Ocultismo -3P\n\nITENS GANHOS\nEquipamento de Carga: Mala Pequena {3/8 itens máximos} Peso: 1.0\n• 1x Pistola (veja a lista de armamentos no Capítulo 5 e selecione a Pistola inicial do personagem)\n• 1x Microscópio para Análise Química {+1d6 em testes de Perícia Química} Peso: 1.5 (apenas para Perito)\n• 1x Algema {rolagem ≥ 20 para escapar} Peso: 0.2\n• 1x Chave da Algema {não ocupa espaço} Peso: 0.01\n\nCOMO UTILIZAR: aplicar as pontuações e entregar os itens ao montar a ficha, antes da entrega ao Mestre.", fonte:"OdC v1.0.3 — pág. 78, 81–82"},
+  {nome:"Caçador Paranormal", desc:"PONTUAÇÕES GANHAS\n• Sentido Paranormal +4P\n• Ocultismo +2P\n• Criatividade +1P\n• Perícia Erúdita +1P\n• Idioma Antigo +2P\n• Atletismo -1P\n• Flexibilidade -1P\n• Liderança -1P\n• Militar -2P\n\nITENS GANHOS\nEquipamento de Carga: Mochila {2/12 itens máximos} Peso: 0.8\n• 1x Detector de Espectro {+1d6 em testes de Sentido Paranormal} Peso: 0.6\n• 1x Crucifixo {+1d6 de dano e DEF contra Infernáculos e Espectros Malignos} Peso: 0.5\n\nCOMO UTILIZAR: aplicar as pontuações e entregar os itens ao montar a ficha, antes da entrega ao Mestre.", fonte:"OdC v1.0.3 — pág. 78, 82"},
+  {nome:"Historiador", desc:"PONTUAÇÕES GANHAS\n• Idiomas Antigos +3P\n• Ocultismo +3P\n• Sentido Paranormal +2P\n• Referência +1P\n• Computação +1P\n• Perícia Erúdita +1P\n• Atletismo -2P\n• Flexibilidade -1P\n• Marcial -2P\n• Agilidade -1P\n\nITENS GANHOS\nEquipamento de Carga: Mochila {3/12 itens máximos}\n• 1x Caderno {50/50 Páginas} Peso: 0.2\n• 1x Caneta {não ocupa espaço} Peso: 0.01\n• 1x Livro sobre códigos e anagramas — \"Codificações e Anagramas da História: como os sábios da antiguidade escondiam seus segredos?\" {+1d6 em testes de Idiomas Antigos} Peso: 0.2\n\nCOMO UTILIZAR: aplicar as pontuações e entregar os itens ao montar a ficha, antes da entrega ao Mestre.", fonte:"OdC v1.0.3 — pág. 78, 82"},
+  {nome:"Cientista", desc:"PONTUAÇÕES GANHAS\n• Computação +1P\n• Ilusionismo +1P\n• Matemática +4P\n• Observador +1P\n• Referência +1P\n• Inteligência +2P\n• Lógica +2P\n• Perícia Química +1P\n• Perícia Erúdita +1P\n• Atletismo -1P\n• Marcial -1P\n• Combate -1P\n• Força Física -1P\n• Velocidade -1P\n• Agilidade -1P\n\nITENS GANHOS\nEquipamento de Carga: Mochila {3/12 itens máximos} Peso: 0.8\n• 1x Esquadro {recebe Vantagem em rolagem de Matemática} Peso: 0.02\n• 1x Caderno {50/50 Páginas} Peso: 0.2\n• 1x Lápis {não ocupa espaço} Peso: 0.01\n• 1x Borracha {não ocupa espaço} Peso: 0.01\n• 1x Lanterna {Ilumina 10m em cone} Peso: 0.1\n\nCOMO UTILIZAR: aplicar as pontuações e entregar os itens ao montar a ficha, antes da entrega ao Mestre.", fonte:"OdC v1.0.3 — pág. 78, 82"},
+  {nome:"Repórter / Profissional da Internet", desc:"PONTUAÇÕES GANHAS (valores exatamente como no PDF, sem o sufixo \"P\" usado nas demais profissões)\n• Arrombamento +1\n• Condução +1\n• Computação +2\n• Ferramenta +1\n• Detecção de Mentiras +4\n• Manipulação +1\n• Psicologia +1\n• Criminalidade +1\n• Rastrear +1\n• Observador +1\n• Percepção +3\n• Silêncioso +2\n• Criatividade +2\n• Agilidade +1\n• Aparência +2\n• Carisma +2\n• Referência +1\n• Perícia Investigativa +1\n• Empatia -3\n• Ocultismo -2\n• Intimidação -1\n• Perícia Pedagógica -1\n\nITENS GANHOS\nEquipamento de Carga: Mochila {4/12 itens máximos} Peso: 0.8\n• 1x Notebook {+3 Pontos em ações de hackeamento; 100% de Bateria} Peso: 2.0\n• 1x Câmera Fotográfica {100/100 fotos | 100% bateria} Peso: 1.5\n• 1x Microfone USB {item narrativo} Peso: 0.03\n• 1x Lanterna {Ilumina 10m em cone} Peso: 0.1\n\nCOMO UTILIZAR: aplicar as pontuações e entregar os itens ao montar a ficha, antes da entrega ao Mestre.", fonte:"OdC v1.0.3 — pág. 78, 82"},
+  {nome:"Professor", desc:"PONTUAÇÕES GANHAS\n• Criatividade +2P\n• Sentido Paranormal +1P\n• Liderança +3P\n• Inteligência +2\n• Referência +2\n• Idiomas Antigos +2P\n• Perícia Investigativa +2P\n• Perícia Pedagógica +2P\n• Perícia em Tortura -2P\n• Perícia em Armas de Fogo -1P\n• Perícia em Armas Brancas -1P\n\nITENS GANHOS\nEquipamento de Carga: Bolsa tiracolo {2/6 itens máximos} Peso: 0.5\n• 1x Caderno {50/50 Páginas} Peso: 0.5\n• 1x Lápis {não ocupa espaço} Peso: 0.01\n• 1x Borracha {não ocupa espaço} Peso: 0.01\n• 1x Livro sobre Pedagogia — \"Esperança de uma Sociedade mais Educada\" {+1d6 em testes de Perícia Pedagógica}\n\nCOMO UTILIZAR: aplicar as pontuações e entregar os itens ao montar a ficha, antes da entrega ao Mestre.", fonte:"OdC v1.0.3 — pág. 78, 82"},
+  {nome:"Agente Novato", desc:"PONTUAÇÕES GANHAS\n• Condução +1P\n• Computação +1P\n• Medicina +1P\n• Atletismo +1P\n• Flexibilidade +1P\n• Marcial +1P\n• Natação +1P\n• Rastrear +1P\n• Combate +1P\n• Ocultismo +1P\n• Perícia Médica Ocultista +1P\n• Perícia Erúdita +1P\n• Perícia Investigativa +1P\n• Perícia em Armas Brancas +1P\n• Perícia em Armas de Fogo +1P\n• Criminalidade -1P\n• Adaptação -1P\n• Liderança -1P\n• Perícia em Tortura -1P\n\nITENS GANHOS\nCompartilhado com as demais Profissões de Agente da Ordem — veja o card \"" + KIT_AGENTE_ORDEM_NOME + "\".\n\nCOMO UTILIZAR: aplicar as pontuações e entregar o Kit de Agente da Ordem ao montar a ficha, antes da entrega ao Mestre.", fonte:"OdC v1.0.3 — pág. 78–79, 82–83"},
+  {nome:"Agente de Campo", desc:"PONTUAÇÕES GANHAS\n• Condução +1P\n• Computação +1P\n• Medicina +1P\n• Atletismo +2P\n• Flexibilidade +1P\n• Marcial +2P\n• Natação +1P\n• Rastrear +2P\n• Combate +2P\n• Ocultismo +3P\n• Perícia Médica Ocultista +2P\n• Perícia Erúdita +1P\n• Perícia Investigativa +2P\n• Perícia em Armas Brancas +1P\n• Perícia em Armas de Fogo +1P\n• Criminalidade -2P\n\nITENS GANHOS\nCompartilhado com as demais Profissões de Agente da Ordem — veja o card \"" + KIT_AGENTE_ORDEM_NOME + "\".\n\nCOMO UTILIZAR: aplicar as pontuações e entregar o Kit de Agente da Ordem ao montar a ficha, antes da entrega ao Mestre.", fonte:"OdC v1.0.3 — pág. 79, 82–83"},
+  {nome:"Agente Médico", desc:"PONTUAÇÕES GANHAS\n• Medicina +4P\n• Ferramenta +2P\n• Manipulação +2P\n• Psicologia +4P\n• Sentido Paranormal +2P\n• Rastrear +1P\n• Observador +1P\n• Percepção +1P\n• Inteligência +1P\n• Lógica +1P\n• Ocultismo +2P\n• Perícia Médica +2P\n• Perícia Médica Ocultista +2P\n• Perícia Psicológica +2P\n• Perícia Erúdita +1P\n• Perícia Química +1P\n• Perícia Investigativa +1P\n• Perícia em Tortura +2P\n• Atletismo -2P\n• Flexibilidade -2P\n• Natação -1P\n• Marcial -1P\n• Militar -2P\n• Criminalidade -2P\n• Intimidação -2P\n• Liderança -1P\n• Empatia -2P\n\nITENS GANHOS\nCompartilhado com as demais Profissões de Agente da Ordem — veja o card \"" + KIT_AGENTE_ORDEM_NOME + "\".\n\nCOMO UTILIZAR: aplicar as pontuações e entregar o Kit de Agente da Ordem ao montar a ficha, antes da entrega ao Mestre.", fonte:"OdC v1.0.3 — pág. 79, 82–83"},
+  {nome:"Agente Exterminador", desc:"PONTUAÇÕES GANHAS\n• Condução +2P\n• Atletismo +4P\n• Flexibilidade +2P\n• Marcial +3P\n• Natação +2P\n• Rastrear +3P\n• Combate +4P\n• Ocultismo +3P\n• Criminalidade +2P\n• Sobrevivência +1P\n• Intimidação +2P\n• Liderança +1P\n• Resistência Psíquica +2P\n• Resistência +2P\n• Perícia Investigativa +3P\n• Perícia em Armas Brancas +3P\n• Perícia em Armas de Fogo +3P\n• Perícia em Tortura +3P\n• Perícia em Mecânica +1P\n• Perícia em Pilotagem +1P\n• Perícia em Explosivo +1P\n• Psicologia -4P\n• Trabalho em Equipe -2P\n• Inteligência Emocional -2P\n• Empatia -4P\n• Carisma -2P\n• Perícia Psicológica -2P\n\nITENS GANHOS\nCompartilhado com as demais Profissões de Agente da Ordem — veja o card \"" + KIT_AGENTE_ORDEM_NOME + "\".\n\nCOMO UTILIZAR: aplicar as pontuações e entregar o Kit de Agente da Ordem ao montar a ficha, antes da entrega ao Mestre.", fonte:"OdC v1.0.3 — pág. 79, 82–83"},
+  {nome:KIT_AGENTE_ORDEM_NOME, desc:"ITENS GANHOS (compartilhado pelas 4 Profissões de Agente da Ordem: Novato, de Campo, Médico e Exterminador)\nEquipamento de Carga: Mochila Militar {x/20 itens máximos} Peso: 1.0\n• 1x Arma Branca ou de Fogo {escolhida pelo Mestre; veja o Capítulo 5}\n• 1x Celular {100/100 Fotos; objeto para rolagem de Computação; Lanterna com iluminação 5m em cone | 100% de Bateria} Peso: 0.1\n• 1x Item específico {escolhido ou criado pelo Mestre; caso escolhido e não criado: veja os Capítulos 6 e 7}\n\nCOMO UTILIZAR: entregar este kit a qualquer personagem com Profissão de Agente da Ordem (Novato, de Campo, Médico ou Exterminador), junto das pontuações específicas de cada uma.", fonte:"OdC v1.0.3 — pág. 82–83"}
+];
+const COMP_CRIACAO_PERSONAGEM = [...COMP_PROFISSOES, MOD_IDADE];
+// Autocomplete customizado do campo Profissão — substitui o antigo datalist
+// nativo do navegador (popup fora do controle de CSS/tema, ver
+// css/profissao-autocomplete.css) por um dropdown com a mesma paleta do
+// resto da ficha. Nomes vêm direto de COMP_PROFISSOES (sem segunda lista
+// para manter em dia); exclui o card do Kit compartilhado, que não é uma
+// Profissão selecionável. O campo continua sendo texto livre — a lista só
+// sugere enquanto o jogador digita, sem travá-lo às opções.
+(function configurarAutocompleteProfissao(){
+  const input = document.getElementById("profissao");
+  const caixa = document.getElementById("profissao_sugestoes");
+  if(!input || !caixa) return;
+
+  const NOMES_PROFISSAO = COMP_PROFISSOES
+    .filter(p => p.nome !== KIT_AGENTE_ORDEM_NOME)
+    .map(p => p.nome);
+
+  function escaparHtml(s){
+    return s.replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  }
+
+  function destacar(nome, termo){
+    if(!termo) return escaparHtml(nome);
+    const i = nome.toLowerCase().indexOf(termo.toLowerCase());
+    if(i === -1) return escaparHtml(nome);
+    return escaparHtml(nome.slice(0,i)) + "<mark>" + escaparHtml(nome.slice(i,i+termo.length)) + "</mark>" + escaparHtml(nome.slice(i+termo.length));
+  }
+
+  let itens = [];
+  let ativo = -1;
+
+  function fechar(){
+    caixa.classList.remove("aberta");
+    caixa.innerHTML = "";
+    itens = [];
+    ativo = -1;
+  }
+
+  function marcarAtivo(idx){
+    itens.forEach(el => el.classList.remove("ativo"));
+    ativo = idx;
+    if(ativo >= 0 && itens[ativo]){
+      itens[ativo].classList.add("ativo");
+      itens[ativo].scrollIntoView({ block:"nearest" });
+    }
+  }
+
+  function selecionar(nome){
+    input.value = nome;
+    fechar();
+    // Dispara "input" para qualquer listener genérico da ficha (ex.: tab-agentes)
+    // reagir à mudança do mesmo jeito que reagiria à digitação manual.
+    input.dispatchEvent(new Event("input", { bubbles:true }));
+    input.focus();
+  }
+
+  function abrir(){
+    const termo = input.value.trim();
+    const filtradas = termo
+      ? NOMES_PROFISSAO.filter(n => n.toLowerCase().includes(termo.toLowerCase()))
+      : NOMES_PROFISSAO;
+
+    caixa.innerHTML = "";
+    itens = [];
+    ativo = -1;
+
+    if(filtradas.length === 0){
+      const vazio = document.createElement("div");
+      vazio.className = "profissao-item-vazio";
+      vazio.textContent = "Nenhuma Profissão do Compêndio corresponde ao texto digitado";
+      caixa.appendChild(vazio);
+      caixa.classList.add("aberta");
+      return;
+    }
+
+    filtradas.forEach(nome => {
+      const item = document.createElement("div");
+      item.className = "profissao-item";
+      item.innerHTML = destacar(nome, termo);
+      item.addEventListener("mousedown", (e) => {
+        // mousedown (não click) para disparar antes do "blur" do input
+        e.preventDefault();
+        selecionar(nome);
+      });
+      caixa.appendChild(item);
+      itens.push(item);
+    });
+    caixa.classList.add("aberta");
+  }
+
+  input.addEventListener("input", abrir);
+  input.addEventListener("focus", abrir);
+
+  input.addEventListener("keydown", (e) => {
+    if(!caixa.classList.contains("aberta")) return;
+    if(e.key === "ArrowDown"){
+      e.preventDefault();
+      if(itens.length) marcarAtivo((ativo + 1) % itens.length);
+    } else if(e.key === "ArrowUp"){
+      e.preventDefault();
+      if(itens.length) marcarAtivo((ativo - 1 + itens.length) % itens.length);
+    } else if(e.key === "Enter"){
+      if(ativo >= 0 && itens[ativo]){
+        e.preventDefault();
+        selecionar(itens[ativo].textContent);
+      }
+    } else if(e.key === "Escape"){
+      fechar();
+    }
+  });
+
+  document.addEventListener("click", (e) => {
+    if(e.target !== input && !caixa.contains(e.target)) fechar();
+  });
+})();
+
+/* ==========================================================
+   APLICAÇÃO AUTOMÁTICA DE PROFISSÃO NA FICHA DO AGENTE (botão "🎯 Aplicar"
+   ao lado do campo Profissão). Lê os valores diretamente do texto (desc) já
+   existente em COMP_PROFISSOES — não duplica pontuações/itens em uma segunda
+   estrutura de dados; interpreta o mesmo texto mostrado no Compêndio.
+   Regras confirmadas com o usuário:
+   - a pontuação de cada Habilidade/Talento/Atributo/Perícia é somada IGUALMENTE
+     aos campos Atual e Máx. da skill correspondente;
+   - se já existir uma Profissão aplicada antes, o bônus anterior (pontuações,
+     itens e dinheiro daquela aplicação) é revertido antes de aplicar a nova;
+   - os itens da Profissão são adicionados automaticamente ao Inventário.
+   Não altera Continente/Sede/Idade nem nenhum outro sistema. ========================================================== */
+function normalizarNomeSkill(s){
+  return (s || "").toString().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim();
+}
+/* Only needed for names in COMP_PROFISSOES that don't match a skill LABEL
+   exactly after normalização (plural/singular, "em"/"com", etc.). "Elogio"
+   (Político) fica de propósito fora daqui: não corresponde a nenhum campo
+   da ficha, então é reportado ao usuário como não aplicável automaticamente. */
+const ALIASES_SKILL_NOME = {
+  "idioma": "idiomas",
+  "idioma antigo": "idiomas_antigos",
+  "deteccao de mentira": "deteccao_mentiras",
+  "ferramentas": "ferramenta",
+  "pericia em explosivos": "pericia_explosivos",
+  "pericia em explosivo": "pericia_explosivos",
+  "pericia em mecanica": "pericia_mecanica"
+};
+const SKILL_ID_POR_NOME = (function(){
+  const map = {};
+  SKILLS_NORMAIS.forEach(([id, label]) => { map[normalizarNomeSkill(label)] = id; });
+  Object.keys(ALIASES_SKILL_NOME).forEach(k => { map[k] = ALIASES_SKILL_NOME[k]; });
+  return map;
+})();
+function encontrarProfissaoPorNome(nome){
+  const alvo = normalizarNomeSkill(nome);
+  return COMP_PROFISSOES.find(p => normalizarNomeSkill(p.nome) === alvo) || null;
+}
+function parsePontuacoesDesc(desc){
+  const m = desc.match(/PONTUAÇÕES GANHAS[^\n]*\n([\s\S]*?)(?:\n\n(?:ITENS GANHOS|OUTROS BENEFÍCIOS|COMO UTILIZAR)|$)/);
+  if(!m) return [];
+  return m[1].split("\n").filter(l => l.trim().startsWith("•")).map(l => {
+    const t = l.replace(/^•\s*/, "").trim();
+    const mm = t.match(/^(.+?)\s+([+-]\d+)P?$/);
+    return mm ? {nome: mm[1].trim(), valor: parseInt(mm[2], 10)} : null;
+  }).filter(Boolean);
+}
+function parseItensDesc(desc){
+  const m = desc.match(/ITENS GANHOS[^\n]*\n([\s\S]*?)(?:\n\n(?:OUTROS BENEFÍCIOS|COMO UTILIZAR)|$)/);
+  if(!m) return [];
+  return m[1].split("\n").filter(l => l.trim().startsWith("•")).map(l => {
+    const t = l.replace(/^•\s*/, "").trim();
+    const mm = t.match(/^(\d+)x\s+([^{]+?)\s*(?:\{([^}]*)\})?\s*(?:Peso:\s*([\d.]+))?\s*$/);
+    if(!mm) return {nome: t, qtd: 1, peso: 0, desc: ""};
+    return {qtd: parseInt(mm[1], 10) || 1, nome: mm[2].trim(), desc: mm[3] ? ("{" + mm[3] + "}") : "", peso: mm[4] ? parseFloat(mm[4]) : 0};
+  });
+}
+function parseDinheiroDesc(desc){
+  const m = desc.match(/Bônus de dinheiro inicial:\s*([+-]?\$?[\d.,]+)/);
+  if(!m) return null;
+  const num = parseFloat(m[1].replace(/[^\d.-]/g, ""));
+  return isNaN(num) ? null : num;
+}
+function reverterAplicacaoProfissaoAnterior(){
+  const campoDados = document.getElementById("profissao_aplicada_dados");
+  const raw = campoDados ? campoDados.value : "";
+  if(!raw) return;
+  let dados;
+  try{ dados = JSON.parse(raw); }catch(e){ return; }
+  (dados.deltas || []).forEach(d => {
+    const maxEl = document.getElementById(d.id);
+    const atualEl = document.getElementById(d.id + "_atual");
+    if(maxEl) maxEl.value = String((parseInt(maxEl.value) || 0) - d.valor);
+    if(atualEl) atualEl.value = String((parseInt(atualEl.value) || 0) - d.valor);
+    if(typeof updateDiceTiers === "function") updateDiceTiers(d.id);
+  });
+  if(dados.dinheiro){
+    const dEl = document.getElementById("dinheiro");
+    // Só reverte automaticamente se o campo ainda for puramente numérico —
+    // evita apagar anotações manuais que o jogador tenha feito depois.
+    if(dEl && /^-?\d+(\.\d+)?$/.test(dEl.value.trim())){
+      dEl.value = String((parseFloat(dEl.value) || 0) - dados.dinheiro);
+    }
+  }
+  if(dados.profissao){
+    invItems = invItems.filter(it => it.origemProfissao !== dados.profissao);
+  }
+}
+function aplicarProfissaoNaFicha(){
+  if(window.CRISCampaignAgentView && typeof window.CRISCampaignAgentView.isActive === "function" && window.CRISCampaignAgentView.isActive()){
+    if(typeof flashIndicator === "function") flashIndicator("✕ Aplicar Profissão em ficha de outro personagem ainda não é permitido.", true, 3400);
+    return;
+  }
+  const nomeDigitado = (document.getElementById("profissao").value || "").trim();
+  if(!nomeDigitado){
+    if(typeof flashIndicator === "function") flashIndicator("Digite o nome da Profissão no campo antes de clicar em Aplicar.", true, 3200);
+    return;
+  }
+  const prof = encontrarProfissaoPorNome(nomeDigitado);
+  if(!prof || prof.nome === KIT_AGENTE_ORDEM_NOME){
+    if(typeof flashIndicator === "function") flashIndicator("Profissão não encontrada no Compêndio. Confira o nome exato em Compêndio > Criação de Personagem > Profissões.", true, 4400);
+    return;
+  }
+  const jaHaviaAnterior = !!document.getElementById("profissao_aplicada_dados").value;
+  const msgConfirm = (jaHaviaAnterior
+      ? "Uma Profissão já havia sido aplicada nesta ficha antes. Aplicar \"" + prof.nome + "\" vai REVERTER o bônus anterior e aplicar o novo.\n\n"
+      : "Aplicar a Profissão \"" + prof.nome + "\"?\n\n") +
+    "Isso vai somar as pontuações aos campos Atual e Máx. das Habilidades/Talentos/Atributos/Perícias correspondentes, adicionar os itens da Profissão ao Inventário e somar o bônus de dinheiro (se houver). Continuar?";
+  if(!confirm(msgConfirm)) return;
+
+  reverterAplicacaoProfissaoAnterior();
+
+  const pontuacoes = parsePontuacoesDesc(prof.desc);
+  const naoMapeadas = [];
+  const deltasAplicados = [];
+  pontuacoes.forEach(p => {
+    const id = SKILL_ID_POR_NOME[normalizarNomeSkill(p.nome)];
+    const maxEl = id ? document.getElementById(id) : null;
+    const atualEl = id ? document.getElementById(id + "_atual") : null;
+    if(!id || !maxEl || !atualEl){ naoMapeadas.push(p.nome + " (" + (p.valor > 0 ? "+" : "") + p.valor + ")"); return; }
+    maxEl.value = String((parseInt(maxEl.value) || 0) + p.valor);
+    atualEl.value = String((parseInt(atualEl.value) || 0) + p.valor);
+    if(typeof updateDiceTiers === "function") updateDiceTiers(id);
+    deltasAplicados.push({id, valor: p.valor});
+  });
+
+  // Profissões de Agente da Ordem (Novato/Campo/Médico/Exterminador) compartilham
+  // o mesmo Kit — os itens vêm do card do Kit, não do texto da própria profissão.
+  const usaKitCompartilhado = /Compartilhado com as demais Profissões de Agente da Ordem/.test(prof.desc);
+  let itensParaAdicionar;
+  if(usaKitCompartilhado){
+    const kit = COMP_PROFISSOES.find(p => p.nome === KIT_AGENTE_ORDEM_NOME);
+    itensParaAdicionar = kit ? parseItensDesc(kit.desc) : [];
+  } else {
+    itensParaAdicionar = parseItensDesc(prof.desc);
+  }
+  itensParaAdicionar.forEach(it => {
+    invItems.push({nome: it.nome, qtd: it.qtd, peso: it.peso, desc: it.desc, origemProfissao: prof.nome});
+  });
+
+  const dinheiro = parseDinheiroDesc(prof.desc);
+  if(dinheiro){
+    const dEl = document.getElementById("dinheiro");
+    if(dEl){
+      if(dEl.value.trim() === "" || /^-?\d+(\.\d+)?$/.test(dEl.value.trim())){
+        dEl.value = String((parseFloat(dEl.value) || 0) + dinheiro);
+      } else {
+        // Campo já tinha texto não-numérico do jogador: só acrescenta, sem apagar nada.
+        dEl.value = dEl.value + " +" + dinheiro;
+      }
+    }
+  }
+
+  document.getElementById("profissao_aplicada_dados").value = JSON.stringify({
+    profissao: prof.nome, deltas: deltasAplicados, dinheiro: dinheiro, aplicadoEm: new Date().toISOString()
+  });
+
+  renderInventory();
+  saveInventory();
+  markAgentDirty();
+  if(typeof updateSAN === "function") updateSAN();
+  if(typeof updateHP === "function") updateHP();
+  if(typeof updateFatigue === "function") updateFatigue();
+  if(typeof initAllSkillBaselines === "function") initAllSkillBaselines();
+  saveAgent();
+
+  let msg = "✔ Profissão \"" + prof.nome + "\" aplicada: " + deltasAplicados.length + " pontuações, " + itensParaAdicionar.length + " itens" + (dinheiro ? ", +" + dinheiro + " de dinheiro" : "") + ".";
+  if(naoMapeadas.length) msg += " ⚠ Ajuste manualmente (não corresponde a nenhum campo da ficha): " + naoMapeadas.join(", ") + ".";
+  if(typeof flashIndicator === "function") flashIndicator(msg, naoMapeadas.length > 0, 6200);
+  else alert(msg);
+}
+document.getElementById("btn_aplicar_profissao").addEventListener("click", aplicarProfissaoNaFicha);
 /* HABILIDADES EM 50 — conteúdos de PLAYER desbloqueados ao atingir 50 pontos em um conhecimento (levantamento a partir do PDF, pág. 85–91). Monster Skills (mesmo marco, porém endereçadas a criaturas) foram deliberadamente excluídas. */
 const COMP_HABILIDADES_50 = [
   {nome:"Arrombamento — 50 — Nunca está fechado", desc:"O jogador poderá rerrolar seu dado de Arrombamento; Arrombamento ganha +5 natural.", fonte:"OdC v1.0.3 — p. 85"},
@@ -4617,7 +4947,8 @@ const COMPENDIO_CATEGORIES = [
   {key:"Teste", label:"Sistema de Testes", items: COMP_TESTES},
   {key:"Combate", label:"Combate", items: COMP_COMBATE},
   {key:"Modificador", label:"Modificadores", items: COMP_MODIFICADORES},
-  {key:"Habilidade50", label:"Habilidades em 50", items: COMP_HABILIDADES_50}
+  {key:"Habilidade50", label:"Habilidades em 50", items: COMP_HABILIDADES_50},
+  {key:"CriacaoPersonagem", label:"Criação de Personagem", items: COMP_CRIACAO_PERSONAGEM}
 ];
 /* ==========================================================
    GUIA DO LIVRO — índice rápido de páginas (confirmadas no PDF nesta revisão)
@@ -4639,6 +4970,10 @@ const GUIA_LIVRO = [
   ]},
   {grupo:"Itens e Modificadores", itens:[
     {nome:"Modificadores (Idade, Profissão, Continente, Sede)", pagina:"p. 77–84", key:"Modificador"}
+  ]},
+  {grupo:"Criação de Personagem", itens:[
+    {nome:"Profissões (pontuações, itens e benefícios)", pagina:"p. 77–83", key:"CriacaoPersonagem"},
+    {nome:"Modificador de Idade", pagina:"p. 77", key:"CriacaoPersonagem"}
   ]}
 ];
 function renderGuiaLivro(){
@@ -7271,6 +7606,7 @@ const ORIGINAL_PDF_BASE64 = "JVBERi0xLjYNJeLjz9MNCjIxMTMgMCBvYmoNPDwvRmlsdGVyL0Z
 <script src="js/ficha-search.js"></script>
 <script src="js/equipamentos.js"></script>
 <script src="js/equipamentos-agente.js"></script>
+<script src="js/equipamentos-custom.js"></script>
 <script src="js/condicoes-ativas-agente.js"></script>
 <script src="js/criaturas.js"></script>
 <script src="js/criaturas-compendio.js"></script>
