@@ -63,6 +63,17 @@
 
   var HIDDEN_FIELD_ID = "agente_conexoes_ids";
   var CUSTOM_STORAGE_KEY = "conexoes:personalizadas";
+  var CUSTOM_CLOUD_PREFIX = "⟦ODC • CONEXÃO PERSONALIZADA • V2⟧";
+  var CUSTOM_CLOUD_EFFECT_SEPARATOR = "\n\nEfeito:\n";
+  var CUSTOM_FIELD_DEFS = [
+    { key: "funcao", label: "Função", inputId: "cconn_form_funcao", placeholder: "Ex.: ATK C" },
+    { key: "alcance", label: "Alcance", inputId: "cconn_form_alcance", placeholder: "Ex.: Toque" },
+    { key: "corrupcao", label: "Corrupção", inputId: "cconn_form_corrupcao", placeholder: "Ex.: 1" },
+    { key: "consumo", label: "Consumo", inputId: "cconn_form_consumo", placeholder: "Ex.: 1d6 de HP" },
+    { key: "necessario", label: "Necessário", inputId: "cconn_form_necessario", placeholder: "Ex.: Ocultismo 20" },
+    { key: "re", label: "RE", inputId: "cconn_form_re", placeholder: "Ex.: 1" },
+    { key: "de", label: "DE", inputId: "cconn_form_de", placeholder: "Ex.: 1 Ação" }
+  ];
   var pickerActiveFilter = "todas";
 
   var customConnections = [];   // biblioteca de Personalizadas (carregada de storageGet)
@@ -139,6 +150,69 @@
     console.error("[CRIS CUSTOM CONNECTIONS ERROR] " + context + ":", msg);
   }
 
+  function cleanCustomField(value){
+    return String(value || "").replace(/\s*[\r\n]+\s*/g, " ").trim();
+  }
+
+  function normalizeCustomFields(fields){
+    fields = fields && typeof fields === "object" ? fields : {};
+    var normalized = {};
+    CUSTOM_FIELD_DEFS.forEach(function(def){
+      normalized[def.key] = cleanCustomField(fields[def.key]);
+    });
+    return normalized;
+  }
+
+  function hasCustomFields(fields){
+    fields = normalizeCustomFields(fields);
+    return CUSTOM_FIELD_DEFS.some(function(def){ return !!fields[def.key]; });
+  }
+
+  // A tabela existente no Supabase possui apenas um campo description.
+  // Para não exigir migração nem quebrar instalações atuais, os novos
+  // dados são enviados nesse mesmo campo em um bloco textual legível.
+  // Conexões antigas não têm o prefixo e, portanto, nunca são analisadas
+  // ou reinterpretadas: todo o texto antigo continua sendo o Efeito.
+  function encodeCloudDescription(cc){
+    var description = String((cc && cc.description) || "").trim();
+    var fields = normalizeCustomFields(cc && cc.fields);
+    if(!hasCustomFields(fields)) return description;
+
+    var lines = [CUSTOM_CLOUD_PREFIX];
+    CUSTOM_FIELD_DEFS.forEach(function(def){
+      if(fields[def.key]) lines.push(def.label + ": " + fields[def.key]);
+    });
+    return lines.join("\n") + CUSTOM_CLOUD_EFFECT_SEPARATOR + description;
+  }
+
+  function decodeCloudDescription(value){
+    var raw = String(value || "");
+    var prefix = CUSTOM_CLOUD_PREFIX + "\n";
+    if(raw.indexOf(prefix) !== 0){
+      return { description: raw, fields: normalizeCustomFields(null) };
+    }
+
+    var separatorAt = raw.indexOf(CUSTOM_CLOUD_EFFECT_SEPARATOR, prefix.length);
+    if(separatorAt < 0){
+      return { description: raw, fields: normalizeCustomFields(null) };
+    }
+
+    var fields = normalizeCustomFields(null);
+    var fieldLines = raw.slice(prefix.length, separatorAt).split("\n");
+    fieldLines.forEach(function(line){
+      CUSTOM_FIELD_DEFS.forEach(function(def){
+        var labelPrefix = def.label + ": ";
+        if(line.indexOf(labelPrefix) === 0){
+          fields[def.key] = cleanCustomField(line.slice(labelPrefix.length));
+        }
+      });
+    });
+    return {
+      description: raw.slice(separatorAt + CUSTOM_CLOUD_EFFECT_SEPARATOR.length),
+      fields: fields
+    };
+  }
+
   function errInfoCC(e){
     if(!e) return null;
     return { status: e.status || (e.originalError && e.originalError.status) || null, code: e.code || null, message: e.message || String(e) };
@@ -161,7 +235,7 @@
     if(!user){ logCC("criada só localmente (sem sessão): " + cc.id); return { ok: false, offline: true }; }
     try{
       var res = await client.from("custom_connections").insert({
-        id: cc.id, user_id: user.id, name: cc.name, description: cc.description, tag: cc.tag, type: cc.type || "custom"
+        id: cc.id, user_id: user.id, name: cc.name, description: encodeCloudDescription(cc), tag: cc.tag, type: cc.type || "custom"
       }).select("id,updated_at").single();
       if(res.error) throw res.error;
       cc.cloudMeta = { existsCloud: true, lastSyncedUpdatedAt: res.data.updated_at, conflict: false };
@@ -215,7 +289,7 @@
       }
 
       var res = await client.from("custom_connections")
-        .update({ name: cc.name, description: cc.description, tag: cc.tag, type: cc.type || "custom" })
+        .update({ name: cc.name, description: encodeCloudDescription(cc), tag: cc.tag, type: cc.type || "custom" })
         .eq("id", cc.id)
         .eq("user_id", user.id)
         .select("id,updated_at")
@@ -284,10 +358,12 @@
     var seen = {};
     var merged = cloudRows.map(function(r){
       seen[r.id] = true;
+      var decoded = decodeCloudDescription(r.description);
       return {
         id: r.id,
         name: r.name || "",
-        description: r.description || "",
+        description: decoded.description,
+        fields: decoded.fields,
         tag: r.tag || "",
         type: r.type || "custom",
         cloudMeta: { existsCloud: true, lastSyncedUpdatedAt: r.updated_at, conflict: false }
@@ -420,12 +496,18 @@
   }
 
   // Converte uma Personalizada (formato de armazenamento: id/name/
-  // description/tag/type) para o mesmo "formato de entrada" que
+  // description/tag/type/fields) para o mesmo "formato de entrada" que
   // CONEXOES_DATA usa (n/d/dl/c/e/s), para que TODO o resto do
   // sistema (findConnByRef, dimLabel, symSrc, renderPickerList,
   // renderMinhasConexoes, renderAgenteConexoes) funcione sem precisar
   // saber se está lidando com uma Conexão oficial ou Personalizada.
   function customToEntry(cc){
+    var fields = normalizeCustomFields(cc.fields);
+    var stats = {};
+    CUSTOM_FIELD_DEFS.forEach(function(def){
+      if(fields[def.key]) stats[def.label] = fields[def.key];
+    });
+    var effect = String(cc.description || "").trim();
     return {
       __custom: true,
       id: cc.id,
@@ -433,9 +515,9 @@
       d: "personalizada",
       dl: cc.tag || "Personalizada",
       tag: cc.tag || "",
-      description: cc.description || "",
-      c: {},
-      e: [],
+      description: effect,
+      c: stats,
+      e: effect ? [{ t: "Efeito", x: effect }] : [],
       s: null,
       p: null
     };
@@ -459,6 +541,7 @@
       id: genCustomId(),
       name: (data.name || "").trim(),
       description: (data.description || "").trim(),
+      fields: normalizeCustomFields(data.fields),
       tag: (data.tag || "").trim(),
       type: "custom",
       cloudMeta: { existsCloud: false, lastSyncedUpdatedAt: null, conflict: false }
@@ -474,6 +557,7 @@
     if(!cc) return null;
     cc.name = (data.name || "").trim();
     cc.description = (data.description || "").trim();
+    cc.fields = normalizeCustomFields(data.fields);
     cc.tag = (data.tag || "").trim();
     saveCustomLibrary();
     attemptSyncOrQueue(cc, "update");
@@ -921,11 +1005,28 @@
 
   /* ==========================================================
      FORMULÁRIO "CRIAR / EDITAR CONEXÃO PERSONALIZADA"
-     Modal próprio (nome, etiqueta, descrição) — único ponto de
+     Modal próprio (nome, etiqueta, dados e efeito) — único ponto de
      entrada de dados das Personalizadas. Usado tanto para criar
      quanto para editar (editar nunca cria uma nova entrada: sempre
      grava de volta no mesmo id).
      ========================================================== */
+
+  function readCustomFieldsFromForm(){
+    var fields = {};
+    CUSTOM_FIELD_DEFS.forEach(function(def){
+      var input = document.getElementById(def.inputId);
+      fields[def.key] = input ? input.value : "";
+    });
+    return normalizeCustomFields(fields);
+  }
+
+  function fillCustomFieldsForm(fields){
+    fields = normalizeCustomFields(fields);
+    CUSTOM_FIELD_DEFS.forEach(function(def){
+      var input = document.getElementById(def.inputId);
+      if(input) input.value = fields[def.key];
+    });
+  }
 
   function ensureCustomFormModal(){
     if(document.getElementById("cconn_form_modal")) return;
@@ -937,6 +1038,7 @@
       '<div class="modal-box cconn-form-box">' +
         '<button type="button" class="cconn-picker-close" id="cconn_form_close">&times;</button>' +
         '<h3 id="cconn_form_title">Criar Conexão Personalizada</h3>' +
+        '<div class="cconn-form-scroll">' +
         '<div class="field cconn-form-field"><label>Nome</label>' +
           '<input type="text" id="cconn_form_name" maxlength="80" placeholder="Nome da Conexão…"></div>' +
         '<div class="field cconn-form-field"><label>Etiqueta</label>' +
@@ -945,9 +1047,16 @@
           '<option value="Especial"><option value="Pessoal"><option value="NPC">' +
           '<option value="Campanha"><option value="Mestre"><option value="Customizada">' +
         '</datalist>' +
-        '<div class="field cconn-form-field cconn-form-field-desc"><label>Descrição</label>' +
-          '<textarea id="cconn_form_desc" placeholder="Descrição da Conexão…"></textarea></div>' +
+        '<div class="cconn-form-stats">' +
+          CUSTOM_FIELD_DEFS.map(function(def){
+            return '<div class="field cconn-form-field"><label>' + def.label + '</label>' +
+              '<input type="text" id="' + def.inputId + '" maxlength="60" placeholder="' + def.placeholder + '"></div>';
+          }).join("") +
+        '</div>' +
+        '<div class="field cconn-form-field cconn-form-field-desc"><label>Efeito</label>' +
+          '<textarea id="cconn_form_desc" placeholder="Descreva o efeito completo da Conexão…"></textarea></div>' +
         '<div class="cconn-form-err" id="cconn_form_err" style="display:none;">Informe um nome para a Conexão.</div>' +
+        '</div>' +
         '<div class="cconn-form-actions">' +
           '<button type="button" id="cconn_form_cancel">Cancelar</button>' +
           '<button type="button" id="cconn_form_save" class="primary">Salvar</button>' +
@@ -975,7 +1084,12 @@
       errEl.style.display = "none";
 
       var editingId = overlay.dataset.editingId || "";
-      var data = { name: name, tag: tagEl.value, description: descEl.value };
+      var data = {
+        name: name,
+        tag: tagEl.value,
+        description: descEl.value,
+        fields: readCustomFieldsFromForm()
+      };
       var saved = editingId ? updateCustomConnection(editingId, data) : createCustomConnection(data);
       var reopenModal = overlay.dataset.reopenModal === "1";
 
@@ -1004,6 +1118,7 @@
     nameEl.value = existingCustom ? existingCustom.name : "";
     tagEl.value = existingCustom ? existingCustom.tag : "";
     descEl.value = existingCustom ? existingCustom.description : "";
+    fillCustomFieldsForm(existingCustom ? existingCustom.fields : null);
     overlay.dataset.editingId = existingCustom ? existingCustom.id : "";
     overlay.dataset.reopenModal = reopenAfterSave ? "1" : "0";
 
@@ -1054,7 +1169,7 @@
   }
 
   // readOnly: quando true (chamado a partir de AGENTES → CONEXÕES), o
-  // modal mostra exatamente os mesmos dados (nome/etiqueta/descrição),
+  // modal mostra exatamente os mesmos dados (nome/etiqueta/campos/efeito),
   // mas NÃO monta a barra de ações (Adicionar/Remover da Ficha, Editar,
   // Excluir) — vira puramente visualização. Sem esse parâmetro (chamado
   // a partir de PARANORMAL → PERSONALIZADAS), o comportamento de
@@ -1065,7 +1180,10 @@
     var c = customToEntry(cc);
 
     var symWrap = document.getElementById("cx_modal_sym");
-    if(symWrap) symWrap.style.display = "none"; // Personalizadas não têm símbolo
+    if(symWrap){
+      symWrap.style.display = "none"; // sem imagem = nenhum espaço vazio no cabeçalho
+      symWrap.classList.remove("cx-sym-light");
+    }
 
     var titleEl = document.getElementById("cx_modal_title");
     var dimEl = document.getElementById("cx_modal_dim");
@@ -1080,13 +1198,28 @@
     if(dimEl) dimEl.textContent = c.dl || "Personalizada";
     if(tecnicaBadge) tecnicaBadge.style.display = "none";
     modalBox.className = "modal-box cx-modal-box cx-personalizada";
-    if(fieldsEl) fieldsEl.innerHTML = "";
 
-    var descHtml = c.description
-      ? ('<div class="cx-modal-section"><h5>Descrição</h5><p>' + esc(c.description) + '</p></div>')
-      : '<div class="cx-modal-section"><p class="empty-state">Sem descrição.</p></div>';
-    if(sectionsEl) sectionsEl.innerHTML = descHtml;
-    if(pageEl) pageEl.textContent = "Conexão Personalizada";
+    var fieldOrder = ["Função", "Alcance", "Corrupção", "Consumo", "Necessário", "RE", "DE"];
+    var fieldsHtml = "";
+    fieldOrder.forEach(function(label){
+      if(c.c[label]){
+        fieldsHtml += '<div class="cx-modal-field"><b>' + esc(label) + '</b><span>' + esc(c.c[label]) + '</span></div>';
+      }
+    });
+    if(fieldsEl) fieldsEl.innerHTML = fieldsHtml;
+
+    var sectionsHtml = "";
+    (c.e || []).forEach(function(section){
+      sectionsHtml += '<div class="cx-modal-section"><h5>' + esc(section.t) + '</h5><p>' + esc(section.x) + '</p></div>';
+    });
+    if(!sectionsHtml){
+      sectionsHtml = '<div class="cx-modal-section"><p class="empty-state">Sem efeito descrito.</p></div>';
+    }
+    if(sectionsEl) sectionsEl.innerHTML = sectionsHtml;
+    if(pageEl){
+      pageEl.textContent = "Conexão Personalizada";
+      pageEl.style.display = "";
+    }
 
     var actions = ensureModalCustomActions();
     if(actions){
@@ -1230,7 +1363,9 @@
         return;
       }
       cc.name = res.data.name || "";
-      cc.description = res.data.description || "";
+      var decoded = decodeCloudDescription(res.data.description);
+      cc.description = decoded.description;
+      cc.fields = decoded.fields;
       cc.tag = res.data.tag || "";
       cc.cloudMeta = { existsCloud: true, lastSyncedUpdatedAt: res.data.updated_at, conflict: false };
       saveCustomLibrary();
@@ -1261,7 +1396,7 @@
     }
     try{
       var res = await client.from("custom_connections")
-        .update({ name: cc.name, description: cc.description, tag: cc.tag, type: cc.type || "custom" })
+        .update({ name: cc.name, description: encodeCloudDescription(cc), tag: cc.tag, type: cc.type || "custom" })
         .eq("id", id).eq("user_id", user.id).select("id,updated_at").single();
       if(res.error) throw res.error;
       cc.cloudMeta = { existsCloud: true, lastSyncedUpdatedAt: res.data.updated_at, conflict: false };
