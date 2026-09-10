@@ -989,6 +989,12 @@
 <link rel="stylesheet" href="css/pdf-agent-import.css">
 <link rel="stylesheet" href="css/campanhas.css">
 <link rel="stylesheet" href="css/profissao-autocomplete.css">
+<link rel="stylesheet" href="css/dimension-atmospheres.css">
+<link rel="stylesheet" href="css/immersive-details.css">
+<link rel="stylesheet" href="css/professional-finish.css">
+<link rel="stylesheet" href="css/mobile-reading.css">
+<link rel="stylesheet" href="css/navigation-tools.css">
+<link rel="stylesheet" href="css/performance-tuning.css">
 </head>
 <body>
 
@@ -2172,6 +2178,7 @@
         <div id="cx_count" class="note" style="text-align:left;"></div>
         <div id="cx_grid" class="cx-grid"></div>
       </div>
+
     </div>
   </div>
 
@@ -2207,17 +2214,6 @@
 
   <!-- ================= PARANORMAL (CONEXÕES) ================= -->
   <div class="tab-panel" id="tab-paranormal">
-    <div class="panel">
-      <h2>Paranormal — Conexões <span class="tag">Banco oficial em construção</span></h2>
-      <p class="empty-state" style="margin-bottom:16px;">O banco oficial de Conexões (cap. X do sistema — Infernais, Arkanjerias, Terrenas, Carniçais, Sombrias, Perdição, Límbicas, Aborto Límbico, Arcanas) ainda será estruturado a partir do PDF. Por enquanto, esta lista serve para anotação manual.</p>
-      <div class="list-add-row">
-        <div class="field"><label>Nome da Conexão</label><input type="text" id="conpar_nome"></div>
-        <div class="field"><label>Origem</label><input type="text" id="conpar_origem"></div>
-        <div class="field" style="flex:2 1 220px;"><label>Descrição</label><input type="text" id="conpar_desc"></div>
-        <button data-add="conexoes_par">Adicionar</button>
-      </div>
-      <div id="list-conexoes_par"></div>
-    </div>
   </div>
 
   <!-- ================= CAMPANHAS ================= -->
@@ -4306,6 +4302,9 @@ const PARANORMAL_FIELDS = {
 };
 function renderParanormalList(key){
   const list = document.getElementById("list-" + key);
+  // O formulario manual antigo foi retirado da interface. Mantemos os
+  // dados legados intactos para nao apagar registros de versoes anteriores.
+  if(!list) return;
   list.innerHTML = "";
   const items = paranormalData[key] || [];
   if(items.length === 0){
@@ -5039,10 +5038,19 @@ function renderCompendio(){
     section.className = "compendio-section" + (isOpen ? " open" : "");
     const header = document.createElement("div");
     header.className = "compendio-section-header";
+    header.setAttribute("role", "button");
+    header.tabIndex = 0;
+    header.setAttribute("aria-expanded", isOpen ? "true" : "false");
     header.innerHTML = `<h3><span class="sec-arrow">▶</span> ${escapeHtml(sec.label)}</h3><span class="sec-count">${matches.length}</span>`;
     header.addEventListener("click", () => {
       if(openSections.has(sec.key)) openSections.delete(sec.key); else openSections.add(sec.key);
       renderCompendio();
+    });
+    header.addEventListener("keydown", event => {
+      if(event.key === "Enter" || event.key === " "){
+        event.preventDefault();
+        header.click();
+      }
     });
     section.appendChild(header);
     const body = document.createElement("div");
@@ -5054,6 +5062,14 @@ function renderCompendio(){
       const isExpanded = expandedCards.has(cardKey);
       const card = document.createElement("div");
       card.className = "compendio-card";
+      card.dataset.ocItemId = cardKey;
+      card.dataset.ocItemKind = "regra";
+      card.dataset.ocItemTitle = item.nome;
+      card.dataset.ocItemText = item.desc;
+      card.dataset.ocItemMeta = item.fonte || sec.label;
+      card.setAttribute("role", "button");
+      card.tabIndex = 0;
+      card.setAttribute("aria-expanded", isExpanded ? "true" : "false");
       const shortDesc = item.desc.length > 150 && !isExpanded ? item.desc.slice(0, 150).trim() + "…" : item.desc;
       card.innerHTML = `<h3>${escapeHtml(item.nome)}<span class="cat-tag">${escapeHtml(sec.label)}</span></h3>` +
         `<p>${escapeHtml(shortDesc)}</p>` +
@@ -5062,6 +5078,12 @@ function renderCompendio(){
       card.addEventListener("click", () => {
         if(expandedCards.has(cardKey)) expandedCards.delete(cardKey); else expandedCards.add(cardKey);
         renderCompendio();
+      });
+      card.addEventListener("keydown", event => {
+        if(event.key === "Enter" || event.key === " "){
+          event.preventDefault();
+          card.click();
+        }
       });
       grid.appendChild(card);
     });
@@ -5309,6 +5331,11 @@ function renderConexoesGrid(){
     const card = document.createElement("div");
     card.className = "cx-card cx-" + c.d + (c.d === "tecnica" ? " cx-tecnica" : "");
     const dimLabel = c.d === "tecnica" ? "Técnica de Aborto Límbico" : (CONEXOES_DIM_LABELS[c.d]||c.dl);
+    card.dataset.ocItemId = "conexao::" + realIdx;
+    card.dataset.ocItemKind = "conexao";
+    card.dataset.ocItemTitle = c.n;
+    card.dataset.ocItemText = (Object.keys(c.c||{}).map(k => k + ": " + c.c[k]).concat((c.e||[]).map(e => (e.t ? e.t + ": " : "") + (e.x||"")))).join("\n\n");
+    card.dataset.ocItemMeta = dimLabel;
     let statsHtml = "";
     statFields.forEach(f=>{
       if(c.c[f]) statsHtml += `<span><b>${cx_esc(f)}</b>${cx_esc(c.c[f])}</span>`;
@@ -7712,6 +7739,11 @@ const ORIGINAL_PDF_BASE64 = "JVBERi0xLjYNJeLjz9MNCjIxMTMgMCBvYmoNPDwvRmlsdGVyL0Z
      dados, salvamento, sincronização ou autenticação foi alterada. -->
 <script src="js/action-bar-more.js"></script>
 <script src="js/account-bar-dock.js"></script>
+<!-- Camada visual isolada: transicoes de documentos/modais e feedback
+     de edicao. Nao le, grava ou altera dados da ficha. -->
+<script src="js/visual-polish.js"></script>
+<script src="js/navigation-tools.js"></script>
+<script src="js/performance-tuning.js"></script>
 
 <!-- Convite por link (Fase C) — modal central, sem tela cheia e sem
      campo de colar token: só abre sozinho quando há um convite

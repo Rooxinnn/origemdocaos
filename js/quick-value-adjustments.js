@@ -55,11 +55,16 @@
   // fora deste módulo e é limpo automaticamente pelo garbage collector
   // caso o campo seja removido do DOM.
   var baseline = new WeakMap();
+  var slashMaximum = new WeakMap();
 
   function isTargetField(el) {
     if (!el || typeof el.matches !== "function") return false;
     if (el.matches(GRID_ATUAL_SELECTOR)) return true;
-    return el.id && EXTRA_FIELD_IDS.indexOf(el.id) !== -1;
+    if (el.id && EXTRA_FIELD_IDS.indexOf(el.id) !== -1) return true;
+    // Campos numéricos editáveis da ficha (incluindo máximos, EXP, idade,
+    // peso e quantidades). Campos de texto livre permanecem intocados.
+    if (!el.closest || !el.closest("#tab-agentes") || el.readOnly || el.type === "hidden") return false;
+    return el.type === "number" || el.inputMode === "decimal" || el.inputMode === "numeric";
   }
 
   function parseNumber(str) {
@@ -77,6 +82,8 @@
 
   function captureBaseline(el) {
     baseline.set(el, parseNumber(el.value));
+    var slash = String(el.value || "").match(/^\s*-?\d+(?:[.,]\d+)?\s*\/\s*(.+)\s*$/);
+    if (slash) slashMaximum.set(el, slash[1]); else slashMaximum.delete(el);
   }
 
   // Retorna true se o valor do campo era uma expressão "+N"/"-N" e foi
@@ -92,7 +99,10 @@
     var base = baseline.has(el) ? baseline.get(el) : parseNumber(el.value);
     var result = base + sign * amount;
 
-    el.value = formatResult(result);
+    // Para campos que usam o formato Atual/Máx. no mesmo input, altera
+    // somente a parte Atual e preserva o máximo (ex.: 20/30 - 5 = 15/30).
+    var maximum = slashMaximum.get(el);
+    el.value = maximum !== undefined ? formatResult(result) + "/" + maximum : formatResult(result);
     return true;
   }
 

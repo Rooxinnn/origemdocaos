@@ -338,6 +338,11 @@
 
       var card = document.createElement("div");
       card.className = "sks-card";
+      card.dataset.ocItemId = "sede::" + skill.id;
+      card.dataset.ocItemKind = "habilidade";
+      card.dataset.ocItemTitle = skill.n;
+      card.dataset.ocItemText = skill.d;
+      card.dataset.ocItemMeta = skill.sede;
       card.innerHTML =
         '<div class="sks-card-body">' +
           '<h4>' + esc(skill.n) + '<span class="sks-card-sede">' + esc(skill.sede) + '</span></h4>' +

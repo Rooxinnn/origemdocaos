@@ -1,0 +1,92 @@
+/* Detalhes imersivos — camada estritamente visual, sem interferir nos dados. */
+
+/* Barras vitais finas, discretas e integradas ao rodape dos blocos. */
+.oc-vital-host{position:relative; padding-bottom:15px !important;}
+.oc-vital-track{
+  position:absolute; left:10px; right:10px; bottom:7px; height:3px;
+  overflow:hidden; border-radius:999px; pointer-events:none;
+  background:rgba(17,13,10,.48); box-shadow:inset 0 0 0 1px rgba(224,194,132,.08);
+}
+.oc-vital-fill{
+  display:block; width:calc(var(--oc-vital-ratio,0) * 100%); height:100%;
+  border-radius:inherit; transition:width .42s cubic-bezier(.2,.75,.25,1),filter .3s ease;
+  background:linear-gradient(90deg,#642f27,#b05a40 72%,#d29667);
+  box-shadow:0 0 8px rgba(176,75,51,.22);
+}
+.oc-vital-host[data-oc-vital="san"] .oc-vital-fill{
+  background:linear-gradient(90deg,#26354b,#526e83 72%,#91a9b6);
+  box-shadow:0 0 8px rgba(91,126,148,.22);
+}
+.oc-vital-host[data-oc-vital="fadiga"] .oc-vital-fill{
+  background:linear-gradient(90deg,#675327,#aa8740 72%,#d7b86c);
+  box-shadow:0 0 8px rgba(180,139,58,.18);
+}
+.oc-vital-host.oc-vital-low .oc-vital-fill{filter:saturate(1.2) brightness(1.08);}
+
+/* Retratos deixam de parecer elementos soltos e passam a integrar o arquivo. */
+.camp-char-card-portrait,.cr-photo-box,.cpd-card-photo,.character-image-frame{
+  position:relative; isolation:isolate;
+  box-shadow:inset 0 0 0 1px rgba(238,210,151,.10),0 8px 24px rgba(0,0,0,.22);
+}
+.camp-char-card-portrait::after,.cr-photo-box::after,.cpd-card-photo::after,.character-image-frame::after{
+  content:""; position:absolute; inset:0; z-index:2; pointer-events:none;
+  background:linear-gradient(145deg,rgba(242,213,151,.10),transparent 32%,transparent 68%,rgba(5,4,3,.25));
+  box-shadow:inset 0 0 16px rgba(0,0,0,.30);
+}
+.camp-char-card-img,.cr-photo-box img,.cpd-card-photo img,.character-image-frame img{
+  filter:saturate(.88) contrast(1.04); transition:filter .3s ease,transform .45s ease;
+}
+.camp-char-card:hover .camp-char-card-img,.cpd-card:hover .cpd-card-photo img{filter:saturate(1) contrast(1.06);transform:scale(1.025);}
+
+/* Cabecalhos tratados como paginas de um dossie. */
+.titlebar,.camp-titlebar,.secret-header,.cr-titlebar{position:relative;overflow:hidden;}
+.titlebar::after,.camp-titlebar::after,.secret-header::after,.cr-titlebar::after{
+  content:""; position:absolute; right:14px; bottom:8px; width:46px; height:1px;
+  pointer-events:none; opacity:.46;
+  background:linear-gradient(90deg,transparent,var(--amber,#a8732b));
+  box-shadow:8px -4px 0 -0.25px rgba(177,126,52,.35);
+}
+.secret-eyebrow,.cr-titlebar-eyebrow,.camp-titlebar-sub{
+  letter-spacing:.16em; text-shadow:0 1px 8px rgba(0,0,0,.55);
+}
+
+/* Selo discreto nos registros de personagem; campanhas ja possuem o
+   indicador MESTRE nativo e nao recebem uma segunda etiqueta. */
+.camp-char-card::before{
+  content:"REGISTRO"; position:absolute; right:9px; bottom:7px; z-index:3;
+  color:rgba(207,178,120,.25); font-size:7px; letter-spacing:.18em; pointer-events:none;
+}
+
+/* Compendio: hierarquia e luz localizada, sem brilho global. */
+.compendio-section-header{position:relative;isolation:isolate;}
+.compendio-section-header::after{
+  content:""; position:absolute; left:18px; right:18px; bottom:0; height:1px;
+  background:linear-gradient(90deg,rgba(184,126,37,.46),transparent 72%);
+}
+.compendio-card,.cpd-card{position:relative;overflow:hidden;isolation:isolate;}
+.compendio-card::after,.cpd-card::after{
+  content:""; position:absolute; inset:-1px; z-index:-1; opacity:0; pointer-events:none;
+  background:radial-gradient(circle at 18% 0%,rgba(210,163,80,.13),transparent 48%);
+  transition:opacity .25s ease;
+}
+.compendio-card:hover::after,.compendio-card:focus-within::after,.cpd-card:hover::after,.cpd-card:focus-within::after{opacity:1;}
+.sec-count{font-variant-numeric:tabular-nums;opacity:.72;}
+
+/* O resultado chama atencao apenas dentro da bandeja. */
+.dice-tray-panel.oc-dice-impact{animation:ocDicePanelImpact .48s ease-out;}
+.dice-tray-panel.oc-dice-impact .drc-result,
+.dice-tray-panel.oc-dice-impact .dice-roll-card:first-child{
+  animation:ocDiceResultReveal .56s cubic-bezier(.2,.8,.2,1);
+}
+@keyframes ocDicePanelImpact{0%{box-shadow:0 0 0 rgba(190,132,39,0)}35%{box-shadow:0 0 28px rgba(190,132,39,.20)}100%{box-shadow:var(--oc-dice-shadow,0 16px 42px rgba(0,0,0,.45))}}
+@keyframes ocDiceResultReveal{0%{transform:translateY(3px);filter:brightness(1.45)}100%{transform:none;filter:none}}
+
+/* Modo leve automatico e respeito explicito a acessibilidade. */
+.oc-performance .compendio-card,.oc-performance .cpd-card,.oc-performance .camp-char-card,
+.oc-performance .oc-vital-fill{transition-duration:.01ms !important;}
+.oc-performance .compendio-card::after,.oc-performance .cpd-card::after{display:none;}
+@media (prefers-reduced-motion:reduce){
+  .oc-vital-fill,.camp-char-card-img,.cpd-card-photo img{transition:none !important;}
+  .dice-tray-panel.oc-dice-impact,.dice-tray-panel.oc-dice-impact .drc-result,
+  .dice-tray-panel.oc-dice-impact .dice-roll-card:first-child{animation:none !important;}
+}

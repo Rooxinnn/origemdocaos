@@ -1,0 +1,134 @@
+/* Acabamento profissional — consistencia, legibilidade e responsividade. */
+:root{
+  --oc-control-h:38px;
+  --oc-radius:4px;
+  --oc-danger:#e06b62;
+  --oc-success:#78bf91;
+  --oc-muted:#b2a792;
+}
+
+/* Hierarquia tipografica previsivel em todas as areas. */
+.panel > h2,.titlebar h2,.camp-titlebar h2,.secret-header h2,.cr-titlebar h2{
+  line-height:1.18; letter-spacing:.045em;
+}
+.panel h3,.modal-box h3,.compendio-section-header,.combat-col-title{
+  line-height:1.3; letter-spacing:.065em;
+}
+.entry-desc,.note,.modal-box p,.compendio-card p,.cpd-card p{
+  color:color-mix(in srgb,var(--paper) 78%,var(--sigil));
+}
+.field label,.stat-box label,.combat-cell label,.combat-minor-cell label,
+.threshold-box label,.san-values-cell label{
+  color:color-mix(in srgb,var(--sigil) 82%,var(--paper));
+  font-weight:600; letter-spacing:.055em;
+}
+
+/* Controles com dimensoes e estados consistentes. */
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),select,
+.field input,.field select{
+  min-height:var(--oc-control-h); border-radius:var(--oc-radius);
+}
+textarea{border-radius:var(--oc-radius);line-height:1.5;}
+button,.camp-btn-primary,.entry-del{
+  min-height:36px; border-radius:var(--oc-radius); font-weight:600;
+  letter-spacing:.045em;
+}
+.modal-close,.dtp-close,.dtp-sound-toggle,.xdp-close,
+.prg-dist-controls button,.drc-actions button,.sheet-card-actions button{
+  min-width:36px;
+}
+input::placeholder,textarea::placeholder{color:color-mix(in srgb,var(--sigil) 68%,transparent);opacity:1;}
+input:hover,select:hover,textarea:hover{border-color:color-mix(in srgb,var(--line) 62%,var(--amber));}
+input:focus,select:focus,textarea:focus{
+  border-color:var(--amber); box-shadow:0 0 0 3px rgba(240,168,60,.10);
+}
+input:invalid:not(:placeholder-shown),textarea:invalid:not(:placeholder-shown){
+  border-color:rgba(224,96,96,.72);
+}
+
+/* Diferenca clara entre acao primaria, secundaria e destrutiva. */
+.camp-btn-primary,button.primary,.save-agent-btn,.welcome-new-btn{
+  border-color:color-mix(in srgb,var(--amber) 78%,white);
+}
+.entry-del,.modal-actions button.danger,
+button[id*="delete"],button[id*="remover"],button[id*="excluir"]{
+  color:color-mix(in srgb,var(--oc-danger) 84%,var(--paper));
+}
+.entry-del:hover,.modal-actions button.danger:hover,
+button[id*="delete"]:hover,button[id*="remover"]:hover,button[id*="excluir"]:hover{
+  border-color:var(--oc-danger); box-shadow:0 0 0 3px rgba(224,96,96,.08);
+}
+button[aria-busy="true"],.camp-btn-loading{cursor:progress;opacity:.72;}
+
+/* Cards e secoes seguem o mesmo alinhamento e ritmo. */
+.entry-card,.sheet-card,.camp-card,.camp-char-card,.compendio-card,.cpd-card,
+.cx-card,.sks-card,.hab50-card,.al-buff-card{
+  border-radius:var(--oc-radius);
+}
+.entry-title,.sheet-card-name,.camp-card-name,.camp-char-card-name,
+.compendio-card h3,.cpd-card-name{line-height:1.28;}
+.entry-card:focus-within,.sheet-card:focus-within,.camp-card:focus-within,
+.compendio-card:focus-within,.cpd-card:focus-within,.cx-card:focus-within{
+  border-color:var(--amber);box-shadow:0 0 0 2px rgba(240,168,60,.10),var(--shadow-l2);
+}
+
+/* Modais previsiveis: limite de tela, leitura interna e acoes separadas. */
+.modal-overlay{padding:clamp(10px,3vw,24px);}
+.modal-box{
+  width:min(100%,620px); max-height:min(88vh,760px); overflow:auto;
+  overscroll-behavior:contain; scrollbar-gutter:stable;
+}
+.modal-box > h3:first-child{margin-top:0;padding-bottom:12px;border-bottom:1px solid rgba(240,168,60,.14);}
+.modal-actions{
+  padding-top:14px;margin-top:4px;border-top:1px solid rgba(255,255,255,.06);
+  flex-wrap:wrap;
+}
+.modal-actions button{min-width:104px;}
+
+/* Estados de sistema mais objetivos e legiveis. */
+.save-indicator{font-style:normal;letter-spacing:.04em;}
+.save-indicator[data-oc-state="success"]{border-color:var(--oc-success);}
+.save-indicator[data-oc-state="error"],.camp-modal-erro{border-color:var(--oc-danger);color:#ffd0ca;}
+.empty-state{color:var(--oc-muted);font-style:normal;max-width:680px;margin-inline:auto;}
+[id$="_carregando"],.pdfimp-loading{
+  animation:ocProfessionalLoading 1.25s ease-in-out infinite;
+}
+@keyframes ocProfessionalLoading{0%,100%{opacity:.58}50%{opacity:1}}
+
+/* Barras de busca e filtros permanecem usaveis em largura reduzida. */
+.cpd-toolbar,.cx-toolbar,.cconn-toolbar,.eqinv-toolbar,.cfh-hab-toolbar{
+  align-items:flex-end;gap:10px;
+}
+.cx-filters,.cpd-filters{scrollbar-width:thin;overscroll-behavior-x:contain;}
+.cx-filter-btn,.cpd-filter-btn,.subtab-btn,.tab-btn{white-space:nowrap;}
+
+/* Foco acessivel sem ruido para quem usa mouse. */
+:where(button,a,input,select,textarea,[tabindex]):focus{outline:none;}
+:where(button,a,input,select,textarea,[tabindex]):focus-visible{
+  outline:2px solid var(--amber-bright);outline-offset:3px;
+}
+
+@media (max-width:760px){
+  :root{--oc-control-h:42px;}
+  button,.camp-btn-primary,.entry-del{min-height:40px;}
+  .modal-overlay{align-items:flex-end;padding:8px;}
+  .modal-box{
+    width:100%;max-width:none;max-height:92dvh;border-radius:7px;
+    padding:clamp(16px,4vw,22px);
+  }
+  .modal-actions{position:sticky;bottom:-1px;z-index:4;background:var(--panel);padding-bottom:2px;}
+  .modal-actions button{flex:1 1 130px;}
+  .cpd-toolbar,.cx-toolbar,.cconn-toolbar,.eqinv-toolbar{align-items:stretch;}
+  .cx-filters,.cpd-filters{display:flex;overflow-x:auto;padding-bottom:7px;flex-wrap:nowrap;}
+  .sheet-card-actions,.camp-char-card-actions{gap:8px;flex-wrap:wrap;}
+}
+
+@media (max-width:420px){
+  .modal-actions button{flex-basis:100%;}
+  .save-indicator{left:10px;right:10px;min-width:0;width:auto;}
+}
+
+@media print{
+  .save-indicator,.dice-tray-toggle,.dice-tray-panel{display:none!important;}
+  *{animation:none!important;transition:none!important;box-shadow:none!important;}
+}

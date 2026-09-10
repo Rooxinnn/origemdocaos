@@ -244,6 +244,7 @@
 
     const isMestre = campaign.owner_id === user.id;
     const mestreLabel = isMestre ? "Você" : "outro jogador";
+    card.classList.add(isMestre ? "camp-card--master" : "camp-card--member");
 
     // "Capa" do arquivo (item 6) — decorativa, mostra de relance status +
     // total de participantes (mestre + jogadores) sem precisar abrir a

@@ -268,10 +268,19 @@
 
       const header = document.createElement("div");
       header.className = "compendio-section-header";
+      header.setAttribute("role", "button");
+      header.tabIndex = 0;
+      header.setAttribute("aria-expanded", isOpen ? "true" : "false");
       header.innerHTML = `<h3><span class="sec-arrow">▶</span> ${esc(sec.label)}</h3><span class="sec-count">${matches.length}</span>`;
       header.addEventListener("click", () => {
         if(crrOpenSections.has(sec.key)) crrOpenSections.delete(sec.key); else crrOpenSections.add(sec.key);
         renderCrr();
+      });
+      header.addEventListener("keydown", event => {
+        if(event.key === "Enter" || event.key === " "){
+          event.preventDefault();
+          header.click();
+        }
       });
       section.appendChild(header);
 
@@ -285,6 +294,14 @@
         const isExpanded = crrExpandedCards.has(cardKey);
         const card = document.createElement("div");
         card.className = "compendio-card";
+        card.dataset.ocItemId = "criatura-regra::" + cardKey;
+        card.dataset.ocItemKind = "criatura";
+        card.dataset.ocItemTitle = item.nome;
+        card.dataset.ocItemText = item.desc;
+        card.dataset.ocItemMeta = item.fonte || sec.label;
+        card.setAttribute("role", "button");
+        card.tabIndex = 0;
+        card.setAttribute("aria-expanded", isExpanded ? "true" : "false");
         const shortDesc = item.desc.length > 150 && !isExpanded ? item.desc.slice(0, 150).trim() + "…" : item.desc;
         card.innerHTML = `<h3>${esc(item.nome)}<span class="cat-tag">${esc(sec.label)}</span></h3>` +
           `<p>${esc(shortDesc)}</p>` +
@@ -293,6 +310,12 @@
         card.addEventListener("click", () => {
           if(crrExpandedCards.has(cardKey)) crrExpandedCards.delete(cardKey); else crrExpandedCards.add(cardKey);
           renderCrr();
+        });
+        card.addEventListener("keydown", event => {
+          if(event.key === "Enter" || event.key === " "){
+            event.preventDefault();
+            card.click();
+          }
         });
         grid.appendChild(card);
       });

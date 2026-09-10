@@ -601,6 +601,42 @@
   padding:0;
   overflow:hidden;
   border-radius:10px;
+  position:relative;
+  background:
+    radial-gradient(ellipse 90% 45% at 50% 0%, rgba(240,168,60,.055), transparent 72%),
+    var(--panel);
+  box-shadow:0 12px 34px rgba(0,0,0,.34);
+  transition:border-color .25s ease, box-shadow .3s ease, transform .3s cubic-bezier(.2,.75,.25,1);
+}
+.camp-card::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:inherit;
+  pointer-events:none;
+  background:linear-gradient(125deg, transparent 38%, rgba(240,168,60,.07) 50%, transparent 62%);
+  opacity:0;
+  transform:translateX(-28%);
+  transition:opacity .28s ease, transform .55s cubic-bezier(.2,.75,.25,1);
+}
+.camp-card:hover{
+  transform:translateY(-3px);
+  box-shadow:0 18px 44px rgba(0,0,0,.46), 0 0 24px rgba(240,168,60,.09);
+}
+.camp-card:hover::after{opacity:1; transform:translateX(28%);}
+.camp-card--master{border-top-color:rgba(240,168,60,.72);}
+.camp-card--master::before{
+  content:"MESTRE";
+  position:absolute;
+  top:12px; left:12px; z-index:4;
+  font-family:'Oswald',sans-serif;
+  font-size:9px;
+  letter-spacing:.18em;
+  color:var(--ink);
+  background:linear-gradient(135deg,var(--amber-bright),var(--amber));
+  border:1px solid rgba(255,194,106,.72);
+  padding:4px 7px;
+  box-shadow:0 3px 12px rgba(0,0,0,.4);
 }
 .camp-card .camp-capa{
   border-radius:10px 10px 0 0;
@@ -608,6 +644,12 @@
   min-height:150px;
   align-items:flex-start;
 }
+.camp-card .camp-capa-img{
+  transition:transform .7s cubic-bezier(.2,.75,.25,1), filter .35s ease;
+}
+.camp-card:hover .camp-capa-img{transform:scale(1.035); filter:saturate(1) contrast(1.08);}
+.camp-card .camp-capa::after{transition:background .35s ease;}
+.camp-card:hover .camp-capa::after{background:linear-gradient(180deg,rgba(0,0,0,.01),rgba(0,0,0,.56));}
 .camp-card-body{
   padding:14px 16px;
   flex:1 1 auto;
@@ -622,6 +664,8 @@
   min-width:0;
 }
 .camp-card-textos .camp-card-name{margin:0 0 3px;}
+.camp-card-textos .camp-card-name{transition:color .22s ease, text-shadow .22s ease;}
+.camp-card:hover .camp-card-name{color:var(--paper); text-shadow:0 0 15px rgba(240,168,60,.18);}
 .camp-card-textos .camp-card-meta{margin:0;}
 .camp-card-linha .camp-btn-primary{
   flex:0 0 auto;
@@ -699,6 +743,15 @@
 @media (max-width:520px){
   .camp-hero-row{flex-direction:column; align-items:stretch;}
   .camp-hero-capa{width:100%; height:180px; min-height:180px;}
+}
+
+@media (hover:none), (max-width:640px){
+  .camp-card:hover{transform:none;}
+  .camp-card::after{display:none;}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .camp-card, .camp-card::after, .camp-card .camp-capa-img{transition:none !important;}
 }
 
 /* Descrição da campanha como um trecho de documento/dossiê, em vez de

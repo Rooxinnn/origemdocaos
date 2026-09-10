@@ -582,9 +582,8 @@
 
   /* ==========================================================
      PARANORMAL → "MINHAS CONEXÕES"
-     Painel novo, adicionado como último filho de #tab-paranormal —
-     o painel manual já existente ali ("Paranormal — Conexões")
-     não é tocado nem movido.
+     Painel principal da aba #tab-paranormal. O antigo formulario manual
+     foi retirado porque este seletor ja oferece todas as Conexoes.
      ========================================================== */
 
   function ensureParanormalPanel(){

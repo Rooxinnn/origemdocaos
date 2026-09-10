@@ -1,0 +1,120 @@
+/* ==========================================================
+   ATMOSFERAS DAS DIMENSOES — ETAPA 3
+   Efeitos estritamente visuais, disparados em selecao/abertura.
+   Nenhuma regra, valor ou dado do sistema e alterado.
+   ========================================================== */
+
+:is(.cx-infernal,.cpd-dim-infernal,[data-dim="infernal"]){--oc-dim:#4d84d6;--oc-dim-soft:rgba(77,132,214,.16);}
+:is(.cx-arkanjerial,.cpd-dim-arkanjerial,[data-dim="arkanjerial"]){--oc-dim:#e4defa;--oc-dim-soft:rgba(228,222,250,.14);}
+:is(.cx-terrena,.cpd-dim-terrena,[data-dim="terrena"]){--oc-dim:#57a862;--oc-dim-soft:rgba(87,168,98,.15);}
+:is(.cx-carnical,.cpd-dim-carnical,[data-dim="carnical"]){--oc-dim:#c23f36;--oc-dim-soft:rgba(194,63,54,.16);}
+:is(.cx-sombria,.cpd-dim-sombria,[data-dim="sombria"]){--oc-dim:#6a4a8a;--oc-dim-soft:rgba(106,74,138,.16);}
+:is(.cx-perdicao,.cpd-dim-perdicao,[data-dim="perdicao"]){--oc-dim:#b563d6;--oc-dim-soft:rgba(181,99,214,.16);}
+:is(.cx-limbica,.cpd-dim-limbica,[data-dim="limbica"]){--oc-dim:#bfc1c3;--oc-dim-soft:rgba(191,193,195,.13);}
+
+.dim-chip,
+.dim-picker-row{
+  border-left-color:var(--oc-dim,var(--amber));
+  transition:border-color .2s ease,box-shadow .25s ease,background .25s ease;
+}
+.dim-chip-label{color:var(--oc-dim,var(--amber-bright));}
+.dim-picker-row:hover,
+.dim-chip:hover{box-shadow:inset 12px 0 24px -22px var(--oc-dim),0 5px 14px rgba(0,0,0,.28);}
+
+/* Cards: cada familia tem um gesto proprio, sempre curto. */
+:is(.cx-card,.cpd-card).cx-infernal:hover .cx-body,
+.cpd-card.cpd-dim-infernal:hover .cpd-card-body{animation:ocInfernalHeat 720ms ease-out both;}
+@keyframes ocInfernalHeat{0%,100%{filter:none;}35%{filter:contrast(1.045) brightness(1.035);}58%{filter:contrast(.985) brightness(1.015);}}
+
+:is(.cx-arkanjerial,.cpd-dim-arkanjerial):is(.cx-card,.cpd-card)::after,
+.modal-box.cx-arkanjerial::after{
+  content:"";position:absolute;inset:-35%;pointer-events:none;
+  background:linear-gradient(112deg,transparent 42%,rgba(255,255,255,.13) 49%,rgba(214,205,255,.09) 52%,transparent 59%);
+  opacity:0;transform:translateX(-24%);
+}
+:is(.cx-arkanjerial,.cpd-dim-arkanjerial):is(.cx-card,.cpd-card):hover::after,
+.modal-overlay:not(.oc-closing) .modal-box.cx-arkanjerial::after{animation:ocArkanjerialRefraction 820ms ease-out 1;}
+@keyframes ocArkanjerialRefraction{0%{opacity:0;transform:translateX(-24%);}32%{opacity:.85;}100%{opacity:0;transform:translateX(24%);}}
+
+:is(.cx-terrena,.cpd-dim-terrena):is(.cx-card,.cpd-card):hover{animation:ocTerrenaRoot 760ms ease-out 1;}
+@keyframes ocTerrenaRoot{0%,100%{box-shadow:var(--shadow-l2);}42%{box-shadow:var(--shadow-l2-hover),inset 8px -8px 24px rgba(87,168,98,.08);}}
+
+:is(.cx-carnical,.cpd-dim-carnical):is(.cx-card,.cpd-card):hover{animation:ocCarnicalPulse 680ms cubic-bezier(.2,.75,.25,1) 1;}
+@keyframes ocCarnicalPulse{0%,100%{filter:none;}38%{filter:brightness(1.08);box-shadow:0 0 0 1px rgba(194,63,54,.38),0 0 22px rgba(194,63,54,.13);}62%{filter:brightness(.99);}}
+
+:is(.cx-sombria,.cpd-dim-sombria):is(.cx-card,.cpd-card)::after,
+.modal-box.cx-sombria::after{
+  content:"";position:absolute;inset:0;pointer-events:none;opacity:0;
+  background:radial-gradient(ellipse at center,transparent 34%,rgba(4,2,7,.5) 100%);
+}
+:is(.cx-sombria,.cpd-dim-sombria):is(.cx-card,.cpd-card):hover::after,
+.modal-overlay:not(.oc-closing) .modal-box.cx-sombria::after{animation:ocSombriaClose 820ms ease-out 1;}
+@keyframes ocSombriaClose{0%{opacity:0;}48%{opacity:.62;}100%{opacity:.18;}}
+
+:is(.cx-perdicao,.cpd-dim-perdicao):is(.cx-card,.cpd-card):hover .cx-body,
+.cpd-card.cpd-dim-perdicao:hover .cpd-card-body{animation:ocPerdicaoSplit 540ms steps(1,end) 1;}
+@keyframes ocPerdicaoSplit{0%,100%{transform:none;text-shadow:none;}22%{transform:translateX(-1px);text-shadow:2px 0 rgba(255,50,130,.28),-2px 0 rgba(70,180,255,.25);}31%{transform:translateX(1px);text-shadow:-1px 0 rgba(255,50,130,.2),1px 0 rgba(70,180,255,.2);}42%{transform:none;text-shadow:none;}}
+
+:is(.cx-limbica,.cpd-dim-limbica):is(.cx-card,.cpd-card)::after,
+.modal-box.cx-limbica::after{
+  content:"";position:absolute;inset:0;pointer-events:none;opacity:0;
+  background:repeating-linear-gradient(to bottom,rgba(220,220,220,.06) 0 1px,transparent 1px 4px);
+}
+:is(.cx-limbica,.cpd-dim-limbica):is(.cx-card,.cpd-card):hover::after,
+.modal-overlay:not(.oc-closing) .modal-box.cx-limbica::after{animation:ocLimbicaScan 740ms steps(1,end) 1;}
+@keyframes ocLimbicaScan{0%{opacity:0;}12%{opacity:.34;}18%{opacity:.06;}43%{opacity:.22;}49%{opacity:.04;}100%{opacity:0;}}
+
+/* Flash atmosferico global: aparece somente ao selecionar/abrir. */
+#oc_dimension_burst{
+  position:fixed;inset:0;z-index:295;pointer-events:none;opacity:0;
+}
+#oc_dimension_burst.oc-dim-burst{animation-duration:900ms;animation-timing-function:ease-out;animation-iteration-count:1;}
+#oc_dimension_burst.oc-dim-infernal{background:repeating-linear-gradient(88deg,transparent 0 14%,rgba(77,132,214,.028) 16%,transparent 19%);animation-name:ocBurstInfernal;}
+#oc_dimension_burst.oc-dim-arkanjerial{background:linear-gradient(115deg,transparent 35%,rgba(228,222,250,.12) 49%,transparent 63%);animation-name:ocBurstArkanjerial;}
+#oc_dimension_burst.oc-dim-terrena{background:radial-gradient(ellipse at 50% 110%,rgba(87,168,98,.12),transparent 55%);animation-name:ocBurstTerrena;}
+#oc_dimension_burst.oc-dim-carnical{background:radial-gradient(ellipse at center,transparent 48%,rgba(150,24,20,.18));animation-name:ocBurstCarnical;}
+#oc_dimension_burst.oc-dim-sombria{background:radial-gradient(ellipse at center,transparent 42%,rgba(4,2,7,.48));animation-name:ocBurstSombria;}
+#oc_dimension_burst.oc-dim-perdicao{background:linear-gradient(90deg,rgba(255,30,120,.035),transparent 14% 86%,rgba(60,170,255,.035));animation-name:ocBurstPerdicao;}
+#oc_dimension_burst.oc-dim-limbica{background:repeating-linear-gradient(to bottom,rgba(215,215,215,.035) 0 1px,transparent 1px 5px);animation-name:ocBurstLimbica;}
+
+@keyframes ocBurstInfernal{0%{opacity:0;filter:blur(4px);}32%{opacity:.62;filter:blur(1px);}100%{opacity:0;filter:blur(6px);}}
+@keyframes ocBurstArkanjerial{0%{opacity:0;transform:translateX(-12%);}40%{opacity:.72;}100%{opacity:0;transform:translateX(12%);}}
+@keyframes ocBurstTerrena{0%{opacity:0;transform:translateY(3%);}38%{opacity:.58;}100%{opacity:0;transform:translateY(-1%);}}
+@keyframes ocBurstCarnical{0%,100%{opacity:0;}28%{opacity:.68;}48%{opacity:.12;}63%{opacity:.42;}75%{opacity:0;}}
+@keyframes ocBurstSombria{0%,100%{opacity:0;}42%{opacity:.62;}70%{opacity:.18;}}
+@keyframes ocBurstPerdicao{0%,100%{opacity:0;transform:none;}18%{opacity:.7;transform:translateX(-1px);}24%{transform:translateX(1px);}31%{opacity:.2;transform:none;}48%{opacity:.48;}56%{opacity:0;}}
+@keyframes ocBurstLimbica{0%,100%{opacity:0;}12%{opacity:.5;}18%{opacity:.08;}37%{opacity:.34;}43%{opacity:.05;}}
+
+@media (hover:none){
+  :is(.cx-card,.cpd-card):hover{animation:none!important;}
+  :is(.cx-card,.cpd-card):hover::after{animation:none!important;}
+}
+@media (prefers-reduced-motion:reduce){
+  #oc_dimension_burst,
+  :is(.cx-card,.cpd-card),
+  :is(.cx-card,.cpd-card)::after,
+  .modal-box::after{animation:none!important;}
+}
+
+/* ==========================================================
+   MODO SEGURO — CONEXOES
+   O modulo troca a classe dimensional do modal no mesmo clique em
+   que preenche seu conteudo. Ele fica deliberadamente fora dos
+   bursts/filtros da Etapa 3 para nao acumular reflow e composicao.
+   A cor da Dimensao, bordas e identidade original permanecem.
+   ========================================================== */
+#sub-comp-conexoes .cx-card,
+#sub-comp-conexoes .cx-card:hover,
+#sub-comp-conexoes .cx-card .cx-body,
+#sub-comp-conexoes .cx-card:hover .cx-body,
+#cx_modal,
+#cx_modal .modal-box,
+#cx_modal .modal-box::before,
+#cx_modal .modal-box::after{
+  animation:none!important;
+  filter:none!important;
+}
+#sub-comp-conexoes .cx-card::after,
+#cx_modal .modal-box::after{display:none!important;}
+#cx_modal{backdrop-filter:none;}
+#cx_modal .modal-box{transform:none;}

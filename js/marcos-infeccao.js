@@ -148,6 +148,11 @@
     list.forEach(function(m){
       var card = document.createElement("div");
       card.className = "cx-card cx-infeccao";
+      card.dataset.ocItemId = "marco-infeccao::" + m.id;
+      card.dataset.ocItemKind = "marco";
+      card.dataset.ocItemTitle = m.titulo;
+      card.dataset.ocItemText = m.descricao;
+      card.dataset.ocItemMeta = "Infecção";
       var shortDesc = m.descricao.length > 150 ? (m.descricao.slice(0, 150).trim() + "…") : m.descricao;
       card.innerHTML =
         '<div class="cx-body">' +

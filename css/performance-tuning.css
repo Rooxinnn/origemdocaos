@@ -1,0 +1,14 @@
+/* Ajustes de desempenho: preserva o visual, reduz repinturas durante scroll. */
+.oc-agent-index{backdrop-filter:none;box-shadow:0 5px 16px rgba(0,0,0,.22)}
+.oc-reader-backdrop{backdrop-filter:none}
+.oc-performance-lite .oc-reader-backdrop{backdrop-filter:none!important}
+.oc-performance-lite .oc-agent-index{backdrop-filter:none!important}
+.oc-performance-lite .cpd-card:hover .cpd-card-body,.oc-performance-lite .cx-card:hover{animation:none!important}
+@media (hover:none), (max-width:700px){
+  .oc-agent-index,.oc-reader-backdrop{backdrop-filter:none!important}
+  .oc-agent-index button,.oc-card-tools button,.oc-back-top{transition-duration:.12s}
+  :is(.cx-card,.cpd-card,.compendio-card):hover{animation:none!important;filter:none!important}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}
+}

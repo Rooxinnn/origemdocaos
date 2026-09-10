@@ -228,6 +228,7 @@
       atuais.forEach(function (key) {
         var chip = document.createElement("div");
         chip.className = "dim-chip";
+        chip.dataset.dim = key;
         chip.innerHTML =
           '<span class="dim-chip-label">' + esc(dimLabel(key)) + '</span>' +
           '<button type="button" class="dim-chip-remove" aria-label="Remover ' + esc(dimLabel(key)) + '">×</button>';
@@ -289,6 +290,7 @@
     disponiveis.forEach(function (key) {
       var row = document.createElement("div");
       row.className = "dim-picker-row";
+      row.dataset.dim = key;
       row.innerHTML =
         '<span class="dim-picker-row-title">' + esc(dimLabel(key)) + '</span>' +
         '<button type="button" class="dim-picker-add-btn">Adicionar</button>';
