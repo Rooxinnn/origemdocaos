@@ -570,6 +570,7 @@
   function symSrc(c){
     if(!c || !c.s) return null;
     if(typeof cx_symSrc === "function") return cx_symSrc(c);
+    if(/^(?:data:|blob:|https?:|\/|\.\.\/|\.\/|img\/)/i.test(String(c.s))) return String(c.s);
     return "data:image/png;base64," + c.s;
   }
 

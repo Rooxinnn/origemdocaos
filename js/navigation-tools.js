@@ -19,7 +19,11 @@
     reader.hidden = true;
     reader.innerHTML = '<div class="oc-reader-backdrop"></div><article class="oc-reader-sheet" role="dialog" aria-modal="true" aria-labelledby="oc_reader_title"><button type="button" class="oc-reader-close" aria-label="Fechar modo de leitura">×</button><div class="oc-reader-kicker">Modo de leitura</div><h2 id="oc_reader_title"></h2><div class="oc-reader-meta"></div><div class="oc-reader-text"></div></article>';
     document.body.appendChild(reader);
-    const close = () => { reader.hidden = true; document.body.classList.remove("oc-reader-open"); };
+    const close = () => {
+      reader.hidden = true;
+      document.body.classList.remove("oc-reader-open");
+      document.documentElement.classList.remove("oc-reader-open");
+    };
     reader.querySelector(".oc-reader-close").addEventListener("click", close);
     reader.querySelector(".oc-reader-backdrop").addEventListener("click", close);
     document.addEventListener("keydown", event => { if (event.key === "Escape" && !reader.hidden) close(); });
@@ -33,6 +37,8 @@
     modal.querySelector(".oc-reader-text").textContent = item.text || "Sem descrição disponível.";
     modal.hidden = false;
     document.body.classList.add("oc-reader-open");
+    document.documentElement.classList.add("oc-reader-open");
+    modal.querySelector(".oc-reader-sheet").scrollTop = 0;
     modal.querySelector(".oc-reader-close").focus();
   }
 
@@ -48,7 +54,11 @@
       kind: clean(card.dataset.ocItemKind || "registro"),
       title: title || "Registro do Compêndio",
       text: clean(card.dataset.ocItemText || (textNode && textNode.textContent)),
-      meta: clean(card.dataset.ocItemMeta || (metaNode && metaNode.textContent))
+      meta: clean(card.dataset.ocItemMeta || (metaNode && metaNode.textContent)),
+      image: clean(card.dataset.ocItemImage),
+      imageAlt: clean(card.dataset.ocItemImageAlt),
+      imageStyle: clean(card.dataset.ocItemImageStyle),
+      tone: clean(card.dataset.ocItemTone)
     };
   }
 

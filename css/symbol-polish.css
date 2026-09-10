@@ -1,0 +1,106 @@
+/* Tratamento visual dos símbolos de Conexões; os PNGs originais não são alterados. */
+.cx-card .cx-sym,
+.cx-modal-sym {
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--cx-c-dim, var(--line));
+  border-radius: 3px;
+  background:
+    linear-gradient(145deg, rgba(255,255,255,.045), transparent 54%),
+    radial-gradient(circle at 50% 44%, #242019 0, #11100c 58%, #090806 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.025),
+    inset 0 -10px 20px rgba(0,0,0,.22),
+    0 4px 12px rgba(0,0,0,.24);
+}
+
+.cx-card .cx-sym {
+  width: 58px;
+  height: 58px;
+  padding: 5px;
+}
+
+.cx-card .cx-sym img,
+.cx-modal-sym img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  filter: brightness(.95) contrast(1.08);
+}
+
+.cx-card .cx-sym img {
+  transition: transform .18s ease, filter .18s ease;
+}
+
+@media (hover:hover) {
+  .cx-card:hover .cx-sym img {
+    transform: scale(1.045);
+    filter: brightness(1.02) contrast(1.1);
+  }
+}
+
+.cx-card .cx-sym.cx-sym-light,
+.cx-modal-sym.cx-sym-light {
+  background:
+    linear-gradient(145deg, rgba(255,255,255,.035), transparent 54%),
+    radial-gradient(circle at 50% 44%, #242019 0, #11100c 58%, #090806 100%) !important;
+  border-color: var(--cx-c-dim, rgba(185,129,32,.34)) !important;
+}
+
+.cx-card .cx-sym.cx-sym-light img,
+.cx-modal-sym.cx-sym-light img {
+  filter: invert(1) brightness(.96) contrast(1.12);
+  mix-blend-mode: screen;
+}
+
+@media (hover:hover) {
+  .cx-card:hover .cx-sym.cx-sym-light img {
+    filter: invert(1) brightness(1.04) contrast(1.14);
+  }
+}
+
+.cx-modal-sym {
+  width: 76px;
+  height: 76px;
+  padding: 7px;
+}
+
+@media (max-width:700px) {
+  .cx-card {
+    flex-wrap: wrap;
+  }
+
+  .cx-card .cx-body {
+    flex: 1 1 calc(100% - 70px);
+  }
+
+  .cx-card > .oc-card-tools {
+    flex: 1 0 100%;
+  }
+
+  .cx-card .cx-sym {
+    width: 54px;
+    height: 54px;
+    padding: 4px;
+  }
+
+  .cx-modal-sym {
+    width: 68px;
+    height: 68px;
+    padding: 6px;
+  }
+
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .cx-card .cx-sym img {
+    transition: none;
+  }
+
+  .cx-card:hover .cx-sym img {
+    transform: none;
+  }
+}
