@@ -19,10 +19,12 @@
    ficha -> PDF. Se algum dia o mapeamento de exportação for corrigido
    ou expandido, a importação acompanha automaticamente.
 
-   BIBLIOTECA: reaproveita o pdf-lib já carregado pelo index.html (ver
-   <script src=".../pdf-lib.min.js"> no <head>) — não adiciona nenhuma
-   dependência nova. Todo o processamento acontece no navegador; o PDF
-   nunca é enviado a nenhum servidor.
+   BIBLIOTECA: reaproveita o pdf-lib carregado sob demanda pelo
+   index.html (ver window.ensurePdfLibLoaded(), chamado dentro de
+   analyzePdf() abaixo, logo antes de qualquer PDFLib.* ser usado) —
+   não adiciona nenhuma dependência nova nem injeta um segundo
+   <script>. Todo o processamento acontece no navegador; o PDF nunca é
+   enviado a nenhum servidor.
 
    DUAS DIVERGÊNCIAS CONHECIDAS em relação ao mapeamento de EXPORTAÇÃO,
    tratadas deliberadamente diferente aqui (documentadas também na
@@ -282,6 +284,7 @@
       try{
         await window.ensurePdfLibLoaded();
       }catch(e){
+        console.error("[Importar Ficha PDF] ensurePdfLibLoaded falhou:", e, "typeof PDFLib:", typeof PDFLib);
         report.errorFatal = "Não foi possível carregar o componente de leitura de PDF. Verifique sua conexão com a internet e tente novamente.";
         return report;
       }
@@ -703,10 +706,15 @@
     const body = document.getElementById("pdfimp_body");
     document.getElementById("pdfimp_confirm").style.display = "none";
     body.innerHTML = '<div class="pdfimp-loading">Lendo PDF…</div>';
-    if(typeof PDFLib === "undefined"){
-      body.innerHTML = '<div class="pdfimp-error">✕ A biblioteca de PDF (pdf-lib) não carregou. Verifique sua conexão com a internet e tente novamente.</div>';
-      return;
-    }
+    // NÃO checar `typeof PDFLib === "undefined"` aqui: isso é herança de
+    // quando o pdf-lib já vinha carregado via <script> fixo no <head>
+    // (então já existiria neste ponto). Desde a ETAPA 7.1 (lazy load),
+    // essa checagem síncrona disparava sempre na primeira importação —
+    // antes mesmo de ensurePdfLibLoaded() ser chamado — e mostrava o
+    // erro "pdf-lib não carregou" sem nunca tentar carregar a
+    // biblioteca. Quem garante o carregamento (com retry seguro e
+    // mensagem amigável em caso de falha real) é analyzePdf(), logo
+    // abaixo, via window.ensurePdfLibLoaded().
     if(!file || !/\.pdf$/i.test(file.name)){
       body.innerHTML = '<div class="pdfimp-error">✕ Selecione um arquivo .pdf.</div>';
       return;

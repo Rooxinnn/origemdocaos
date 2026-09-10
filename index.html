@@ -6597,14 +6597,31 @@ function drawExtraPage(pdfDoc, font, fontBold, pageW, pageH, title, lines){
 // função que já usa `PDFLib.*` foi alterada; só passou a ser chamada
 // depois de garantir que a biblioteca terminou de carregar.
 var __pdfLibLoadPromise = null;
+var PDF_LIB_CDN_URL = "https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js";
 function ensurePdfLibLoaded(){
   if(typeof PDFLib !== "undefined") return Promise.resolve();
   if(__pdfLibLoadPromise) return __pdfLibLoadPromise;
   __pdfLibLoadPromise = new Promise((resolve, reject) => {
     const s = document.createElement("script");
-    s.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js";
-    s.onload = () => resolve();
-    s.onerror = () => { __pdfLibLoadPromise = null; reject(new Error("pdf-lib failed to load")); };
+    s.src = PDF_LIB_CDN_URL;
+    s.onload = () => {
+      // Defensivo: o script pode responder 200 sem de fato anexar
+      // `window.PDFLib` (CDN servindo HTML de erro, build errado etc.).
+      // Sem esta checagem, resolve() dispararia mesmo assim e o erro só
+      // apareceria depois, disfarçado, no primeiro PDFLib.* chamado.
+      if(typeof PDFLib === "undefined"){
+        console.error("[ensurePdfLibLoaded] script carregou (onload) mas window.PDFLib continua undefined. URL:", PDF_LIB_CDN_URL);
+        __pdfLibLoadPromise = null;
+        reject(new Error("pdf-lib script loaded but window.PDFLib is undefined"));
+        return;
+      }
+      resolve();
+    };
+    s.onerror = (ev) => {
+      console.error("[ensurePdfLibLoaded] falha ao carregar script. URL:", PDF_LIB_CDN_URL, "evento:", ev);
+      __pdfLibLoadPromise = null;
+      reject(new Error("pdf-lib failed to load"));
+    };
     document.head.appendChild(s);
   });
   return __pdfLibLoadPromise;
@@ -6619,6 +6636,7 @@ async function exportAgentPDF(){
   try{
     await ensurePdfLibLoaded();
   }catch(e){
+    console.error("[exportAgentPDF] ensurePdfLibLoaded falhou:", e, "typeof PDFLib:", typeof PDFLib);
     alert("A biblioteca de PDF (pdf-lib) não carregou. Verifique sua conexão com a internet e tente novamente.");
     return;
   }
