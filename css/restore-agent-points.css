@@ -1,0 +1,16 @@
+/* Recuperação rápida — ação discreta da ficha, sem alterar a barra principal. */
+#tab-agentes .restore-agent-points-btn{
+  padding:9px 13px;
+  font-size:11px;
+  color:var(--paper-dim);
+  border-color:rgba(240,168,60,.38);
+  background:rgba(240,168,60,.055);
+}
+#tab-agentes .restore-agent-points-btn:hover{
+  color:var(--paper);
+  border-color:var(--amber-bright);
+  background:rgba(240,168,60,.13);
+}
+@media (max-width:480px){
+  #tab-agentes .restore-agent-points-btn{padding:10px 12px;}
+}

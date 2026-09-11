@@ -102,10 +102,12 @@
     const app = $("app_screen");
     const auth = $("auth_screen");
     const accountBar = $("account_bar");
+    const guestBar = $("guest_bar");
     if (loading) loading.style.display = "none";
     if (welcome) welcome.style.display = "none";
     if (app) app.style.display = "none";
     if (accountBar) accountBar.style.display = "none";
+    if (guestBar) guestBar.style.display = "none";
     if (auth) auth.classList.add("is-visible");
 
     // FASE C, item 5 — integração mínima com js/campanhas.js: só lê se
@@ -382,6 +384,11 @@
     // ETAPA 1.1 — DIAGNÓSTICO TEMPORÁRIO: confirma que enterApp() está
     // sendo chamada e se crisStartAppIfNeeded já existe neste momento.
     console.log("[C.R.I.S. Auth DIAG] enterApp() chamada. crisStartAppIfNeeded existe?", typeof window.crisStartAppIfNeeded);
+    // Só muda de contexto se esta aba estiver realmente como visitante.
+    // Em renovação normal de sessão, não toca no estado que já está aberto.
+    if (window.CRISGuest && typeof window.CRISGuest.isGuest === "function" && window.CRISGuest.isGuest() && typeof window.CRISGuest.leaveForAccount === "function") {
+      window.CRISGuest.leaveForAccount();
+    }
     hideAuthScreen();
     updateAccountInfo(user);
 
@@ -495,6 +502,13 @@
         } finally {
           setLoading(btn, false, "Entrar");
         }
+      });
+    }
+
+    const guestButton = $("auth_guest_enter");
+    if (guestButton) {
+      guestButton.addEventListener("click", () => {
+        if (window.CRISGuest && typeof window.CRISGuest.enter === "function") window.CRISGuest.enter();
       });
     }
 

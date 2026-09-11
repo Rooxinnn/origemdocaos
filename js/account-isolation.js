@@ -134,6 +134,7 @@
     "criaturas:index",   // 2) Criaturas — índice
     "xp:diario",         // 5) Diário de XP
     "paranormal:data",   // 4) Paranormal
+    "onboarding:creation_guide", // Preferência visual do guia inicial (uma vez por conta).
     "sync:mutation_queue", // ETAPA 6 — fila de sincronização offline (js/sync-queue.js).
                             // Reaproveita o MESMO mecanismo de isolamento por conta usado
                             // acima, em vez de inventar um segundo mecanismo — a fila de

@@ -996,6 +996,9 @@
 <link rel="stylesheet" href="css/navigation-tools.css">
 <link rel="stylesheet" href="css/performance-tuning.css">
 <link rel="stylesheet" href="css/symbol-polish.css">
+<link rel="stylesheet" href="css/restore-agent-points.css">
+<link rel="stylesheet" href="css/creation-guide.css">
+<link rel="stylesheet" href="css/guest-mode.css">
 </head>
 <body>
 
@@ -1041,6 +1044,8 @@
         <input type="password" id="auth_login_password" autocomplete="current-password" required placeholder="••••••••">
       </div>
       <button type="submit" class="auth-submit-btn" id="auth_login_submit">Entrar</button>
+      <button type="button" class="auth-guest-btn" id="auth_guest_enter">Continuar sem conta</button>
+      <p class="auth-guest-note">Crie fichas e consulte o sistema neste aparelho. Campanhas e nuvem exigem uma conta.</p>
       <div class="auth-links-row">
         <button type="button" class="auth-tab-btn" data-auth-tab="recover">Esqueceu sua senha?</button>
         <button type="button" class="auth-tab-btn" data-auth-tab="signup">Criar conta</button>
@@ -1139,7 +1144,11 @@
       <div id="account_email"></div>
     </div>
     <button type="button" id="btn_logout" title="Sair da conta">Sair</button>
-  </div>
+</div>
+<div id="guest_bar" style="display:none;">
+  <span>Visitante · salvo neste aparelho</span>
+  <button type="button" id="btn_guest_login">Entrar / Criar conta</button>
+</div>
 </div>
 <script>
 (function(){
@@ -1806,7 +1815,7 @@
     <button class="tab-btn" data-tab="guialivro">Guia do Livro</button>
     <button class="tab-btn" data-tab="inventario">Inventário</button>
     <button class="tab-btn" data-tab="paranormal">Paranormal</button>
-    <button class="tab-btn" data-tab="campanhas">Campanhas</button>
+    <button class="tab-btn" data-tab="campanhas" id="tab_btn_campanhas">Campanhas</button>
   </div>
 </div>
 
@@ -2126,6 +2135,7 @@
     <div class="action-bar">
       <button id="btn_back_to_list">← Voltar às Fichas</button>
       <button class="save-agent-btn" id="btn_save_agent">💾 Salvar Ficha</button>
+      <button type="button" class="restore-agent-points-btn" id="btn_restore_agent_points" title="Recupera HP, SAN, Fadiga e todos os campos Atual/Máx. preenchidos">↺ Recuperar Pontos</button>
       <span id="cloud_sync_badge" class="cloud-sync-badge" title="Estado da sincronização com a nuvem"></span>
       <!-- AJUSTE DE UI (visual apenas): as ações secundárias abaixo foram
            agrupadas num menu "Mais Opções" para reduzir a poluição visual
@@ -2187,6 +2197,10 @@
   <div class="tab-panel" id="tab-guialivro">
     <div class="panel">
       <h2>Guia do Livro <span class="tag">Origem do Caos • V1.0.3</span></h2>
+      <section class="creation-guide-home" id="creation_guide_home" aria-labelledby="creation_guide_home_title"></section>
+      <div class="creation-guide-index-heading">
+        <span>Índice do Livro</span>
+      </div>
       <p class="note" style="text-align:left; margin:0 0 14px;">Índice rápido para achar a regra completa no livro. Clique em um item para abrir a categoria correspondente no Compêndio.</p>
       <div id="guia_livro_sections"></div>
     </div>
@@ -2576,6 +2590,15 @@
      um resumo rápido (flashIndicator) e para forçar uma nova tentativa. -->
 <div class="cris-global-sync" id="cris_global_sync_indicator" style="display:none;"></div>
 
+<!-- Guia inicial: todo o conteúdo e a lógica ficam em js/creation-guide.js.
+     Não lê nem altera fichas, campanhas ou sincronização. -->
+<div class="creation-guide-overlay" id="creation_guide_overlay" aria-hidden="true">
+  <section class="creation-guide-modal" role="dialog" aria-modal="true" aria-labelledby="creation_guide_modal_title">
+    <button type="button" class="creation-guide-close" id="creation_guide_close" aria-label="Fechar guia">×</button>
+    <div id="creation_guide_modal_content"></div>
+  </section>
+</div>
+
 <script>
 /* ==========================================================
    STORAGE HELPERS (personal — só o próprio usuário acessa)
@@ -2590,6 +2613,7 @@ function flashIndicator(text, isErr, durationMs){
 }
 
 async function storageGet(key){
+  key = (window.CRISGuest && typeof window.CRISGuest.mapStorageKey === "function") ? window.CRISGuest.mapStorageKey(key) : key;
   if(!hasNativeStorage()){
     // window.storage (API exclusiva do ambiente de Artifacts do Claude.ai) não
     // está disponível nesta execução — o HTML foi aberto diretamente no
@@ -2613,6 +2637,7 @@ function hasNativeStorage(){
 }
 async function storageSet(key, value, attempt, silent){
   attempt = attempt || 1;
+  key = (window.CRISGuest && typeof window.CRISGuest.mapStorageKey === "function") ? window.CRISGuest.mapStorageKey(key) : key;
 
   if(!hasNativeStorage()){
     // Mesmo fallback do storageGet: sem window.storage disponível, grava em
@@ -2664,18 +2689,23 @@ function debounce(fn, ms){
    alterada.
    ========================================================== */
 async function storageListKeys(prefix){
+  const guest = window.CRISGuest && typeof window.CRISGuest.mapStoragePrefix === "function" ? window.CRISGuest : null;
+  const actualPrefix = guest ? guest.mapStoragePrefix(prefix || "") : (prefix || "");
   if(!hasNativeStorage()){
     try{
       const all = Object.keys(localStorage);
-      return prefix ? all.filter(k => k.indexOf(prefix) === 0) : all;
+      const keys = actualPrefix ? all.filter(k => k.indexOf(actualPrefix) === 0) : all;
+      return guest ? guest.unmapStorageKeys(keys) : keys;
     }catch(e){ return []; }
   }
   try{
-    const res = await window.storage.list(prefix || "", false);
-    return (res && Array.isArray(res.keys)) ? res.keys : [];
+    const res = await window.storage.list(actualPrefix, false);
+    const keys = (res && Array.isArray(res.keys)) ? res.keys : [];
+    return guest ? guest.unmapStorageKeys(keys) : keys;
   }catch(e){ return []; }
 }
 async function storageDeleteKey(key){
+  key = (window.CRISGuest && typeof window.CRISGuest.mapStorageKey === "function") ? window.CRISGuest.mapStorageKey(key) : key;
   if(!hasNativeStorage()){
     try{ localStorage.removeItem(key); }catch(e){}
     return;
@@ -2688,6 +2718,10 @@ async function storageDeleteKey(key){
    ========================================================== */
 document.querySelectorAll(".tab-btn").forEach(btn => {
   btn.addEventListener("click", () => {
+    if(btn.dataset.tab === "campanhas" && window.CRISGuest && window.CRISGuest.isGuest && window.CRISGuest.isGuest()){
+      window.CRISGuest.requireLoginForCampaigns();
+      return;
+    }
     document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
     document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
     btn.classList.add("active");
@@ -3757,6 +3791,7 @@ function showWelcomeScreen(){
   document.getElementById("app_screen").style.display = "none";
   document.getElementById("welcome_screen").style.display = "block";
   renderSheetCards();
+  document.dispatchEvent(new Event("oc:welcome-screen-shown"));
 }
 function showAppScreen(){
   document.getElementById("welcome_screen").style.display = "none";
@@ -3775,6 +3810,10 @@ document.getElementById("btn_nav_fichas").addEventListener("click", showWelcomeS
 // já existente (dispara o loadCampaignList() de js/campanhas.js
 // normalmente), sem duplicar nenhuma lógica de navegação.
 document.getElementById("btn_welcome_campanhas").addEventListener("click", () => {
+  if(window.CRISGuest && window.CRISGuest.isGuest && window.CRISGuest.isGuest()){
+    window.CRISGuest.requireLoginForCampaigns();
+    return;
+  }
   showAppScreen();
   const campBtn = document.querySelector('.tab-btn[data-tab="campanhas"]');
   if (campBtn) campBtn.click();
@@ -5529,9 +5568,39 @@ async function crisStartAppIfNeeded(){
   } finally {
     document.getElementById("loading_screen").style.display = "none";
     showWelcomeScreen();
+    // Só depois da inicialização completa da conta oferece a cópia opcional
+    // das fichas de visitante. A escolha nunca bloqueia login ou sincronização.
+    if(window.CRISGuest && typeof window.CRISGuest.onAccountReady === "function"){
+      window.CRISGuest.onAccountReady();
+    }
   }
 }
 window.crisStartAppIfNeeded = crisStartAppIfNeeded;
+
+// MODO VISITANTE — inicializa apenas recursos locais. Não chama isolamento
+// de contas, sincronização, realtime, campanhas nem qualquer operação cloud.
+async function crisStartGuestApp(){
+  if(__crisAppStarted) return;
+  __crisAppStarted = true;
+  try{
+    await loadSheetsIndex();
+    await migrateLegacySheetIfNeeded();
+    renderInventory();
+    await loadParanormal();
+    renderCompendio();
+    renderConexoes();
+    renderGuiaLivro();
+    if(window.CharacterConnections && typeof window.CharacterConnections.reloadLibrary === "function"){
+      await window.CharacterConnections.reloadLibrary();
+    }
+  }catch(e){
+    console.error("[C.R.I.S. Visitante] Erro ao preparar os dados locais:", e);
+  }finally{
+    document.getElementById("loading_screen").style.display = "none";
+    showWelcomeScreen();
+  }
+}
+window.crisStartGuestApp = crisStartGuestApp;
 
 // CORREÇÃO DE BUG ("login trava, só sai com F5, mas não sempre"): a trava
 // __crisAppStarted acima impede rodar a inicialização duas vezes — mas
@@ -7675,6 +7744,9 @@ const ORIGINAL_PDF_BASE64 = "JVBERi0xLjYNJeLjz9MNCjIxMTMgMCBvYmoNPDwvRmlsdGVyL0Z
 <script src="js/image-cropper.js"></script>
 <script src="js/character-image.js"></script>
 <script src="js/quick-value-adjustments.js"></script>
+<script src="js/restore-agent-points.js"></script>
+<script src="js/creation-guide.js"></script>
+<script src="js/guest-mode.js"></script>
 <script src="js/sheet-search.js"></script>
 <script src="js/combat-dice-auto.js"></script>
 <script src="js/vital-states.js"></script>

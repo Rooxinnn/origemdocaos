@@ -531,6 +531,33 @@
     return await storageSet(CUSTOM_STORAGE_KEY, JSON.stringify(customConnections), 1, true);
   }
 
+  // Importação explícita do modo visitante: une por ID, preserva as
+  // Personalizadas que já pertencem à conta e só então agenda o envio
+  // normal para a nuvem. Nunca tenta interpretar nem reescrever o Efeito.
+  async function importCustomLibrary(items){
+    if(!Array.isArray(items) || !items.length) return 0;
+    var added = [];
+    items.forEach(function(raw){
+      if(!raw || !raw.id || findCustomById(raw.id)) return;
+      var cc = {
+        id: String(raw.id),
+        name: String(raw.name || "").trim(),
+        description: String(raw.description || "").trim(),
+        fields: normalizeCustomFields(raw.fields),
+        tag: String(raw.tag || "").trim(),
+        type: "custom",
+        cloudMeta: { existsCloud: false, lastSyncedUpdatedAt: null, conflict: false }
+      };
+      customConnections.push(cc);
+      added.push(cc);
+    });
+    if(!added.length) return 0;
+    await saveCustomLibrary();
+    added.forEach(function(cc){ attemptSyncOrQueue(cc, "create"); });
+    renderAll();
+    return added.length;
+  }
+
   // Criação continua síncrona (mesma assinatura/retorno de antes — quem
   // chama não precisa virar async): grava local na hora, e SÓ DEPOIS
   // dispara o envio à nuvem em segundo plano, sem aguardar (instrução 3 —
@@ -1489,7 +1516,11 @@
   // função privada do módulo.
   // ---------------------------------------------------------
   window.CharacterConnections = {
-    refresh: renderAll
+    refresh: renderAll,
+    // Recarrega somente a biblioteca local ativa. O modo visitante usa a
+    // mesma interface, mas uma área de armazenamento separada por aparelho.
+    reloadLibrary: loadCustomConnections,
+    importLibrary: importCustomLibrary
   };
 
   // ETAPA 4.1B — chamado por index.html: syncAfterLogin() a partir de

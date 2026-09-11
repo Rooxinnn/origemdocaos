@@ -565,6 +565,14 @@
     const el = $("cris_global_sync_indicator");
     if (!el) return;
 
+    // O estado da fila continua sendo processado normalmente; este painel
+    // global, porém, não faz parte mais da interface. Erros transitórios de
+    // sincronização não devem ocupar a tela do jogador nem impedir os retries
+    // automáticos já existentes.
+    el.style.display = "none";
+    el.textContent = "";
+    return;
+
     if (forceState === "offline" || !navigator.onLine) {
       el.className = "cris-global-sync state-offline";
       el.textContent = "☁ Offline — pendente";
