@@ -999,6 +999,7 @@
 <link rel="stylesheet" href="css/restore-agent-points.css">
 <link rel="stylesheet" href="css/creation-guide.css">
 <link rel="stylesheet" href="css/guest-mode.css">
+<link rel="stylesheet" href="css/creation-assistant.css">
 </head>
 <body>
 
@@ -1216,6 +1217,7 @@
 
     <div class="welcome-new-wrap">
       <button class="welcome-new-btn" id="btn_new_sheet">+ Criar Nova Ficha</button>
+      <button class="creation-assistant-launch" id="btn_creation_assistant">✦ Criar com Assistente</button>
       <button id="btn_import_json_welcome" style="margin-left:10px;">⭱ Importar JSON</button>
       <button id="btn_import_pdf_welcome" style="margin-left:10px;">📄 Importar Ficha PDF</button>
       <input type="file" id="input_import_pdf" accept="application/pdf,.pdf" style="display:none;">
@@ -2589,6 +2591,14 @@
      há nada pendente — não polui a interface no dia a dia. Clicável para
      um resumo rápido (flashIndicator) e para forçar uma nova tentativa. -->
 <div class="cris-global-sync" id="cris_global_sync_indicator" style="display:none;"></div>
+
+<!-- Assistente opcional: a ficha final continua sendo a mesma ficha editável. -->
+<div class="creation-assistant-overlay" id="creation_assistant_overlay" aria-hidden="true">
+  <section class="creation-assistant-modal" role="dialog" aria-modal="true" aria-labelledby="creation_assistant_title">
+    <button type="button" class="creation-assistant-close" id="creation_assistant_close" aria-label="Fechar assistente">×</button>
+    <div id="creation_assistant_content"></div>
+  </section>
+</div>
 
 <!-- Guia inicial: todo o conteúdo e a lógica ficam em js/creation-guide.js.
      Não lê nem altera fichas, campanhas ou sincronização. -->
@@ -7747,6 +7757,7 @@ const ORIGINAL_PDF_BASE64 = "JVBERi0xLjYNJeLjz9MNCjIxMTMgMCBvYmoNPDwvRmlsdGVyL0Z
 <script src="js/restore-agent-points.js"></script>
 <script src="js/creation-guide.js"></script>
 <script src="js/guest-mode.js"></script>
+<script src="js/creation-assistant.js"></script>
 <script src="js/sheet-search.js"></script>
 <script src="js/combat-dice-auto.js"></script>
 <script src="js/vital-states.js"></script>
