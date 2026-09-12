@@ -2061,6 +2061,7 @@
 
       <div class="panel">
         <h2>Itens do Agente</h2>
+        <div class="agent-items-note">Itens livres e anotações</div>
         <textarea id="itens" style="min-height:140px;"></textarea>
         <div class="items-footer">
           <div class="peso-box"><label>Peso Total</label><input type="number" id="peso_total"></div>
@@ -2183,7 +2184,7 @@
       </div>
 
       <div class="subtab-panel" id="sub-comp-conexoes">
-        <p class="note" style="text-align:left; margin:0 0 14px;">Catálogo de Conexões e Técnicas de Aborto Límbico, organizado por Dimensão conforme o livro (Sistema de OdC, cap. Conexões — pág. 314–500). A integração com as fichas dos Agentes será feita em uma próxima etapa.</p>
+        <p class="note" style="text-align:left; margin:0 0 14px;">Catálogo de Conexões e Técnicas de Aborto Límbico, organizado por Dimensão conforme o livro (Sistema de OdC, cap. Conexões — pág. 314–500).</p>
         <div class="cx-toolbar">
           <div class="field"><label>Pesquisar</label><input type="text" id="cx_search" placeholder="🔍 Buscar conexão ou técnica…"></div>
         </div>
@@ -2212,6 +2213,7 @@
   <div class="tab-panel" id="tab-inventario">
     <div class="panel">
       <h2>Inventário</h2>
+      <div class="inventory-add-heading">Adicionar item personalizado</div>
       <div class="list-add-row">
         <div class="field"><label>Item</label><input type="text" id="inv_nome"></div>
         <div class="field" style="flex:0 1 90px;"><label>Qtd.</label><input type="number" id="inv_qtd" value="1" min="1"></div>
@@ -2220,6 +2222,7 @@
         <button id="btn_inv_add">Adicionar</button>
       </div>
       <div class="eqinv-toolbar">
+        <div class="inventory-add-heading">Adicionar equipamento do Compêndio</div>
         <button type="button" id="eqinv_add_btn">+ Adicionar Item</button>
       </div>
       <div id="inv_list"></div>
@@ -4227,10 +4230,28 @@ function renderInventory(){
   list.innerHTML = "";
   if(invItems.length === 0){
     list.innerHTML = '<div class="empty-state">Nenhum item cadastrado ainda.</div>';
+    document.getElementById("inv_peso_total").value = "0.0";
+    return;
   }
+
+  const groups = [
+    {key:"catalogados", title:"Equipamentos do Compêndio", note:"Itens estruturados, com categoria e detalhes.", items:[]},
+    {key:"livres", title:"Itens pessoais e personalizados", note:"Itens adicionados manualmente ou criados pelo jogador.", items:[]}
+  ];
   invItems.forEach((item, idx) => {
+    (item && item.eqRef ? groups[0] : groups[1]).items.push({item:item, idx:idx});
+  });
+  groups.forEach(group => {
+    if(!group.items.length) return;
+    const section = document.createElement("section");
+    section.className = "inventory-group inventory-group-" + group.key;
+    section.innerHTML = `<div class="inventory-group-heading"><div><h3>${group.title}</h3><span>${group.note}</span></div><b>${group.items.length}</b></div><div class="inventory-group-list"></div>`;
+    const groupList = section.querySelector(".inventory-group-list");
+    list.appendChild(section);
+    group.items.forEach(({item, idx}) => {
     const card = document.createElement("div");
     card.className = "entry-card";
+    card.dataset.invIndex = String(idx);
     // Itens vindos do Compêndio de Equipamentos (ver js/equipamentos-agente.js)
     // guardam só a referência ("eqRef": ID em EQUIPAMENTOS_DATA) — nunca uma
     // cópia dos dados do equipamento. Aqui só mostramos o nome (buscado ao
@@ -4243,7 +4264,7 @@ function renderInventory(){
       card.innerHTML = eqIt
         ? `<div class="entry-body"><div class="entry-title eqinv-title" data-eqopen="${item.eqRef}">${escapeHtml(eqIt.nome)}</div></div><button class="entry-del" data-del="${idx}">Remover</button>`
         : `<div class="entry-body"><div class="entry-title">Equipamento não encontrado</div></div><button class="entry-del" data-del="${idx}">Remover</button>`;
-      list.appendChild(card);
+      groupList.appendChild(card);
       const openEl = card.querySelector("[data-eqopen]");
       if(openEl){
         openEl.addEventListener("click", () => window.Equipamentos.openItemModal(item.eqRef));
@@ -4257,7 +4278,8 @@ function renderInventory(){
       </div>
       <button class="entry-del" data-del="${idx}">Remover</button>
     `;
-    list.appendChild(card);
+    groupList.appendChild(card);
+    });
   });
   const total = invItems.reduce((sum, it) => sum + (parseFloat(it.peso)||0) * (parseInt(it.qtd)||1), 0);
   document.getElementById("inv_peso_total").value = total.toFixed(1);
