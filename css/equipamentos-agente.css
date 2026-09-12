@@ -14,8 +14,70 @@
 /* ---------- botão "+ Adicionar Item" (Agentes → Inventário) ---------- */
 .eqinv-toolbar{
   display:flex;
-  justify-content:flex-start;
+  align-items:center;
+  gap:14px;
   margin-bottom:14px;
+}
+
+/* Inventário organizado por origem, sem misturar itens catalogados com
+   anotações livres. Os cards continuam usando .entry-card e os mesmos
+   controles existentes; estas regras só criam hierarquia visual. */
+.inventory-add-heading{
+  font-family:'Oswald',sans-serif;
+  font-size:10px;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  color:var(--sigil);
+  margin:4px 0 8px;
+}
+.eqinv-toolbar .inventory-add-heading{ margin:0; }
+.inventory-group{
+  margin-top:18px;
+  padding:12px;
+  border:1px solid rgba(184,121,26,.32);
+  background:rgba(18,15,12,.34);
+}
+.inventory-group:first-child{ margin-top:8px; }
+.inventory-group-heading{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding-bottom:9px;
+  margin-bottom:10px;
+  border-bottom:1px solid rgba(184,121,26,.25);
+}
+.inventory-group-heading h3{
+  margin:0;
+  font-family:'Oswald',sans-serif;
+  font-size:13px;
+  color:var(--paper);
+  letter-spacing:.06em;
+  text-transform:uppercase;
+}
+.inventory-group-heading span{
+  display:block;
+  margin-top:3px;
+  font-size:10px;
+  color:var(--sigil);
+}
+.inventory-group-heading b{
+  flex:0 0 auto;
+  min-width:24px;
+  text-align:center;
+  color:var(--amber-bright);
+  font-family:'Oswald',sans-serif;
+  font-size:12px;
+}
+.inventory-group-list{ display:grid; gap:8px; }
+.inventory-group-livres .entry-card{ border-left-color:var(--line); }
+.agent-items-note{
+  margin:-4px 0 7px;
+  font-family:'Oswald',sans-serif;
+  font-size:10px;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:var(--sigil);
 }
 
 /* ---------- card de item referenciado dentro do #inv_list já existente ---------- */
@@ -133,6 +195,10 @@
 }
 
 @media (max-width:640px){
+  .eqinv-toolbar{ align-items:stretch; flex-direction:column; gap:8px; }
+  .inventory-group{ padding:9px; }
+  .inventory-group-heading h3{ font-size:12px; }
+  .inventory-group-heading span{ font-size:9px; }
   .eqinv-picker-row-title{ font-size:12px; }
 }
 
@@ -151,9 +217,33 @@
   margin-bottom:8px;
 }
 .eqinv-itens-list{
+  display:grid;
+  gap:10px;
+}
+.eqinv-items-group{
+  padding:9px 10px;
+  border:1px solid rgba(184,121,26,.24);
+  background:rgba(18,15,12,.25);
+}
+.eqinv-items-group-title{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:7px;
+  font-family:'Oswald',sans-serif;
+  font-size:10px;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:var(--sigil);
+}
+.eqinv-items-group-title span{
+  color:var(--amber-bright);
+  font-size:11px;
+}
+.eqinv-items-group-list{
   display:flex;
   flex-wrap:wrap;
-  gap:8px;
+  gap:7px;
 }
 .eqinv-item-row{
   display:flex;

@@ -587,8 +587,26 @@
     }
 
     list.innerHTML = "";
+    var groups = {
+      catalogados: {title:"Equipamentos do Compêndio", items:[]},
+      livres: {title:"Itens pessoais e personalizados", items:[]}
+    };
     items.forEach(function(item, idx){
       if (!item) return;
+      (item.eqRef ? groups.catalogados : groups.livres).items.push({item:item, idx:idx});
+    });
+    Object.keys(groups).forEach(function(key){
+      var group = groups[key];
+      if (!group.items.length) return;
+      var section = document.createElement("div");
+      section.className = "eqinv-items-group eqinv-items-group-" + key;
+      section.innerHTML = '<div class="eqinv-items-group-title">' + group.title + '<span>' + group.items.length + '</span></div><div class="eqinv-items-group-list"></div>';
+      group.list = section.querySelector(".eqinv-items-group-list");
+      list.appendChild(section);
+    });
+    items.forEach(function(item, idx){
+      if (!item) return;
+      var targetGroup = item.eqRef ? groups.catalogados : groups.livres;
       var chip = document.createElement("button");
       chip.type = "button";
       chip.className = "eqinv-item-chip";
@@ -622,7 +640,7 @@
           });
           row.appendChild(chip);
           row.appendChild(minusBtn);
-          list.appendChild(row);
+          targetGroup.list.appendChild(row);
           return;
         } else {
           chip.textContent = "Equipamento não encontrado";
@@ -637,7 +655,7 @@
       }
 
       row.appendChild(chip);
-      list.appendChild(row);
+      if (targetGroup.list) targetGroup.list.appendChild(row);
     });
   }
 
@@ -850,7 +868,7 @@
 
     invItems.forEach(function(item, idx){
       if (!item || !item.eqRef) return;
-      var card = list.children[idx];
+      var card = list.querySelector('[data-inv-index="' + idx + '"]');
       if (!card) return;
       var titleEl = card.querySelector(".eqinv-title");
       if (!titleEl) return; // "Equipamento não encontrado": nada a acrescentar
