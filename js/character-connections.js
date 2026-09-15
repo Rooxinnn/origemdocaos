@@ -332,7 +332,12 @@
         .select("id,name,description,tag,type,updated_at")
         .eq("user_id", user.id);
       if(res.error) throw res.error;
-      return res.data || [];
+      // A mesma tabela também guarda os registros internos do criador de
+      // Profissões/Skills. Eles pertencem à conta, mas não são Conexões e
+      // jamais devem aparecer na biblioteca ou no seletor de Conexões.
+      return (res.data || []).filter(function(row){
+        return row.tag !== "oc:custom_profession:v1" && row.tag !== "oc:custom_skill:v1";
+      });
     }catch(e){
       logCCError("falha ao buscar Personalizadas na nuvem", e);
       return null;

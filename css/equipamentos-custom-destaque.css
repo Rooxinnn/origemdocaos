@@ -44,8 +44,24 @@
   display:block;
 }
 
+/* Ação direta para itens criados pelo jogador. Fica discreta ao lado da
+   exclusão e não altera os controles dos equipamentos do Compêndio. */
+.eqcustom-edit-btn{
+  align-self:center;
+  margin-right:6px;
+  padding:7px 10px;
+  font-size:10px;
+  color:var(--amber-bright);
+  border-color:var(--amber);
+  background:rgba(184,121,26,0.08);
+}
+.eqcustom-edit-btn:hover{
+  background:rgba(184,121,26,0.18);
+}
+
 @media (max-width:640px){
   .eqinv-custom-thumb{ width:44px; height:44px; }
+  .eqcustom-edit-btn{ padding:6px 8px; }
 }
 
 /* ---------- seletor de imagem no formulário de criação/edição ----------

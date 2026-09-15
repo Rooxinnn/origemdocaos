@@ -1,0 +1,49 @@
+/* Biblioteca privada de Profissões e Skills personalizadas. */
+.cpp-panel{padding-top:4px;}
+.cpp-topline{display:flex;justify-content:space-between;gap:18px;margin:0 0 14px;padding-bottom:12px;border-bottom:1px solid var(--line);}
+.cpp-topline h3{margin:0 0 4px;font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.06em;color:var(--paper);font-size:16px;}
+.cpp-topline p{margin:0;color:var(--sigil);font-size:11px;}
+.cpp-switch{display:flex;gap:7px;margin-bottom:12px;}
+.cpp-switch button{padding:8px 14px;font-size:11px;}
+.cpp-switch button.active,.cpp-create{border-color:var(--amber-bright);color:var(--paper);background:rgba(184,121,26,.18);}
+.cpp-create{margin:0 0 12px;}
+.cpp-card{display:flex;align-items:stretch;border:1px solid var(--line);border-left:3px solid var(--amber);background:var(--panel-2);margin-bottom:8px;}
+.cpp-card-main{flex:1;min-width:0;padding:11px 13px;cursor:pointer;}
+.cpp-card-main:hover h4{color:var(--amber-bright);}
+.cpp-card h4{font-family:'Oswald',sans-serif;color:var(--paper);font-size:14px;letter-spacing:.04em;text-transform:uppercase;margin:0 0 2px;}
+.cpp-card span{font-family:'Oswald',sans-serif;color:var(--amber);font-size:10px;letter-spacing:.06em;text-transform:uppercase;}
+.cpp-card p{margin:7px 0 0;color:var(--paper-dim);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cpp-card-actions{display:flex;flex-direction:column;justify-content:center;gap:5px;padding:8px;border-left:1px solid var(--line);}
+.cpp-card-actions button{padding:6px 9px;font-size:10px;}
+.cpp-card-actions button:last-child{color:#d57670;}
+.cpp-editor-box{width:min(760px,96vw);max-height:88vh;overflow:auto;text-align:left;position:relative;}
+.cpp-editor-box h3{margin:0 30px 16px 0;font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.06em;color:var(--paper);}
+.cpp-modal-x{position:absolute;right:14px;top:14px;background:transparent;border:0;color:var(--sigil);font-size:21px;padding:2px 8px;}
+.cpp-modal-x:hover{color:var(--paper);border:0;}
+.cpp-editor-section{margin-top:17px;padding-top:12px;border-top:1px solid var(--line);}
+.cpp-editor-section h4{margin:0 0 3px;font-family:'Oswald',sans-serif;font-size:13px;text-transform:uppercase;color:var(--amber-bright);letter-spacing:.05em;}
+.cpp-editor-section p{margin:0 0 9px;color:var(--sigil);font-size:10.5px;}
+.cpp-point-row,.cpp-item-row{display:grid;gap:7px;margin-bottom:7px;align-items:center;}
+.cpp-point-row{grid-template-columns:minmax(160px,1fr) 95px 30px;}
+.cpp-item-row{grid-template-columns:minmax(130px,1.1fr) 64px 74px minmax(130px,1fr) 30px;}
+.cpp-point-row input,.cpp-point-row select,.cpp-item-row input{min-width:0;}
+.cpp-point-row button,.cpp-item-row button{padding:5px 8px;color:#d57670;}
+.cpp-editor-section > button{font-size:10px;padding:7px 10px;}
+.cpp-skill-choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;max-height:230px;overflow:auto;padding:2px;}
+.cpp-check{display:flex;gap:8px;padding:8px;border:1px solid var(--line);background:rgba(0,0,0,.14);cursor:pointer;}
+.cpp-check input{accent-color:var(--amber-bright);}
+.cpp-check b{display:block;color:var(--paper);font-family:'Oswald',sans-serif;font-size:11px;text-transform:uppercase;}
+.cpp-check small{color:var(--sigil);font-size:9px;}
+.cpp-empty-inline{color:var(--sigil);font-style:italic;font-size:11px;}
+.cpp-detail-box{width:min(620px,94vw);text-align:left;position:relative;}
+.cpp-detail-box>span{font-family:'Oswald',sans-serif;color:var(--amber);font-size:10px;text-transform:uppercase;letter-spacing:.12em;}
+.cpp-detail-box h3{margin:7px 25px 16px 0;color:var(--paper);font-family:'Oswald',sans-serif;text-transform:uppercase;font-size:22px;letter-spacing:.04em;}
+.cpp-detail-box p{margin:0;color:var(--paper);font-size:14px;line-height:1.65;white-space:pre-wrap;}
+.custom-profession-skills{margin-top:14px;border:1px solid var(--line);border-left:3px solid var(--amber);background:rgba(20,17,13,.35);padding:10px 12px;}
+.custom-profession-skills-head{display:flex;justify-content:space-between;gap:10px;margin-bottom:8px;font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.08em;font-size:11px;color:var(--paper);}
+.custom-profession-skills-head small{color:var(--amber);font-size:10px;}
+#custom_profession_skills_list{display:flex;flex-wrap:wrap;gap:7px;}
+.custom-profession-skill-chip{padding:7px 10px;font-size:10.5px;color:var(--paper);border-color:var(--amber);background:rgba(184,121,26,.08);}
+.custom-profession-skill-chip:hover{color:var(--amber-bright);border-color:var(--amber-bright);}
+.custom-profession-skills-empty{color:var(--sigil);font-size:10.5px;font-style:italic;}
+@media(max-width:640px){.cpp-card{flex-direction:column;}.cpp-card-actions{flex-direction:row;border-left:0;border-top:1px solid var(--line);justify-content:flex-end;}.cpp-item-row{grid-template-columns:1fr 54px 64px;}.cpp-item-row [data-cpp-item-desc]{grid-column:1 / -2;}.cpp-skill-choices{grid-template-columns:1fr;}.cpp-editor-box{padding:15px;}.cpp-topline p{font-size:10px;}}

@@ -582,9 +582,9 @@
      depois do wrap daquele arquivo, já que ele é aplicado primeiro —
      esta tag <script> é carregada em seguida no index.html), marcar
      o card de cada item com "custom: true" como clicável — mesma
-     correspondência por índice já usada por aquele arquivo
-     (list.children[idx] == invItems[idx], pois renderInventory()
-     desenha um card por posição, na mesma ordem, sem filtrar nada).
+     correspondência pelo atributo data-inv-index. O Inventário pode
+     agrupar os cards em seções visuais, então usar list.children[idx]
+     deixaria de apontar para o item correto.
      ========================================================== */
 
   function enhanceCustomCards(){
@@ -593,14 +593,34 @@
 
     invItems.forEach(function(item, idx){
       if (!item || !item.custom) return;
-      var card = list.children[idx];
+      var card = list.querySelector('[data-inv-index="' + idx + '"]');
       if (!card) return;
       card.classList.add("eqinv-card");
       var titleEl = card.querySelector(".entry-title");
-      if (!titleEl || titleEl.dataset.eqcustomBound) return;
-      titleEl.classList.add("eqinv-title");
-      titleEl.dataset.eqcustomBound = "1";
-      titleEl.addEventListener("click", function(){ openViewModal(idx); });
+      if (titleEl && !titleEl.dataset.eqcustomBound){
+        titleEl.classList.add("eqinv-title");
+        titleEl.dataset.eqcustomBound = "1";
+        titleEl.addEventListener("click", function(){ openViewModal(idx); });
+      }
+
+      // A edição também fica disponível diretamente no card. Assim o
+      // jogador não precisa abrir o detalhe do item para alterar um campo.
+      if (!card.querySelector("[data-eqcustom-edit]")){
+        var editBtn = document.createElement("button");
+        editBtn.type = "button";
+        editBtn.className = "eqcustom-edit-btn";
+        editBtn.dataset.eqcustomEdit = String(idx);
+        editBtn.textContent = "Editar";
+        editBtn.addEventListener("click", function(event){
+          event.stopPropagation();
+          if (isReadOnlyThirdPartyView()){ blockReadOnly(); return; }
+          editingIdx = idx;
+          openFormModal(item);
+        });
+        var deleteBtn = card.querySelector(".entry-del");
+        if (deleteBtn) card.insertBefore(editBtn, deleteBtn);
+        else card.appendChild(editBtn);
+      }
     });
   }
 

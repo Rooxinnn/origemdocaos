@@ -59,7 +59,12 @@
     set("nome", state.nome); set("idade", state.idade); set("profissao", state.profissao);
     if (state.conceito) set("anotacoes", state.conceito);
     groups.forEach(function (group) { group.items().forEach(function (item) { var value = clamp(state.values[item[0]]); set(item[0], value); set(item[0] + "_atual", value); if (typeof updateDiceTiers === "function") updateDiceTiers(item[0]); }); });
-    if (typeof updateSAN === "function") updateSAN(); if (typeof updateHP === "function") updateHP(); if (typeof updateFatigue === "function") updateFatigue(); if (typeof initAllSkillBaselines === "function") initAllSkillBaselines(); if (typeof checkHabilidades50Unlock === "function") checkHabilidades50Unlock(); if (typeof window.updateAgentVitalStates === "function") window.updateAgentVitalStates(); if (typeof markAgentDirty === "function") markAgentDirty();
+    if (typeof updateSAN === "function") updateSAN(); if (typeof updateHP === "function") updateHP(); if (typeof updateFatigue === "function") updateFatigue();
+    // Uma ficha recém-criada começa descansada: os valores atuais recebem
+    // seus máximos já calculados, incluindo os 5 pontos-base de SAN/Fadiga.
+    set("san_atual", (document.getElementById("san_max") || {}).value || 0);
+    set("fadiga_atual", (document.getElementById("fadiga_max") || {}).value || 0);
+    if (typeof initAllSkillBaselines === "function") initAllSkillBaselines(); if (typeof checkHabilidades50Unlock === "function") checkHabilidades50Unlock(); if (typeof window.updateAgentVitalStates === "function") window.updateAgentVitalStates(); if (typeof markAgentDirty === "function") markAgentDirty();
     closeModal();
     await saveAgent();
   }
