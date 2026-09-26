@@ -1,0 +1,76 @@
+/* Menu da área de criaturas: disponível nas fichas, lista e compêndios. */
+.cr-area-nav{
+  position:sticky;
+  top:0;
+  z-index:35;
+  margin:0 0 28px;
+  padding:12px 16px 14px;
+  background:rgba(20,16,13,.97);
+  border:1px solid var(--line);
+  border-bottom:2px solid var(--amber);
+  box-shadow:0 12px 26px rgba(0,0,0,.35);
+  backdrop-filter:blur(12px);
+}
+.cr-area-nav-top,.cr-area-nav-links{display:flex;align-items:center;gap:10px;}
+.cr-area-nav-top{justify-content:space-between;margin-bottom:11px;}
+.cr-area-nav-name{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.09em;color:var(--paper);font-size:14px;}
+.cr-area-nav-name small{color:var(--paper-dim);font-family:'Special Elite',monospace;text-transform:none;letter-spacing:0;font-size:12px;margin-left:8px;}
+.cr-area-nav button{
+  min-height:42px;
+  padding:9px 15px;
+  background:var(--panel-2);
+  border:1px solid var(--line);
+  color:var(--paper);
+  font:500 13px 'Oswald',sans-serif;
+  letter-spacing:.035em;
+  cursor:pointer;
+  transition:background .15s,border-color .15s;
+}
+.cr-area-nav button:hover,.cr-area-nav button:focus-visible{border-color:var(--amber-bright);background:#32251b;}
+.cr-area-nav button:focus-visible{outline:2px solid var(--amber-bright);outline-offset:2px;}
+.cr-area-nav-links{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) auto;}
+.cr-area-nav-links button.is-active{background:#3a2918;border-color:var(--amber-bright);color:#fff1d6;}
+.cr-area-nav-links .cr-area-create,
+.cr-import-toolbar .cr-list-create{background:#8a3a2a;border-color:#c0522f;color:#fff4e0;font-weight:600;}
+.cr-area-nav-links .cr-area-create:hover,
+.cr-import-toolbar .cr-list-create:hover{background:#a64730;}
+.cr-area-nav .cr-area-exit{background:transparent;color:var(--paper-dim);font-family:'Special Elite',monospace;font-size:12px;}
+#creature_list_screen .secret-header{margin-bottom:20px;}
+#creature_list_screen .secret-header .secret-divider{margin-bottom:10px;}
+#creature_list_screen .cr-import-toolbar{
+  display:grid;
+  grid-template-columns:minmax(240px,1fr) minmax(180px,230px) auto;
+  align-items:end;
+  gap:10px;
+  margin:0 0 10px;
+}
+#creature_list_screen .cr-import-toolbar button{min-height:42px;font-size:13px;}
+#creature_list_screen .cr-import-toolbar label{display:flex;flex-direction:column;gap:6px;min-width:0;}
+#creature_list_screen .cr-import-toolbar label span{
+  color:var(--sigil);font:600 11px 'Oswald',sans-serif;
+  letter-spacing:.08em;text-transform:uppercase;
+}
+#creature_list_screen .cr-import-toolbar input,
+#creature_list_screen .cr-import-toolbar select{
+  box-sizing:border-box;width:100%;min-width:0;min-height:42px;
+  padding:9px 12px;border:1px solid var(--line);
+  background:var(--panel-2);color:var(--paper);
+}
+#creature_list_screen .cr-list-count{color:var(--sigil);font-size:11px;margin:0 0 16px;}
+#creature_list_screen .sheet-list{margin-bottom:24px;}
+@media(max-width:700px){
+  .cr-area-nav{margin-bottom:20px;padding:10px 12px;}
+  .cr-area-nav-top{gap:8px;margin-bottom:8px;}
+  .cr-area-nav-name{font-size:12px;}
+  .cr-area-nav-name small{display:none;}
+  .cr-area-nav .cr-area-exit{font-size:11px;padding:7px 9px;}
+  .cr-area-nav-links{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;}
+  .cr-area-nav-links button{min-width:0;padding:8px 7px;font-size:12px;}
+  #creature_list_screen .cr-import-toolbar{grid-template-columns:repeat(2,minmax(0,1fr));}
+  #creature_list_screen .cr-list-search{grid-column:1 / -1;}
+  #creature_list_screen .cr-import-toolbar button{white-space:normal;}
+}
+@media(max-width:420px){
+  #creature_list_screen .cr-import-toolbar{grid-template-columns:1fr;}
+  #creature_list_screen .cr-list-search{grid-column:auto;}
+}

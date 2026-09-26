@@ -1,0 +1,70 @@
+/* Arquivos Secretos: tons de alerta discretos, sem alterar o layout. */
+:is(#creature_list_screen, #creature_sheet_screen, #creature_compendio_screen,
+    #creature_registro_screen, #creature_ficha_completa_screen, #creature_regras_screen){
+  --amber:#934337;
+  --amber-bright:#ce795e;
+  --line:#503329;
+  --panel:#1b1513;
+  --panel-2:#271b18;
+  --sigil:#9c796d;
+  --tex-panel:linear-gradient(150deg,#211815,#1a1412);
+  min-height:100vh;
+  background:
+    radial-gradient(ellipse at 50% 0%,rgba(140,50,30,.10),transparent 58%),
+    radial-gradient(ellipse at 15% 100%,rgba(140,50,30,.06),transparent 55%),
+    #100d0c;
+}
+
+/* Painéis e controles seguem os cantos secos da entrada da área. */
+:is(#creature_list_screen, #creature_sheet_screen, #creature_compendio_screen,
+    #creature_registro_screen, #creature_ficha_completa_screen, #creature_regras_screen)
+  :is(button, input, select, textarea, .panel, .sheet-card, .compendio-card,
+      .cpd-card, .cpd-section, .crf-accordion-item){
+  border-radius:2px;
+}
+
+:is(#creature_list_screen, #creature_sheet_screen, #creature_compendio_screen,
+    #creature_registro_screen, #creature_ficha_completa_screen, #creature_regras_screen)
+  :is(input,select,textarea):focus{
+  box-shadow:0 0 0 2px rgba(192,82,47,.13);
+}
+
+:is(#creature_list_screen, #creature_sheet_screen, #creature_compendio_screen,
+    #creature_registro_screen, #creature_ficha_completa_screen, #creature_regras_screen)
+  .cr-area-nav{
+  background:rgba(27,19,17,.97);
+  border-bottom-color:#934337;
+}
+:is(#creature_list_screen, #creature_sheet_screen, #creature_compendio_screen,
+    #creature_registro_screen, #creature_ficha_completa_screen, #creature_regras_screen)
+  .cr-area-nav button:hover,
+:is(#creature_list_screen, #creature_sheet_screen, #creature_compendio_screen,
+    #creature_registro_screen, #creature_ficha_completa_screen, #creature_regras_screen)
+  .cr-area-nav button:focus-visible{background:#3a2520;}
+:is(#creature_list_screen, #creature_sheet_screen, #creature_compendio_screen,
+    #creature_registro_screen, #creature_ficha_completa_screen, #creature_regras_screen)
+  .cr-area-nav-links button.is-active{
+  background:#3b231e;
+  color:#f0e6cf;
+}
+
+/* Cards próprios: borda vermelha e brilho suave ao passar o mouse. */
+#creature_list_screen .sheet-card{
+  background:linear-gradient(150deg,#241a17,#1b1513);
+  border-top-color:#934337;
+}
+#creature_list_screen .sheet-card::before{
+  background:linear-gradient(180deg,rgba(160,55,40,.07),transparent 42%);
+}
+#creature_list_screen .sheet-card:hover{background:#2a1c18;}
+#creature_sheet_screen .combat-hero-box{
+  background:radial-gradient(circle at 50% 20%,rgba(145,53,39,.16),var(--panel-2) 75%);
+}
+#creature_sheet_screen .topbar-logo{box-shadow:0 0 16px rgba(174,70,48,.22);}
+#creature_sheet_screen .tab-btn.active{background:rgba(160,60,40,.13);}
+#creature_compendio_screen .cpd-filter-btn.active{
+  background:rgba(150,58,42,.12);
+}
+#creature_regras_screen .compendio-card::before{
+  background:#934337;
+}

@@ -59,15 +59,13 @@
   gap:8px;
 }
 
-/* ---------- card (colapsado / expandido) ---------- */
+/* ---------- card compacto ---------- */
 .cfh-hab-card{
   background:var(--panel);
   border:1px solid var(--line);
   border-left:3px solid var(--amber);
 }
-.cfh-hab-card.open{
-  border-left-color:var(--amber-bright);
-}
+.cfh-hab-card:hover{border-color:var(--amber-bright);}
 
 .cfh-hab-card-head{
   width:100%;
@@ -81,13 +79,17 @@
   cursor:pointer;
   text-align:left;
 }
+.cfh-hab-card-head:focus-visible{outline:2px solid var(--amber-bright);outline-offset:2px;}
 .cfh-hab-card-name{
+  min-width:0;
+  overflow-wrap:anywhere;
   font-family:'Oswald',sans-serif;
   font-size:13px;
   letter-spacing:0.04em;
   text-transform:uppercase;
   color:var(--paper);
 }
+.cfh-hab-card-end{display:flex;align-items:center;gap:16px;flex:0 0 auto;}
 .cfh-hab-card-pb{
   flex:0 0 auto;
   font-family:'Oswald',sans-serif;
@@ -96,47 +98,53 @@
   color:var(--amber-bright);
   white-space:nowrap;
 }
+.cfh-hab-card-hint{font:11px 'Special Elite',monospace;color:var(--paper-dim);white-space:nowrap;}
 
-.cfh-hab-card-body{
-  display:none;
-  padding:0 16px 16px;
-  border-top:1px solid var(--line);
-}
-.cfh-hab-row{
-  margin-top:14px;
-}
-.cfh-hab-row label{
-  display:block;
-  font-family:'Oswald',sans-serif;
-  font-size:10px;
-  letter-spacing:0.12em;
-  text-transform:uppercase;
-  color:var(--sigil);
-  margin-bottom:5px;
-}
-.cfh-hab-row-value{
-  font-size:13px;
-  color:var(--paper-dim);
-}
-.cfh-hab-desc p{
-  margin:0;
-  font-size:12.5px;
-  line-height:1.75;
-  color:var(--paper-dim);
-  white-space:pre-wrap;
-  word-wrap:break-word;
-}
-
-.cfh-hab-card-actions{
+/* ---------- detalhes em popup, no padrão das descrições dos agentes ---------- */
+.cfh-hab-detail-box{
+  max-width:600px;
+  max-height:min(86vh,780px);
+  padding:0;
   display:flex;
-  gap:8px;
-  margin-top:16px;
+  flex-direction:column;
+  overflow:hidden;
+  text-align:left;
+  border-color:var(--amber);
+  box-shadow:0 24px 70px rgba(0,0,0,.65);
 }
-.cfh-hab-card-actions button{
-  flex:0 0 auto;
-  font-size:10.5px;
-  padding:7px 14px;
+.cfh-detail-top{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:15px 24px 0;
+  color:var(--amber-bright);
+  font:600 11px 'Oswald',sans-serif;
+  letter-spacing:.12em;text-transform:uppercase;
 }
+.cfh-detail-top button{
+  border:1px solid var(--line);background:var(--panel-2);
+  color:var(--paper);width:34px;height:34px;cursor:pointer;font-size:21px;line-height:1;
+}
+.cfh-detail-top button:hover,.cfh-detail-top button:focus-visible{border-color:var(--amber-bright);}
+.cfh-hab-detail-box h3{
+  margin:0 24px;padding:6px 0 18px;
+  font:600 clamp(18px,3vw,24px) 'Oswald',sans-serif;
+  color:var(--paper);text-transform:uppercase;line-height:1.3;
+  border-bottom:1px solid var(--line);
+}
+.cfh-detail-stats{display:grid;grid-template-columns:minmax(0,2fr) minmax(90px,1fr);gap:10px;margin:18px 24px;}
+.cfh-detail-stats > div{padding:13px 15px;background:var(--panel-2);border:1px solid var(--line);min-width:0;}
+.cfh-detail-stats span,.cfh-detail-content h4{
+  display:block;margin:0 0 7px;color:var(--amber-bright);
+  font:600 11px 'Oswald',sans-serif;letter-spacing:.08em;text-transform:uppercase;
+}
+.cfh-detail-stats strong{display:block;font:15px 'Special Elite',monospace;color:var(--paper);overflow-wrap:anywhere;}
+.cfh-detail-content{padding:0 24px 20px;overflow-y:auto;min-height:0;}
+.cfh-detail-content h4{border-bottom:1px dashed var(--line);padding-bottom:7px;}
+.cfh-detail-content p{
+  margin:0;color:var(--paper-dim);font-size:14px;line-height:1.7;
+  text-align:left;white-space:pre-wrap;overflow-wrap:anywhere;
+}
+.cfh-detail-actions{display:flex;justify-content:flex-end;gap:10px;padding:15px 24px;border-top:1px solid var(--line);background:var(--panel-2);}
+.cfh-detail-actions button{min-height:40px;padding:8px 17px;cursor:pointer;}
 .cfh-hab-del-btn{
   background:rgba(224,96,96,0.10);
   border-color:#e06060;
@@ -195,7 +203,13 @@
 @media(max-width:640px){
   .cfh-hab-modal-box{ max-width:94vw; padding:20px; }
   .cfh-hab-card-head{ padding:11px 14px; }
-  .cfh-hab-card-body{ padding:0 14px 14px; }
+  .cfh-hab-card-hint{display:none;}
+  .cfh-hab-detail-box{max-width:calc(100vw - 24px);max-height:calc(100dvh - 24px);}
+  .cfh-detail-top{padding:12px 16px 0;}
+  .cfh-hab-detail-box h3{margin:0 16px;}
+  .cfh-detail-stats{margin:15px 16px;}
+  .cfh-detail-content{padding:0 16px 16px;}
+  .cfh-detail-actions{padding:12px 16px;}
 }
 
 /* ==========================================================

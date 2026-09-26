@@ -1,0 +1,40 @@
+/* Pesquisa das habilidades de criaturas, alinhada ao Compêndio. */
+#creature_regras_screen .secret-header{margin-bottom:28px;}
+#creature_regras_screen .crr-toolbar{
+  box-sizing:border-box;
+  width:min(100%,1040px);
+  margin:0 auto 28px;
+  padding:18px;
+  border:1px solid var(--line);
+  background:var(--panel);
+}
+#creature_regras_screen .crr-toolbar label{
+  display:block;
+  margin-bottom:9px;
+  color:var(--paper-dim);
+  font:600 12px 'Oswald',sans-serif;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+#creature_regras_screen .crr-toolbar input{
+  box-sizing:border-box;
+  width:100%;
+  min-height:48px;
+  padding:11px 14px;
+  border:1px solid var(--line);
+  background:var(--panel-2);
+  color:var(--paper);
+  font:13px 'Special Elite',monospace;
+}
+#creature_regras_screen .crr-toolbar input:focus{border-color:var(--amber-bright);}
+#creature_regras_screen .crr-count{
+  min-height:16px;
+  margin-top:10px;
+  text-align:right;
+  color:var(--sigil);
+  font:11px 'Oswald',sans-serif;
+  letter-spacing:.05em;
+}
+@media(max-width:700px){
+  #creature_regras_screen .crr-toolbar{padding:12px;margin-bottom:24px;}
+}

@@ -158,3 +158,12 @@
 .pdfimp-modal-box .modal-actions button.primary:hover{
   background: rgba(160,60,30,0.3);
 }
+
+.cr-import-toolbar{ margin: 0 0 16px; display:flex; justify-content:flex-end; }
+.cr-import-toolbar button{
+  padding:9px 14px;
+  color:var(--text, #eee);
+  background:var(--panel-2, #25211e);
+  border:1px solid var(--line, #73542f);
+  cursor:pointer;
+}

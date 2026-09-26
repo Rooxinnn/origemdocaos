@@ -90,6 +90,32 @@
 @media(max-width:820px){ .cr-combat-grid{grid-template-columns:repeat(3, minmax(0,1fr));} }
 @media(max-width:520px){ .cr-combat-grid{grid-template-columns:repeat(2, minmax(0,1fr));} }
 
+#creature_sheet_screen .cr-vitals-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));
+  gap:10px;
+  margin:16px 0 22px;
+}
+#creature_sheet_screen .cr-vitals-grid .combat-hero-box{min-width:0;}
+#creature_sheet_screen .cr-vital-hint{
+  color:var(--sigil);
+  font:10px 'Special Elite',monospace;
+  min-height:16px;
+}
+#creature_sheet_screen .cr-vitals-grid input::placeholder{font-size:12px;font-weight:400;}
+#creature_sheet_screen .cr-vitals-grid #cr_res_n{text-align:center;}
+#creature_sheet_screen .cr-vitals-grid #cr_pb_gain{align-self:flex-start;margin-top:auto;}
+#creature_sheet_screen .cr-combat-subtitle{
+  margin:0 0 12px;
+  padding-bottom:8px;
+  border-bottom:1px solid var(--line);
+  color:var(--paper-dim);
+  font:600 13px 'Oswald',sans-serif;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+#creature_sheet_screen .cr-combat-weight{max-width:240px;margin-top:16px;}
+
 /* ---------- grades de Habilidades/Talentos/Atributos/Perícias ---------- */
 .cr-skill-grid{display:grid; grid-template-columns:1fr 1fr; gap:2px 22px;}
 @media(max-width:820px){ .cr-skill-grid{grid-template-columns:1fr;} }
