@@ -246,13 +246,23 @@
     // O inventário mora dentro da ficha (data.inventario) só na
     // nuvem — localmente continua em inventoryStorageKey(id),
     // sem nenhuma alteração (instrução 6).
-    let inventario = [];
+    // Uma falha de leitura não pode transformar um inventário existente em [].
+    // Na ficha aberta, o array em memória inclui alterações cuja gravação
+    // assíncrona ainda está em andamento.
+    let inventario;
     try {
-      const invRaw = await window.storageGet(window.inventoryStorageKey(localId));
-      inventario = invRaw ? JSON.parse(invRaw) : [];
-      if (!Array.isArray(inventario)) inventario = [];
+      if (window.currentAgentId === localId && typeof window.getOpenInventorySnapshot === "function") {
+        inventario = window.getOpenInventorySnapshot();
+      } else {
+        const invRaw = await window.storageGet(window.inventoryStorageKey(localId));
+        if (invRaw === null || invRaw === undefined) throw new Error("inventário local indisponível");
+        inventario = JSON.parse(invRaw);
+      }
+      if (!Array.isArray(inventario)) throw new Error("formato inválido do inventário");
     } catch (e) {
-      inventario = [];
+      logSyncError("Inventário não pôde ser lido; sincronização cancelada para '" + localId + "'", e);
+      setBadge("error");
+      return { ok: false, inventoryError: true };
     }
 
     const nome = ((agentData && agentData.nome) || "").trim() || "Ficha sem nome";
@@ -604,7 +614,7 @@
 
       // separa inventário (que na nuvem mora dentro de data) do
       // restante dos campos da ficha, sem alterar o formato local.
-      const inventario = Array.isArray(cloudData.inventario) ? cloudData.inventario : [];
+      const inventario = Array.isArray(cloudData.inventario) ? cloudData.inventario : null;
       const agentData = Object.assign({}, cloudData);
       delete agentData.inventario;
       delete agentData.localSheetId;
@@ -619,7 +629,7 @@
         if (!okSheet) continue;
 
         if (gen !== currentGeneration()) { logGenStale("downloadCloudAgentList (antes de gravar inventário)"); break; }
-        if (inventario.length > 0) {
+        if (inventario !== null) {
           await window.storageSet(window.inventoryStorageKey(newLocalId), JSON.stringify(inventario), 1, true);
         }
 
@@ -702,7 +712,7 @@
   // conflito nem verifica updated_at — quem chama já garantiu isso.
   async function applyCloudAgentToLocalEntry(entry, cloudAgent) {
     const cloudData = (cloudAgent.data && typeof cloudAgent.data === "object") ? cloudAgent.data : {};
-    const inventario = Array.isArray(cloudData.inventario) ? cloudData.inventario : [];
+    const inventario = Array.isArray(cloudData.inventario) ? cloudData.inventario : null;
     const agentData = Object.assign({}, cloudData);
     delete agentData.inventario;
     delete agentData.localSheetId;
@@ -713,7 +723,10 @@
     // Mantém o Inventário local igual ao que veio junto da ficha na
     // nuvem (instrução 8 — mesma arquitetura já usada no download
     // inicial), inclusive quando ficou vazio.
-    await window.storageSet(window.inventoryStorageKey(entry.id), JSON.stringify(inventario), 1, true);
+    if (inventario !== null) {
+      const okInventory = await window.storageSet(window.inventoryStorageKey(entry.id), JSON.stringify(inventario), 1, true);
+      if (!okInventory) return false;
+    }
 
     await writeCloudMeta(entry.id, {
       cloudId: cloudAgent.id,
@@ -817,13 +830,16 @@
   async function recordRemoteSyncForOpenSheet(localId, cloudRow) {
     if (!localId || !cloudRow || !cloudRow.id) return false;
     const cloudData = (cloudRow.data && typeof cloudRow.data === "object") ? cloudRow.data : {};
-    const inventario = Array.isArray(cloudData.inventario) ? cloudData.inventario : [];
+    const inventario = Array.isArray(cloudData.inventario) ? cloudData.inventario : null;
     const agentData = Object.assign({}, cloudData);
     delete agentData.inventario;
     delete agentData.localSheetId;
     try {
       await window.storageSet(window.sheetStorageKey(localId), JSON.stringify(agentData), 1, true);
-      await window.storageSet(window.inventoryStorageKey(localId), JSON.stringify(inventario), 1, true);
+      if (inventario !== null) {
+        const okInventory = await window.storageSet(window.inventoryStorageKey(localId), JSON.stringify(inventario), 1, true);
+        if (!okInventory) throw new Error("falha ao gravar inventário local");
+      }
       await writeCloudMeta(localId, {
         cloudId: cloudRow.id,
         lastSyncedCloudUpdatedAt: cloudRow.updated_at,
@@ -924,14 +940,17 @@
       if (!cloudAgent) throw new Error("registro cloud não encontrado");
 
       const cloudData = (cloudAgent.data && typeof cloudAgent.data === "object") ? cloudAgent.data : {};
-      const inventario = Array.isArray(cloudData.inventario) ? cloudData.inventario : [];
+      const inventario = Array.isArray(cloudData.inventario) ? cloudData.inventario : null;
       const agentData = Object.assign({}, cloudData);
       delete agentData.inventario;
       delete agentData.localSheetId;
 
       const okSheet = await window.storageSet(window.sheetStorageKey(localId), JSON.stringify(agentData), 1, true);
       if (!okSheet) throw new Error("falha ao gravar ficha local");
-      await window.storageSet(window.inventoryStorageKey(localId), JSON.stringify(inventario), 1, true);
+      if (inventario !== null) {
+        const okInventory = await window.storageSet(window.inventoryStorageKey(localId), JSON.stringify(inventario), 1, true);
+        if (!okInventory) throw new Error("falha ao gravar inventário local");
+      }
 
       // Metadata reescrita do zero: substitui o objeto inteiro, então
       // "conflict" some naturalmente (instrução 1.4 — "limpar estado

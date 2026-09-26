@@ -3549,9 +3549,7 @@ document.getElementById("exp").addEventListener("input", () => { updateLevelDisp
 document.getElementById("exp").addEventListener("change", () => { processXpRewards(); });
 
 /* ==========================================================
-   SALVAMENTO MANUAL DA FICHA DE AGENTE
-   (autosave/debounce removido — nada é gravado automaticamente
-   enquanto o usuário edita; só o botão "💾 Salvar Ficha" grava.)
+   SALVAMENTO DA FICHA DE AGENTE
    ========================================================== */
 let __agentDirty = false;          // true quando há edições ainda não salvas
 // FASE G — getter mínimo e não-invasivo, só para o módulo de "ficha de
@@ -3560,19 +3558,40 @@ let __agentDirty = false;          // true quando há edições ainda não salva
 // o funcionamento normal de __agentDirty.
 function isAgentDirty(){ return __agentDirty; }
 let __agentSaveInFlight = false;   // evita cliques concorrentes no botão
+let __agentChangeRevision = 0;     // impede um save em andamento de limpar uma edição mais nova
+let __agentAutosaveTimer = null;
+
+function scheduleAgentAutosave(){
+  clearTimeout(__agentAutosaveTimer);
+  if(!currentAgentId) return;
+  __agentAutosaveTimer = setTimeout(() => {
+    __agentAutosaveTimer = null;
+    if(__agentDirty) saveAgent(true);
+  }, 700);
+}
 
 function markAgentDirty(){
   __agentDirty = true;
+  __agentChangeRevision++;
+  scheduleAgentAutosave();
 }
 
-async function saveAgent(){
-  if(__agentSaveInFlight) return;
+async function saveAgent(isAutosave){
+  if(__agentSaveInFlight){
+    if(isAutosave) scheduleAgentAutosave();
+    return;
+  }
+  if(!currentAgentId) return;
   __agentSaveInFlight = true;
+  const savedAgentId = currentAgentId;
+  const savedRevision = __agentChangeRevision;
 
   const btn = document.getElementById("btn_save_agent");
   const originalLabel = btn.textContent;
-  btn.disabled = true;
-  btn.textContent = "Salvando…";
+  if(!isAutosave){
+    btn.disabled = true;
+    btn.textContent = "Salvando…";
+  }
 
   try{
     // 0. garante que os desbloqueios de Habilidades em 50 estejam em dia
@@ -3594,21 +3613,21 @@ async function saveAgent(){
     }
 
     // 2/3. salva a ficha e aguarda a confirmação real da gravação
-    const res = await storageSet(sheetStorageKey(currentAgentId), JSON.stringify(data), 1, true);
+    const res = await storageSet(sheetStorageKey(savedAgentId), JSON.stringify(data), 1, true);
 
     if(res){
       // 4. só confirma sucesso depois da gravação realmente confirmada
-      __agentDirty = false;
-      const idx = sheetsIndex.findIndex(e => e.id === currentAgentId);
+      if(currentAgentId === savedAgentId && __agentChangeRevision === savedRevision) __agentDirty = false;
+      const idx = sheetsIndex.findIndex(e => e.id === savedAgentId);
       const nomeFicha = (data.nome || "").trim() || "Ficha sem nome";
       if(idx >= 0){
         sheetsIndex[idx].nome = nomeFicha;
         sheetsIndex[idx].updatedAt = Date.now();
       } else {
-        sheetsIndex.push({ id: currentAgentId, nome: nomeFicha, updatedAt: Date.now() });
+        sheetsIndex.push({ id: savedAgentId, nome: nomeFicha, updatedAt: Date.now() });
       }
       await saveSheetsIndex();
-      flashIndicator("✓ Ficha salva com sucesso!", false, 2500);
+      flashIndicator(isAutosave ? "✓ Salvo automaticamente" : "✓ Ficha salva com sucesso!", false, isAutosave ? 1200 : 2500);
       // Backup automático (ver script "BACKUP E RESTAURAÇÃO"): registra o
       // estado após um salvamento manual bem-sucedido — cobre alterações
       // importantes como HP, SAN, Fadiga, Corrupção, Infecção, Dimensão,
@@ -3621,7 +3640,7 @@ async function saveAgent(){
       // "Salvar Ficha", sem nunca bloquear ou reverter o salvamento local
       // (instruções 9 e 21 — funciona normalmente offline/sem Supabase).
       if(typeof window.CRISSync === "object" && window.CRISSync){
-        window.CRISSync.syncSheetToCloud(currentAgentId, data).catch(() => {});
+        window.CRISSync.syncSheetToCloud(savedAgentId, data).catch(() => {});
       }
     } else {
       flashIndicator("✕ Não foi possível salvar a ficha. Tente novamente.", true, 3000);
@@ -3629,9 +3648,12 @@ async function saveAgent(){
   }catch(e){
     flashIndicator("✕ Não foi possível salvar a ficha. Tente novamente.", true, 3000);
   }finally{
-    btn.disabled = false;
-    btn.textContent = originalLabel;
+    if(!isAutosave){
+      btn.disabled = false;
+      btn.textContent = originalLabel;
+    }
     __agentSaveInFlight = false;
+    if(__agentDirty && __agentChangeRevision !== savedRevision) scheduleAgentAutosave();
   }
 }
 
@@ -4312,6 +4334,11 @@ function escapeHtml(str){
 // sistema novo) — só acrescenta um sufixo próprio, associando o
 // Inventário aos dados da ficha correspondente.
 function inventoryStorageKey(id){ return sheetStorageKey(id) + ":inventario"; }
+
+// A sincronização usa o estado atual da ficha aberta, mesmo enquanto
+// storageSet do inventário ainda está pendente.
+function getOpenInventorySnapshot(){ return JSON.parse(JSON.stringify(invItems)); }
+window.getOpenInventorySnapshot = getOpenInventorySnapshot;
 
 async function saveInventory(){
   if(!currentAgentId) return; // nenhuma ficha aberta: nada a salvar
