@@ -40,8 +40,8 @@
    2) CRIAR NOVA HABILIDADE (por criatura)
       Adiciona, dentro do painel "Movimentos, Conexões e
       Habilidades" já existente na ficha de criatura, uma lista de
-      cards expansíveis (Nome + PB visíveis; ATK/PB/Descrição ao
-      expandir) com criação, edição e exclusão.
+      cards compactos (Nome + PB). Os detalhes abrem em um modal
+      com ATK/PB/Descrição e ações de edição e exclusão.
 
       PERSISTÊNCIA — NÃO cria um segundo localStorage nem uma
       biblioteca global. As habilidades de cada criatura são
@@ -97,6 +97,7 @@
   var cfHabilidades = [];
   var lastSeenRaw = null;
   var pendingDeleteId = null;
+  var detailTrigger = null;
 
   /* ---------- helpers ---------- */
   function esc(s){
@@ -137,6 +138,7 @@
     var raw = JSON.stringify(cfHabilidades);
     el.value = raw;
     lastSeenRaw = raw;
+    el.dispatchEvent(new Event("input", { bubbles: true }));
   }
 
   /* ---------- injeção do markup (uma única vez, no carregamento) ----------
@@ -174,19 +176,10 @@
     var pbLabel = (h.pb !== "" ? esc(h.pb) : "—") + " PB";
     return (
       '<div class="cfh-hab-card" data-cfh-id="' + esc(h.id) + '">' +
-        '<button type="button" class="cfh-hab-card-head" data-cfh-toggle="' + esc(h.id) + '">' +
+        '<button type="button" class="cfh-hab-card-head" data-cfh-view="' + esc(h.id) + '" aria-label="Ver detalhes de ' + esc(h.nome || "habilidade sem nome") + '">' +
           '<span class="cfh-hab-card-name">' + (h.nome ? esc(h.nome) : "Habilidade sem nome") + '</span>' +
-          '<span class="cfh-hab-card-pb">' + pbLabel + '</span>' +
+          '<span class="cfh-hab-card-end"><span class="cfh-hab-card-pb">' + pbLabel + '</span><span class="cfh-hab-card-hint">Ver detalhes ›</span></span>' +
         '</button>' +
-        '<div class="cfh-hab-card-body" id="cfh_hab_body_' + esc(h.id) + '">' +
-          '<div class="cfh-hab-row"><label>ATK</label><div class="cfh-hab-row-value">' + (h.atk ? esc(h.atk) : "—") + '</div></div>' +
-          '<div class="cfh-hab-row"><label>PB</label><div class="cfh-hab-row-value">' + (h.pb !== "" ? esc(h.pb) : "—") + '</div></div>' +
-          '<div class="cfh-hab-row cfh-hab-desc"><label>Descrição</label><p>' + (h.descricao ? esc(h.descricao) : "—") + '</p></div>' +
-          '<div class="cfh-hab-card-actions">' +
-            '<button type="button" class="cfh-hab-edit-btn" data-cfh-edit="' + esc(h.id) + '">Editar</button>' +
-            '<button type="button" class="cfh-hab-del-btn" data-cfh-del="' + esc(h.id) + '">Excluir</button>' +
-          '</div>' +
-        '</div>' +
       '</div>'
     );
   }
@@ -203,21 +196,74 @@
   }
 
   function wireCardEvents(){
-    document.querySelectorAll("[data-cfh-toggle]").forEach(function(btn){
-      btn.onclick = function(){
-        var card = btn.closest(".cfh-hab-card");
-        var body = document.getElementById("cfh_hab_body_" + btn.dataset.cfhToggle);
-        if(!card || !body) return;
-        var open = card.classList.toggle("open");
-        body.style.display = open ? "block" : "none";
-      };
+    document.querySelectorAll("[data-cfh-view]").forEach(function(btn){
+      btn.onclick = function(){ openHabDetail(btn.dataset.cfhView, btn); };
     });
-    document.querySelectorAll("[data-cfh-edit]").forEach(function(btn){
-      btn.onclick = function(){ openHabModal(btn.dataset.cfhEdit); };
+  }
+
+  /* ---------- visualização de uma habilidade ---------- */
+  function ensureDetailModal(){
+    if(document.getElementById("cfh_hab_detail_modal")) return;
+    var overlay = document.createElement("div");
+    overlay.className = "modal-overlay cfh-hab-detail-modal";
+    overlay.id = "cfh_hab_detail_modal";
+    overlay.innerHTML =
+      '<div class="modal-box cfh-hab-detail-box" role="dialog" aria-modal="true" aria-labelledby="cfh_detail_name" aria-describedby="cfh_detail_desc">' +
+        '<div class="cfh-detail-top"><span>Registro de habilidade</span><button type="button" id="cfh_detail_close" aria-label="Fechar detalhes">×</button></div>' +
+        '<h3 id="cfh_detail_name"></h3>' +
+        '<div class="cfh-detail-stats">' +
+          '<div><span>ATK / Tipo de ataque</span><strong id="cfh_detail_atk"></strong></div>' +
+          '<div><span>Custo</span><strong id="cfh_detail_pb"></strong></div>' +
+        '</div>' +
+        '<div class="cfh-detail-content"><h4>Descrição</h4><p id="cfh_detail_desc"></p></div>' +
+        '<div class="cfh-detail-actions">' +
+          '<button type="button" id="cfh_detail_edit">Editar</button>' +
+          '<button type="button" id="cfh_detail_delete" class="cfh-hab-del-btn">Excluir</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(overlay);
+    document.getElementById("cfh_detail_close").addEventListener("click", closeHabDetail);
+    overlay.addEventListener("click", function(e){ if(e.target === overlay) closeHabDetail(); });
+    document.addEventListener("keydown", function(e){
+      if(overlay.style.display !== "flex") return;
+      if(e.key === "Escape") closeHabDetail();
+      if(e.key === "Tab"){
+        var controls = Array.from(overlay.querySelectorAll("button"));
+        var first = controls[0], last = controls[controls.length - 1];
+        if(e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
+        else if(!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
+      }
     });
-    document.querySelectorAll("[data-cfh-del]").forEach(function(btn){
-      btn.onclick = function(){ confirmDeleteHabilidade(btn.dataset.cfhDel); };
+    document.getElementById("cfh_detail_edit").addEventListener("click", function(){
+      var id = overlay.dataset.habId;
+      closeHabDetail(false);
+      openHabModal(id);
     });
+    document.getElementById("cfh_detail_delete").addEventListener("click", function(){
+      var id = overlay.dataset.habId;
+      closeHabDetail(false);
+      confirmDeleteHabilidade(id);
+    });
+  }
+  function openHabDetail(id, trigger){
+    var h = cfHabilidades.find(function(item){ return item.id === id; });
+    if(!h) return;
+    ensureDetailModal();
+    var overlay = document.getElementById("cfh_hab_detail_modal");
+    overlay.dataset.habId = id;
+    detailTrigger = trigger || null;
+    document.getElementById("cfh_detail_name").textContent = h.nome || "Habilidade sem nome";
+    document.getElementById("cfh_detail_atk").textContent = h.atk || "—";
+    document.getElementById("cfh_detail_pb").textContent = h.pb !== "" ? h.pb + " PB" : "—";
+    document.getElementById("cfh_detail_desc").textContent = h.descricao || "Sem descrição cadastrada.";
+    overlay.style.display = "flex";
+    document.getElementById("cfh_detail_close").focus();
+  }
+  function closeHabDetail(restoreFocus){
+    var overlay = document.getElementById("cfh_hab_detail_modal");
+    if(overlay) overlay.style.display = "none";
+    if(restoreFocus !== false && detailTrigger && detailTrigger.isConnected) detailTrigger.focus();
+    detailTrigger = null;
   }
 
   /* ---------- modal de criação/edição ---------- */
@@ -256,6 +302,7 @@
     document.getElementById("cfh_f_pb").value = h ? h.pb : "";
     document.getElementById("cfh_f_desc").value = h ? h.descricao : "";
     document.getElementById("cfh_hab_modal").style.display = "flex";
+    document.getElementById("cfh_f_nome").focus();
   }
   function closeHabModal(){
     var modal = document.getElementById("cfh_hab_modal");
@@ -318,6 +365,7 @@
     ensureDeleteModal();
     pendingDeleteId = id;
     document.getElementById("cfh_hab_delete_modal").style.display = "flex";
+    document.getElementById("cfh_hab_delete_cancel").focus();
   }
 
   /* ---------- espelhamento por leitura periódica ----------
@@ -330,6 +378,7 @@
     var el = getHiddenField();
     if(!el) return;
     if(el.value === lastSeenRaw) return;
+    if(document.getElementById("cfh_hab_detail_modal")?.style.display === "flex") closeHabDetail(false);
     lastSeenRaw = el.value;
     cfHabilidades = parseHabilidades(el.value);
     renderHabilidades();

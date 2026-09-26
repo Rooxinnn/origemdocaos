@@ -90,7 +90,7 @@
   function buildAccordionItem(nome, corpo, idx, groupKey){
     return `
       <div class="crf-accordion-item">
-        <button type="button" class="crf-accordion-head" data-crf-acc="${groupKey}-${idx}">
+        <button type="button" class="crf-accordion-head" data-crf-acc="${groupKey}-${idx}" aria-expanded="false">
           <span class="crf-accordion-arrow">▼</span>${esc(nome)}
         </button>
         <div class="crf-accordion-body" id="crf-acc-${groupKey}-${idx}">${esc(corpo)}</div>
@@ -196,7 +196,9 @@
   /* ---------- abas principais ---------- */
   function updateCrfTabButtons(){
     document.querySelectorAll(".crf-tab-btn").forEach(btn => {
-      btn.classList.toggle("active", btn.dataset.crfTab === crfActiveTab);
+      const active = btn.dataset.crfTab === crfActiveTab;
+      btn.classList.toggle("active", active);
+      btn.setAttribute("aria-pressed", active ? "true" : "false");
     });
     ["status","poderes","descricao"].forEach(tab => {
       const panel = document.getElementById("crf_panel_" + tab);
@@ -231,6 +233,7 @@
         if(!body || !item) return;
         const open = item.classList.toggle("open");
         body.style.display = open ? "block" : "none";
+        btn.setAttribute("aria-expanded", open ? "true" : "false");
       };
     });
   }
@@ -285,6 +288,7 @@
 
     hideAllCrfScreens();
     if(screen) screen.style.display = "block";
+    window.scrollTo(0, 0);
   }
 
   /* ---------- wiring geral ---------- */

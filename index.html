@@ -985,8 +985,11 @@
 <link rel="stylesheet" href="css/condicoes-ativas-agente.css">
 <link rel="stylesheet" href="css/criaturas.css">
 <link rel="stylesheet" href="css/criaturas-compendio.css">
+<link rel="stylesheet" href="css/criaturas-ficha.css">
+<link rel="stylesheet" href="css/criaturas-regras.css">
 <link rel="stylesheet" href="css/creature-features.css">
 <link rel="stylesheet" href="css/pdf-agent-import.css">
+<link rel="stylesheet" href="css/creature-auto.css">
 <link rel="stylesheet" href="css/campanhas.css">
 <link rel="stylesheet" href="css/profissao-autocomplete.css">
 <link rel="stylesheet" href="css/custom-professions.css">
@@ -1001,6 +1004,8 @@
 <link rel="stylesheet" href="css/creation-guide.css">
 <link rel="stylesheet" href="css/guest-mode.css">
 <link rel="stylesheet" href="css/creation-assistant.css">
+<link rel="stylesheet" href="css/creature-navigation.css">
+<link rel="stylesheet" href="css/creature-danger-theme.css">
 </head>
 <body>
 
@@ -1320,10 +1325,23 @@
       <div class="secret-divider"></div>
     </div>
     <div id="creature_cloud_sync_banner" class="cloud-sync-banner" style="display:none;"></div>
-    <div id="creature_list" class="sheet-list"></div>
-    <div class="secret-back-wrap">
-      <button class="secret-back-btn" id="creature_list_back_btn">← Voltar</button>
+    <div class="cr-import-toolbar">
+      <label class="cr-list-search">
+        <span>Pesquisar criaturas</span>
+        <input type="search" id="cr_list_search" placeholder="Pesquisar criatura pelo nome…" autocomplete="off">
+      </label>
+      <label class="cr-list-sort">
+        <span>Ordenar por</span>
+        <select id="cr_list_sort">
+          <option value="recentes">Mais recentes</option>
+          <option value="nome">Nome (A–Z)</option>
+        </select>
+      </label>
+      <button type="button" id="cr_import_pdf_btn">📄 Importar Criatura PDF</button>
+      <input type="file" id="cr_import_pdf_file" accept="application/pdf,.pdf" hidden>
     </div>
+    <div id="cr_list_count" class="cr-list-count" aria-live="polite"></div>
+    <div id="creature_list" class="sheet-list"></div>
   </div>
 </div>
 
@@ -1343,10 +1361,6 @@
     <div>
       <h1>ORIGEM DO CAOS</h1>
       <div class="sub">Arquivos Secretos — Ficha de Criatura</div>
-    </div>
-    <div class="tabs">
-      <button class="nav-fichas-btn" id="cr_btn_nav_minhas" title="Voltar para Minhas Criaturas">Minhas Criaturas</button>
-      <button class="nav-fichas-btn" id="cr_btn_nav_secretos" title="Voltar para Arquivos Secretos">Arquivos Secretos</button>
     </div>
   </div>
 
@@ -1374,6 +1388,41 @@
 
     <div class="panel">
       <h2>Dados de Combate <span class="tag">Sistema de Vitalidade da Criatura</span></h2>
+      <div class="cr-vitals-grid">
+        <div class="combat-hero-box"><label>HP</label><span class="cr-vital-hint">Atual / Máximo</span>
+          <div class="hp-values">
+            <input type="text" inputmode="decimal" id="cr_hp_atual" aria-label="HP atual" placeholder="Atual">
+            <span class="hp-sep">/</span>
+            <input type="number" id="cr_hp_max" aria-label="HP máximo" placeholder="Máx.">
+          </div>
+        </div>
+        <div class="combat-hero-box"><label>SAN</label><span class="cr-vital-hint">Atual / Máximo</span>
+          <div class="hp-values">
+            <input type="text" id="cr_san_atual" aria-label="SAN atual" placeholder="Atual">
+            <span class="hp-sep">/</span>
+            <input type="text" id="cr_san_max" aria-label="SAN máxima" placeholder="Máx.">
+          </div>
+        </div>
+        <div class="combat-hero-box"><label>Proteção</label><span class="cr-vital-hint">Atual / Máximo</span>
+          <div class="hp-values">
+            <input type="text" inputmode="decimal" id="cr_protecao_atual" aria-label="Proteção atual" placeholder="Atual">
+            <span class="hp-sep">/</span>
+            <input type="number" id="cr_protecao_max" aria-label="Proteção máxima" placeholder="Máx.">
+          </div>
+        </div>
+        <div class="combat-hero-box"><label>PB</label><span class="cr-vital-hint">Atual / Máximo</span>
+          <div class="hp-values">
+            <input type="text" inputmode="decimal" id="cr_pb_atual" aria-label="PB atual" placeholder="Atual">
+            <span class="hp-sep">/</span>
+            <input type="number" id="cr_pb_max" aria-label="PB máximo" placeholder="Máx.">
+          </div>
+          <button type="button" class="cr-auto-small-btn" id="cr_pb_gain" title="Ganhar 1 P.B. por ação principal, reação ou fim do turno">+1 PB</button>
+        </div>
+        <div class="combat-hero-box"><label>RES N</label><span class="cr-vital-hint">Resistência natural</span>
+          <input type="text" id="cr_res_n" aria-label="Resistência natural">
+        </div>
+      </div>
+      <h3 class="cr-combat-subtitle">Ataque, Defesa e Movimento</h3>
       <div class="cr-combat-grid">
         <div class="combat-minor-cell"><label>ATK N</label><input type="text" id="cr_atk_n"></div>
         <div class="combat-minor-cell"><label>ATK AB</label><input type="text" id="cr_atk_ab"></div>
@@ -1386,50 +1435,11 @@
         <div class="combat-minor-cell"><label>DESV N</label><input type="text" id="cr_desv_n"></div>
         <div class="combat-minor-cell"><label>DESV O</label><input type="text" id="cr_desv_o"></div>
       </div>
-      <!-- DESTAQUE PRINCIPAL (Correção): HP, PROTEÇÃO, RES N e PB — os 4
-           valores mais importantes da criatura, reaproveitando literalmente
-           as classes globais .combat-hero-row/.combat-hero-box/.hp-values já
-           usadas para HP/Proteção dos Agentes (index.html). Nenhuma classe
-           nova foi criada para este grupo. Duas linhas de 2 caixas (o próprio
-           .combat-hero-row já é uma grade de 2 colunas) para não precisar
-           alterar essa classe global para 4 colunas.
-           Todos os 4 continuam 100% manuais — nenhum cálculo automático. -->
-      <div class="combat-hero-row" style="margin-top:18px;">
-        <div class="combat-hero-box"><label>HP</label>
-          <div class="hp-values">
-            <input type="text" inputmode="decimal" id="cr_hp_atual" placeholder="Atual">
-            <span class="hp-sep">/</span>
-            <input type="number" id="cr_hp_max">
-          </div>
-        </div>
-        <div class="combat-hero-box"><label>Proteção</label>
-          <div class="hp-values">
-            <input type="text" inputmode="decimal" id="cr_protecao_atual" placeholder="Atual">
-            <span class="hp-sep">/</span>
-            <input type="number" id="cr_protecao_max">
-          </div>
-        </div>
-      </div>
-      <div class="combat-hero-row" style="margin-top:10px;">
-        <div class="combat-hero-box"><label>RES N</label><input type="text" id="cr_res_n"></div>
-        <div class="combat-hero-box"><label>PB</label>
-          <div class="hp-values">
-            <input type="text" inputmode="decimal" id="cr_pb_atual" placeholder="Atual">
-            <span class="hp-sep">/</span>
-            <input type="number" id="cr_pb_max">
-          </div>
-        </div>
-      </div>
-
-      <!-- Demais valores (SAN e Peso Total) seguem exatamente como antes,
-           no padrão .footer-box já existente — fora do destaque principal. -->
-      <div class="footer-row" style="margin-top:14px;">
-        <div class="footer-box"><label>SAN (Atual / Máx.)</label>
-          <div style="display:flex; gap:6px; align-items:center;">
-            <input type="text" id="cr_san_atual" style="text-align:center;"><span style="color:var(--sigil);">/</span><input type="text" id="cr_san_max" style="text-align:center;">
-          </div>
-        </div>
-        <div class="footer-box"><label>Peso Total</label><input type="text" id="cr_peso_total"></div>
+      <p class="cr-auto-note">Dados calculados automaticamente quando os pontos permitem; valores especiais preenchidos manualmente são preservados.</p>
+      <div class="cr-combat-weight field"><label for="cr_peso_total">Peso Total</label><input type="text" id="cr_peso_total"></div>
+      <div class="cr-auto-actions">
+        <button type="button" id="cr_restore_points">✦ Recuperar pontos atuais</button>
+        <span>HP, SAN, Proteção, PB e pontos das grades; mantém todos os máximos.</span>
       </div>
     </div>
 
@@ -1461,6 +1471,15 @@
     <div class="panel">
       <h2>Perícias</h2>
       <div class="cr-skill-grid" id="cr_grid_pericias"></div>
+    </div>
+
+    <div class="panel" id="cr_auto_progress_panel">
+      <h2>Progressão da Criatura</h2>
+      <div id="cr_points_summary" class="cr-auto-summary"></div>
+      <h3>Habilidades em 50</h3>
+      <p class="cr-auto-note">Desbloqueadas quando o máximo do conhecimento chega a 50 pontos. Os efeitos dependem da situação de jogo.</p>
+      <input type="hidden" id="cr_hab50_unlocked" value="[]">
+      <div id="cr_hab50_grid" class="cr-auto-50-grid"></div>
     </div>
 
     <div class="panel">
@@ -1510,14 +1529,12 @@
 
     <div class="cpd-grid" id="cpd_grid"></div>
 
-    <div class="secret-back-wrap">
-      <button class="secret-back-btn" id="cpd_back_btn">← Voltar</button>
-    </div>
   </div>
 </div>
 
 <div id="creature_registro_screen" style="display:none;">
   <div class="secret-wrap">
+    <div class="cpd-reg-nav"><button type="button" class="secret-back-btn" id="cpd_reg_back_btn">← Voltar ao Compêndio</button><span>Registro catalogado</span></div>
     <div class="secret-header">
       <div class="secret-eyebrow">⚠ Arquivos Secretos</div>
       <h2 id="cpd_reg_nome">—</h2>
@@ -1545,9 +1562,33 @@
       </div>
     </div>
 
-    <div class="secret-back-wrap">
-      <button class="secret-back-btn" id="cpd_reg_back_btn">← Voltar ao Compêndio</button>
+  </div>
+</div>
+
+<div id="creature_ficha_completa_screen" style="display:none;">
+  <div class="secret-wrap">
+    <div class="crf-context">
+      <button type="button" class="secret-back-btn" id="crf_back_btn">← Voltar ao Compêndio</button>
+      <span>Compêndio de Criaturas / Ficha catalogada</span>
     </div>
+    <div class="crf-header">
+      <div class="cpd-card-texture" aria-hidden="true"></div>
+      <div class="crf-photo-box"><img id="crf_photo" alt="" style="display:none;"><span class="crf-photo-fallback" id="crf_photo_fallback">Sem Registro Visual</span></div>
+      <div class="crf-header-info">
+        <div class="cr-titlebar-eyebrow">Registro de Entidade</div>
+        <h2 id="crf_nome">—</h2>
+        <div class="crf-badges"><span class="crf-badge-dim" id="crf_dim">—</span><span class="crf-badge-tipo" id="crf_tipo">—</span></div>
+        <div class="crf-nivel-line" id="crf_nivel"></div>
+      </div>
+    </div>
+    <div class="crf-tabs" aria-label="Seções da ficha catalogada">
+      <button type="button" class="crf-tab-btn" data-crf-tab="status">Status</button>
+      <button type="button" class="crf-tab-btn" data-crf-tab="poderes">Poderes</button>
+      <button type="button" class="crf-tab-btn" data-crf-tab="descricao">Descrição</button>
+    </div>
+    <div class="crf-panel" id="crf_panel_status"></div>
+    <div class="crf-panel" id="crf_panel_poderes" style="display:none;"></div>
+    <div class="crf-panel" id="crf_panel_descricao" style="display:none;"></div>
   </div>
 </div>
 
@@ -1575,15 +1616,13 @@
       <div class="secret-divider"></div>
     </div>
 
-    <div class="list-add-row" style="margin-bottom:6px;">
-      <div class="field" style="flex:2 1 260px;"><label>Pesquisar</label><input type="text" id="crr_search" placeholder="Nome ou trecho da descrição…"></div>
+    <div class="crr-toolbar">
+      <label for="crr_search">Pesquisar habilidades e regras</label>
+      <input type="search" id="crr_search" placeholder="Nome ou trecho da descrição…" autocomplete="off">
+      <div id="crr_count" class="crr-count" aria-live="polite"></div>
     </div>
-    <div id="crr_count" class="note" style="text-align:left; margin:0 0 12px;"></div>
     <div id="crr_sections"></div>
 
-    <div class="secret-back-wrap">
-      <button class="secret-back-btn" id="crr_back_btn">← Voltar</button>
-    </div>
   </div>
 </div>
 
@@ -1599,6 +1638,17 @@
       <button id="pdfimp_cancel">Cancelar</button>
       <button id="pdfimp_confirm" class="primary" style="display:none;">Importar Ficha</button>
       <button id="pdfimp_close" style="margin-left:auto;">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="cr_pdfimp_modal">
+  <div class="modal-box pdfimp-modal-box">
+    <h3 style="margin-top:0;">Importar Criatura PDF</h3>
+    <div class="pdfimp-body" id="cr_pdfimp_body"></div>
+    <div class="modal-actions">
+      <button type="button" id="cr_pdfimp_cancel">Cancelar</button>
+      <button type="button" id="cr_pdfimp_confirm" class="primary" style="display:none;">Importar Criatura</button>
     </div>
   </div>
 </div>
@@ -7866,9 +7916,13 @@ const ORIGINAL_PDF_BASE64 = "JVBERi0xLjYNJeLjz9MNCjIxMTMgMCBvYmoNPDwvRmlsdGVyL0Z
 <script src="js/condicoes-ativas-agente.js"></script>
 <script src="js/criaturas.js"></script>
 <script src="js/criaturas-compendio.js"></script>
+<script src="js/criaturas-ficha.js"></script>
 <script src="js/criaturas-regras.js"></script>
 <script src="js/creature-features.js"></script>
 <script src="js/pdf-agent-import.js"></script>
+<script src="js/pdf-creature-import.js"></script>
+<script src="js/creature-auto.js"></script>
+<script src="js/creature-navigation.js"></script>
 <!-- ETAPA 1: precisa vir por último, depois que crisStartAppIfNeeded() e
      todos os elementos de #auth_screen/#btn_logout já existem no DOM. -->
 <script src="js/friendly-errors.js"></script>

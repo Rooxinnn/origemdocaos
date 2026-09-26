@@ -222,6 +222,7 @@
 
   let cpdActiveFilter = "todas";
   let cpdSearchTerm = "";
+  let cpdReturnScroll = 0;
 
   /* ---------- navegação entre telas ----------
      Mesmo padrão (display none/block) já usado por showWelcomeScreen/
@@ -255,8 +256,7 @@
   }
 
   function backToSecretFilesFromCpd(){
-    hideAllCpdAndOtherScreens();
-    document.getElementById("secret_files_screen").style.display = "block";
+    window.CRISCreatureNav.open("minhas");
   }
 
   /* ---------- filtro por dimensão ---------- */
@@ -279,7 +279,7 @@
       btn.type = "button";
       btn.className = "cpd-filter-btn cpd-dim-" + d.key;
       btn.dataset.cpdFilter = d.key;
-      btn.innerHTML = `<span class="cpd-filter-dot"></span>${d.emoji} ${esc(d.label)}`;
+      btn.innerHTML = `<span class="cpd-filter-dot" aria-hidden="true"></span>${esc(d.label)}`;
       wrap.appendChild(btn);
     });
 
@@ -336,6 +336,7 @@
   function wireCpdCardButtons(scope){
     scope.querySelectorAll("[data-cpd-open]").forEach(btn => {
       btn.addEventListener("click", () => {
+        cpdReturnScroll = window.scrollY || 0;
         const id = btn.dataset.cpdOpen;
         const c = CPD_CREATURES.find(x => x.id === id);
         // Só criaturas com registro completo (Etapa 2 — ver campo "ficha")
@@ -355,7 +356,7 @@
     section.innerHTML = `
       <div class="cpd-section-header">
         <span class="cpd-section-dot"></span>
-        <h3>${dim ? dim.emoji + " " + esc(dim.label) : ""}</h3>
+        <h3>${dim ? esc(dim.label) : ""}</h3>
         <span class="cpd-section-count">${list.length} registro(s)</span>
       </div>
     `;
@@ -401,10 +402,15 @@
     }
 
     if(cpdActiveFilter === "todas"){
+      let visibleSections = 0;
       CPD_DIMENSOES.forEach(dim => {
         const list = CPD_CREATURES.filter(c => c.dimensao === dim.key);
-        container.appendChild(buildCpdSection(dim, list));
+        if(list.length){
+          container.appendChild(buildCpdSection(dim, list));
+          visibleSections++;
+        }
       });
+      if(!visibleSections) container.innerHTML = '<div class="cpd-empty">Nenhuma criatura catalogada ainda.</div>';
       wireCpdCardButtons(container);
       return;
     }
@@ -451,6 +457,14 @@
 
     hideAllCpdAndOtherScreens();
     if(regScreen) regScreen.style.display = "block";
+    window.scrollTo(0, 0);
+  }
+
+  function returnToCompendioScreen(){
+    hideAllCpdAndOtherScreens();
+    const screen = document.getElementById("creature_compendio_screen");
+    if(screen) screen.style.display = "block";
+    window.scrollTo(0, cpdReturnScroll);
   }
 
   /* ---------- wiring geral ---------- */
@@ -462,7 +476,7 @@
     if(backBtn) backBtn.addEventListener("click", backToSecretFilesFromCpd);
 
     const regBackBtn = document.getElementById("cpd_reg_back_btn");
-    if(regBackBtn) regBackBtn.addEventListener("click", showCompendioScreen);
+    if(regBackBtn) regBackBtn.addEventListener("click", returnToCompendioScreen);
 
     const search = document.getElementById("cpd_search");
     if(search){
@@ -486,8 +500,6 @@
   window.__cpdGetCreature = function(id){ return CPD_CREATURES.find(x => x.id === id) || null; };
   window.__cpdGetDimInfo = dimInfo;
   window.__cpdBackToCompendioScreen = function(){
-    hideAllCpdAndOtherScreens();
-    const el = document.getElementById("creature_compendio_screen");
-    if(el) el.style.display = "block";
+    returnToCompendioScreen();
   };
 })();

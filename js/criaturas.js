@@ -93,6 +93,99 @@
   const CR_INDEX_KEY = "criaturas:index";
   let creaturesIndex = [];
   let currentCreatureId = null;
+  let crDirty = false;
+  let crRevision = 0;
+  let crAutosaveTimer = null;
+  let crSavePromise = null;
+  const crPendingDrafts = new Map();
+  const crSkillMaxBaseline = new WeakMap();
+  const CR_DRAFT_PREFIX = "criaturas:rascunho:";
+
+  // Backups automáticos são cópias auxiliares. Se o navegador estiver sem
+  // espaço, libera os mais antigos antes de desistir de gravar uma ficha ou
+  // o índice. Nunca remove fichas nem backups manuais.
+  async function crStorageSet(key, value){
+    let saved = await storageSet(key, value, 1, true);
+    if(saved || hasNativeStorage()) return saved;
+    const mappedKey = window.CRISGuest && typeof window.CRISGuest.mapStorageKey === "function"
+      ? window.CRISGuest.mapStorageKey(key) : key;
+    try{
+      localStorage.setItem(mappedKey, value);
+      return { key: mappedKey, value };
+    }catch(e){
+      if(e?.name !== "QuotaExceededError" && e?.code !== 22) return null;
+    }
+    let backups = [];
+    try{
+      const raw = await storageGet("backup:auto:index");
+      backups = JSON.parse(raw || "[]");
+      if(!Array.isArray(backups)) backups = [];
+    }catch(e){ backups = []; }
+    while(backups.length && !saved){
+      const old = backups.pop();
+      if(!old?.id) continue;
+      await storageDeleteKey("backup:auto:" + old.id);
+      await storageSet("backup:auto:index", JSON.stringify(backups), 1, true);
+      saved = await storageSet(key, value, 1, true);
+    }
+    return saved;
+  }
+
+  function crDraftKey(id){ return CR_DRAFT_PREFIX + id; }
+  function getPendingDraft(id){
+    if(crPendingDrafts.has(id)) return crPendingDrafts.get(id);
+    try{
+      const saved = JSON.parse(sessionStorage.getItem(crDraftKey(id)) || "null");
+      if(saved && typeof saved === "object" && !Array.isArray(saved)) return saved;
+    }catch(e){}
+    return null;
+  }
+
+  function scheduleCrAutosave(){
+    clearTimeout(crAutosaveTimer);
+    const scheduledId = currentCreatureId;
+    if(!scheduledId) return;
+    crAutosaveTimer = setTimeout(() => {
+      crAutosaveTimer = null;
+      if(crDirty && currentCreatureId === scheduledId) saveCreature(true);
+    }, 700);
+  }
+  function markCrDirty(){
+    crDirty = true;
+    crRevision++;
+    scheduleCrAutosave();
+  }
+  async function flushCrBeforeSwitch(quiet){
+    clearTimeout(crAutosaveTimer);
+    if(crSavePromise) await crSavePromise;
+    if(!crDirty) return true;
+    let saved = await saveCreature(true);
+    if(saved && crDirty) saved = await saveCreature(true);
+    if(!saved && !quiet && typeof flashIndicator === "function"){
+      flashIndicator("✕ Não foi possível salvar a criatura. Tente novamente antes de trocar de ficha.", true, 3400);
+    }
+    return saved;
+  }
+  function preserveCurrentDraft(){
+    if(!currentCreatureId || !crDirty) return false;
+    const draft = {};
+    crFieldIds().forEach(id => { draft[id] = document.getElementById(id).value; });
+    crPendingDrafts.set(currentCreatureId, draft);
+    try{ sessionStorage.setItem(crDraftKey(currentCreatureId), JSON.stringify(draft)); }catch(e){}
+    clearTimeout(crAutosaveTimer);
+    crDirty = false;
+    return true;
+  }
+  async function safeLeaveCreature(){
+    if(await flushCrBeforeSwitch(true)) return true;
+    // Uma falha do navegador não prende a pessoa na ficha. O rascunho
+    // continua acessível ao reabrir a mesma criatura nesta sessão.
+    if(preserveCurrentDraft()){
+      if(typeof flashIndicator === "function") flashIndicator("⚠ Salvamento indisponível. Rascunho mantido nesta aba; tente salvar novamente depois.", true, 5000);
+      return true;
+    }
+    return false;
+  }
 
   function crSheetKey(id){ return "criatura:sheet:" + id; }
   function genCreatureId(){
@@ -209,17 +302,31 @@
     }
   }
   async function saveCreaturesIndex(){
-    await storageSet(CR_INDEX_KEY, JSON.stringify(creaturesIndex), 1, true);
+    return crStorageSet(CR_INDEX_KEY, JSON.stringify(creaturesIndex));
   }
 
   function renderCreatureList(){
     const list = document.getElementById("creature_list");
     if(!list) return;
+    const count = document.getElementById("cr_list_count");
     if(creaturesIndex.length === 0){
       list.innerHTML = '<div class="empty-state">Nenhuma criatura registrada ainda.</div>';
+      if(count) count.textContent = "0 criaturas registradas";
       return;
     }
-    const sorted = [...creaturesIndex].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+    const query = (document.getElementById("cr_list_search")?.value || "")
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+    const sort = document.getElementById("cr_list_sort")?.value || "recentes";
+    const normalized = v => String(v || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    const sorted = creaturesIndex.filter(entry => !query || normalized(entry.nome).includes(query))
+      .sort((a,b) => sort === "nome"
+        ? String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR")
+        : (Number(b.updatedAt) || 0) - (Number(a.updatedAt) || 0));
+    if(count) count.textContent = `${sorted.length} de ${creaturesIndex.length} ${creaturesIndex.length === 1 ? "criatura" : "criaturas"}`;
+    if(!sorted.length){
+      list.innerHTML = '<div class="empty-state">Nenhuma criatura corresponde à pesquisa.</div>';
+      return;
+    }
     list.innerHTML = "";
     sorted.forEach(entry => {
       const card = document.createElement("div");
@@ -228,9 +335,9 @@
         <div class="sheet-card-name">${esc(entry.nome || "Criatura sem nome")}</div>
         <div class="cr-list-tag">Criatura</div>
         <div class="sheet-card-actions">
-          <button data-cr-open="${entry.id}">Abrir</button>
-          <button data-cr-dup="${entry.id}">Duplicar</button>
-          <button class="entry-del" data-cr-del="${entry.id}">Excluir</button>
+          <button data-cr-open="${esc(entry.id)}">Abrir</button>
+          <button data-cr-dup="${esc(entry.id)}">Duplicar</button>
+          <button class="entry-del" data-cr-del="${esc(entry.id)}">Excluir</button>
         </div>
       `;
       list.appendChild(card);
@@ -257,19 +364,30 @@
     document.getElementById("creature_sheet_screen").style.display = "block";
   }
   function backToSecretFiles(){
-    hideAllCreatureAndSecretScreens();
-    document.getElementById("secret_files_screen").style.display = "block";
+    window.CRISCreatureNav.open("minhas");
   }
 
   /* ---------- CRUD ---------- */
   async function createNewCreature(){
+    if(!await flushCrBeforeSwitch()) return;
+    clearTimeout(crAutosaveTimer);
     await loadCreaturesIndex();
     const id = genCreatureId();
+    if(!await crStorageSet(crSheetKey(id), "{}")){
+      if(typeof flashIndicator === "function") flashIndicator("✕ Não foi possível criar a ficha: armazenamento indisponível.", true, 4200);
+      return false;
+    }
+    creaturesIndex.push({ id, nome: "Criatura sem nome", updatedAt: Date.now() });
+    if(!await saveCreaturesIndex()){
+      creaturesIndex = creaturesIndex.filter(entry => entry.id !== id);
+      await storageDeleteKey(crSheetKey(id));
+      if(typeof flashIndicator === "function") flashIndicator("✕ Não foi possível criar a ficha: armazenamento indisponível.", true, 4200);
+      return false;
+    }
     currentCreatureId = id;
+    crDirty = false;
     buildAllCrGrids();
     clearCreatureForm();
-    creaturesIndex.push({ id, nome: "Criatura sem nome", updatedAt: Date.now() });
-    await saveCreaturesIndex();
     // ETAPA 5.2B — cloud: cria o registro em public.creatures com o
     // MESMO id local, se houver sessão válida. Nunca bloqueia a
     // criação local nem apaga nada se a nuvem falhar (ver
@@ -278,7 +396,8 @@
       try { await window.CRISCreaturesSync.syncCreatureToCloud(id, "Criatura sem nome", {}); }
       catch (e) { console.error("[Criaturas] Erro ao sincronizar criação com a nuvem:", e); }
     }
-    await crAutoBackup("Criação de criatura", true);
+    // A ficha vazia já está salva. Um backup completo aqui pode ocupar o
+    // espaço necessário para a primeira edição; backups seguem nos saves.
     if (typeof window.CRISCreaturesSync === "object" && window.CRISCreaturesSync && typeof window.CRISCreaturesSync.refreshBadge === "function") {
       window.CRISCreaturesSync.refreshBadge(id);
     }
@@ -286,9 +405,12 @@
   }
 
   async function openCreature(id){
+    if(currentCreatureId !== id && !await flushCrBeforeSwitch()) return false;
+    clearTimeout(crAutosaveTimer);
     await loadCreaturesIndex();
     buildAllCrGrids();
     currentCreatureId = id;
+    crDirty = false;
     const raw = await storageGet(crSheetKey(id));
     clearCreatureForm();
     if(raw){
@@ -300,8 +422,21 @@
         });
       }catch(e){}
     }
+    const pendingDraft = getPendingDraft(id);
+    if(pendingDraft){
+      Object.keys(pendingDraft).forEach(fid => {
+        const field = document.getElementById(fid);
+        if(field) field.value = pendingDraft[fid];
+      });
+      crDirty = true;
+      scheduleCrAutosave();
+    }
     applyPhotoFromField();
     fallbackCrSkillAtualFromMax();
+    CR_ALL_SKILLS.forEach(([skillId]) => {
+      const input = document.getElementById(skillId);
+      if(input) crSkillMaxBaseline.set(input, input.value);
+    });
     updateAllCrDiceTiers();
     // ETAPA 5.2B — só atualiza o indicador (☁) com o último estado
     // conhecido; não faz nenhuma chamada de rede aqui.
@@ -309,49 +444,113 @@
       window.CRISCreaturesSync.refreshBadge(id);
     }
     showCreatureSheetScreen();
+    return true;
   }
 
-  let __creatureSaveInFlight = false;
-  async function saveCreature(){
-    if(!currentCreatureId || __creatureSaveInFlight) return;
-    __creatureSaveInFlight = true;
+  async function saveCreature(isAutosave){
+    if(!currentCreatureId) return false;
+    if(crSavePromise){
+      await crSavePromise;
+      if(crDirty) return saveCreature(isAutosave);
+      return true;
+    }
+    const savedId = currentCreatureId;
+    const savedRevision = crRevision;
     const btn = document.getElementById("cr_btn_save");
     const originalLabel = btn ? btn.textContent : "";
-    if(btn){ btn.disabled = true; btn.textContent = "Salvando…"; }
+    if(btn && !isAutosave){ btn.disabled = true; btn.textContent = "Salvando…"; }
+    const operation = (async () => {
     try{
       const data = {};
       crFieldIds().forEach(id => data[id] = document.getElementById(id).value);
-      const res = await storageSet(crSheetKey(currentCreatureId), JSON.stringify(data), 1, true);
+      const res = await crStorageSet(crSheetKey(savedId), JSON.stringify(data));
       if(res){
-        const idx = creaturesIndex.findIndex(e => e.id === currentCreatureId);
+        const idx = creaturesIndex.findIndex(e => e.id === savedId);
         const nome = (data.cr_nome || "").trim() || "Criatura sem nome";
         if(idx >= 0){
           creaturesIndex[idx].nome = nome;
           creaturesIndex[idx].updatedAt = Date.now();
         } else {
-          creaturesIndex.push({ id: currentCreatureId, nome, updatedAt: Date.now() });
+          creaturesIndex.push({ id: savedId, nome, updatedAt: Date.now() });
         }
-        await saveCreaturesIndex();
-        if(typeof flashIndicator === "function") flashIndicator("✓ Criatura salva com sucesso!", false, 2500);
-        await crAutoBackup("Salvamento da criatura", false);
+        const indexSaved = await saveCreaturesIndex();
+        if(!indexSaved) console.warn("[Criaturas] Ficha salva; nome na lista será atualizado no próximo salvamento.");
+        if(currentCreatureId === savedId && crRevision === savedRevision) crDirty = false;
+        crPendingDrafts.delete(savedId);
+        try{ sessionStorage.removeItem(crDraftKey(savedId)); }catch(e){}
+        if(!isAutosave && typeof flashIndicator === "function") flashIndicator(indexSaved ? "✓ Criatura salva com sucesso!" : "✓ Ficha salva. O nome na lista será atualizado depois.", !indexSaved, 3000);
+        if(!isAutosave) await crAutoBackup("Salvamento da criatura", false);
         // ETAPA 5.2B — cloud: só roda DEPOIS que o storageSet local já
         // confirmou sucesso (res). Nunca é chamado se o salvamento
         // local falhar; nunca apaga/reverte o dado local se a nuvem
         // falhar (ver js/creatures-sync.js).
         if (typeof window.CRISCreaturesSync === "object" && window.CRISCreaturesSync) {
-          try { await window.CRISCreaturesSync.syncCreatureToCloud(currentCreatureId, nome, data); }
+          try { await window.CRISCreaturesSync.syncCreatureToCloud(savedId, nome, data); }
           catch (e) { console.error("[Criaturas] Erro ao sincronizar salvamento com a nuvem:", e); }
         }
+        return true;
       } else {
-        if(typeof flashIndicator === "function") flashIndicator("✕ Não foi possível salvar a criatura. Tente novamente.", true, 3000);
+        if(!isAutosave && typeof flashIndicator === "function") flashIndicator("✕ Não foi possível salvar a criatura. Tente novamente.", true, 3000);
+        return false;
       }
     }catch(e){
-      if(typeof flashIndicator === "function") flashIndicator("✕ Não foi possível salvar a criatura. Tente novamente.", true, 3000);
+      console.error("[Criaturas] Erro ao salvar:", e);
+      if(!isAutosave && typeof flashIndicator === "function") flashIndicator("✕ Não foi possível salvar a criatura. Tente novamente.", true, 3000);
+      return false;
     }finally{
-      if(btn){ btn.disabled = false; btn.textContent = originalLabel; }
-      __creatureSaveInFlight = false;
+      if(btn && !isAutosave){ btn.disabled = false; btn.textContent = originalLabel; }
+    }
+    })();
+    crSavePromise = operation;
+    let succeeded = false;
+    try{ succeeded = await operation; return succeeded; }
+    finally{
+      if(crSavePromise === operation) crSavePromise = null;
+      if(succeeded && crDirty && currentCreatureId === savedId) scheduleCrAutosave();
     }
   }
+
+  // Entrada usada pelo importador de PDF. Mantém a mesma estrutura de dados,
+  // índice e sincronização das criaturas criadas pela interface.
+  window.CRISCreatureSheets = window.CRISCreatureSheets || {};
+  window.CRISCreatureSheets.importFromPdf = async function(data){
+    if(!data || typeof data !== "object" || !Object.keys(data).length){
+      throw new Error("Nenhum campo de criatura foi reconhecido.");
+    }
+    // Uma falha ao salvar a ficha antiga não pode impedir a criação de
+    // um registro novo. Mantém a ficha antiga intacta e aberta nesse caso.
+    const canSwitch = await flushCrBeforeSwitch(true);
+    await loadCreaturesIndex();
+    buildAllCrGrids();
+    const allowed = new Set(crFieldIds());
+    const clean = {};
+    Object.keys(data).forEach(id => {
+      if(allowed.has(id) && typeof data[id] === "string") clean[id] = data[id];
+    });
+    if(!Object.keys(clean).length) throw new Error("Nenhum campo compatível foi reconhecido.");
+    const id = genCreatureId();
+    const nome = (clean.cr_nome || "").trim() || "Criatura sem nome";
+    const saved = await storageSet(crSheetKey(id), JSON.stringify(clean), 1, true);
+    if(!saved) throw new Error("Não foi possível salvar a criatura importada.");
+    creaturesIndex.push({ id, nome, updatedAt: Date.now() });
+    try{
+      const indexSaved = await storageSet(CR_INDEX_KEY, JSON.stringify(creaturesIndex), 1, true);
+      if(!indexSaved) throw new Error("Não foi possível atualizar a lista de criaturas.");
+    }catch(e){
+      creaturesIndex = creaturesIndex.filter(entry => entry.id !== id);
+      await storageDeleteKey(crSheetKey(id));
+      throw e;
+    }
+    try{ await crAutoBackup("Importação de criatura em PDF", true); }
+    catch(e){ console.error("[Criaturas] Backup após importação:", e); }
+    if(window.CRISCreaturesSync && typeof window.CRISCreaturesSync.syncCreatureToCloud === "function"){
+      try{ await window.CRISCreaturesSync.syncCreatureToCloud(id, nome, clean); }
+      catch(e){ console.error("[Criaturas] Sincronização após importação:", e); }
+    }
+    if(!canSwitch) preserveCurrentDraft();
+    const opened = await openCreature(id);
+    return { id, opened: !!opened, previousPending: !canSwitch };
+  };
 
   async function duplicateCreature(id){
     const raw = await storageGet(crSheetKey(id));
@@ -396,7 +595,8 @@
      guardados e não passa por este listener, então não dispara a regra. */
   function syncCrSkillAtualOnMaxInput(maxEl){
     const atualEl = document.getElementById(maxEl.id + "_atual");
-    if(atualEl) atualEl.value = maxEl.value;
+    if(!atualEl) return;
+    if(atualEl.value === "") atualEl.value = maxEl.value;
   }
 
   /* Migração leve para fichas salvas antes desta correção: elas só têm o
@@ -466,6 +666,9 @@
     const cardMinhas = document.getElementById("secret_card_minhas");
     if(cardCriar) cardCriar.addEventListener("click", () => { createNewCreature(); });
     if(cardMinhas) cardMinhas.addEventListener("click", () => { showCreatureListScreen(); });
+    const listSearchHandler = typeof debounce === "function" ? debounce(renderCreatureList, 150) : renderCreatureList;
+    document.getElementById("cr_list_search")?.addEventListener("input", listSearchHandler);
+    document.getElementById("cr_list_sort")?.addEventListener("change", renderCreatureList);
 
     // Minhas Criaturas → Voltar (Arquivos Secretos)
     const listBack = document.getElementById("creature_list_back_btn");
@@ -479,14 +682,37 @@
 
     // Salvar
     const btnSave = document.getElementById("cr_btn_save");
-    if(btnSave) btnSave.addEventListener("click", saveCreature);
+    if(btnSave) btnSave.addEventListener("click", () => saveCreature(false));
 
     // Dado (4/6/8/12/20) + regra ATUAL/MÁX. reagem ao campo Máx. de cada skill
-    document.getElementById("creature_sheet_screen")?.addEventListener("input", (e) => {
+    const creatureScreen = document.getElementById("creature_sheet_screen");
+    creatureScreen?.addEventListener("focusin", (e) => {
+      if(e.target && e.target.dataset && e.target.dataset.crSkill){
+        crSkillMaxBaseline.set(e.target, e.target.value);
+      }
+    });
+    creatureScreen?.addEventListener("input", (e) => {
       if(e.target && e.target.dataset && e.target.dataset.crSkill){
         updateCrDiceTiers(e.target.id);
         syncCrSkillAtualOnMaxInput(e.target);
       }
+      if(e.target && e.target.id && e.target.matches("input, textarea, select")) markCrDirty();
+    });
+    creatureScreen?.addEventListener("change", (e) => {
+      const maxEl = e.target;
+      if(!maxEl || !maxEl.dataset || !maxEl.dataset.crSkill) return;
+      const previous = Number(crSkillMaxBaseline.get(maxEl));
+      const next = Number(maxEl.value);
+      const atualEl = document.getElementById(maxEl.id + "_atual");
+      if(atualEl && maxEl.value !== "" && Number.isFinite(previous) && Number.isFinite(next) && next > previous && atualEl.value !== ""){
+        const atual = Number(atualEl.value);
+        if(Number.isFinite(atual)) atualEl.value = String(Math.min(next, atual + next - previous));
+      }
+      if(atualEl && maxEl.value !== "" && Number.isFinite(next) && Number(atualEl.value) > next){
+        atualEl.value = String(next);
+      }
+      crSkillMaxBaseline.set(maxEl, maxEl.value);
+      markCrDirty();
     });
 
     // Exclusão (modal próprio — não reaproveita #delete_modal dos Agentes)
@@ -510,6 +736,12 @@
       // retry automático.
       await crAutoBackup("Antes de excluir criatura", true);
       await storageDeleteKey(crSheetKey(id));
+      if(currentCreatureId === id){
+        clearTimeout(crAutosaveTimer);
+        currentCreatureId = null;
+        crDirty = false;
+      }
+      crPendingDrafts.delete(id);
       creaturesIndex = creaturesIndex.filter(e => e.id !== id);
       await saveCreaturesIndex();
       renderCreatureList();
@@ -555,4 +787,9 @@
       loadCreaturesIndex().then(renderCreatureList);
     }
   };
+  window.CRISCreatureSheets = window.CRISCreatureSheets || {};
+  window.CRISCreatureSheets.getCurrentId = function(){ return currentCreatureId; };
+  // Navegação entre áreas: confirma o salvamento local antes de sair da ficha.
+  window.CRISCreatureSheets.beforeLeave = safeLeaveCreature;
+  window.CRISCreatureSheets.save = saveCreature;
 })();

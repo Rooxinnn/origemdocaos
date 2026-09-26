@@ -212,6 +212,9 @@
     {nome:"Ocultismo — 50 — Paranormal Original", desc:"ATK C, DEF C e DESV O ganham bônus de +5. A criatura tem Vantagem em qualquer rolagem de Ocultismo, e qualquer ação de ATK C, DEF C ou DESV O consome apenas metade do P.B. necessário.", fonte:"OdC v1.0.3 — p. 514"}
   ];
 
+  // A ficha consulta esta mesma lista para desbloquear habilidades em 50.
+  window.CRRCreature50 = CRR_HABILIDADES_50;
+
   const CRR_CATEGORIES = [
     {key:"RegrasGerais",  label:"Regras Gerais",         items: CRR_REGRAS_GERAIS},
     {key:"Infeccao",      label:"Infecção",               items: CRR_INFECCAO},
@@ -358,9 +361,7 @@
   }
 
   function backToSecretFilesFromCrr(){
-    hideAllCrrAndOtherScreens();
-    const el = document.getElementById("secret_files_screen");
-    if(el) el.style.display = "block";
+    window.CRISCreatureNav.open("minhas");
   }
 
   /* ---------------------------------------------------------
