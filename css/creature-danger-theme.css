@@ -68,3 +68,76 @@
 #creature_regras_screen .compendio-card::before{
   background:#934337;
 }
+
+/* Ações do compêndio e da ficha, sem mudar a grade do catálogo. */
+#creature_compendio_screen .cpd-card-action{
+  flex-direction:column;
+  justify-content:center;
+  gap:6px;
+  padding:9px 14px;
+}
+#creature_compendio_screen .cpd-card-btn{
+  width:100%;
+  min-height:32px;
+  padding:6px 12px;
+  letter-spacing:.07em;
+}
+#creature_compendio_screen .cpd-card-secondary{
+  border-color:var(--line);
+  color:var(--paper-dim);
+}
+#creature_compendio_screen .cpd-card-remove{
+  border-color:#6a3931;
+  color:#d2a79b;
+}
+.cpd-detail-actions{
+  display:flex;
+  justify-content:flex-end;
+  gap:8px;
+  flex-wrap:wrap;
+  margin:0 0 16px;
+}
+.cpd-detail-actions button,#creature_sheet_screen .cr-catalog-action{
+  background:#32211d;
+  border:1px solid #8a3a2a;
+  color:var(--paper);
+  padding:9px 14px;
+  cursor:pointer;
+}
+.cpd-detail-actions button:hover,#creature_sheet_screen .cr-catalog-action:hover{
+  background:#462720;
+  border-color:#c0522f;
+}
+#creature_sheet_screen #cr_btn_catalog_remove{
+  background:transparent;
+  color:#d4aa9e;
+}
+:is(#cr_btn_catalog_remove,#cpd_reg_remove,#crf_remove)[hidden]{display:none;}
+:is(#creature_registro_screen,#creature_ficha_completa_screen) .crf-plain-text,
+#creature_ficha_completa_screen .crf-accordion-body{white-space:pre-wrap;}
+
+#cr_catalog_modal .cr-catalog-modal-box{
+  max-width:460px;
+  text-align:left;
+  background:#1b1513;
+  border-color:#6b3930;
+  border-radius:2px;
+}
+#cr_catalog_modal h2{margin:0 0 8px;color:var(--paper);font-size:18px;text-transform:uppercase;}
+#cr_catalog_modal p{color:var(--paper-dim);}
+#cr_catalog_modal .cr-catalog-note{font-size:11px;line-height:1.6;margin:12px 0;}
+#cr_catalog_modal .cr-catalog-details{border-top:1px solid #503329;margin:14px 0;padding-top:12px;}
+#cr_catalog_modal summary{color:#d3b9a9;font:600 12px 'Oswald',sans-serif;cursor:pointer;}
+#cr_catalog_modal label{display:block;margin:12px 0 5px;color:#bfa99d;font-size:11px;text-transform:uppercase;}
+#cr_catalog_modal :is(input,select,textarea){
+  box-sizing:border-box;
+  width:100%;
+  padding:9px 11px;
+  background:#271b18;
+  border:1px solid #503329;
+  border-radius:2px;
+  color:var(--paper);
+}
+#cr_catalog_modal textarea{resize:vertical;}
+#cr_catalog_modal button{border-radius:2px;}
+#cr_catalog_modal button.primary{background:#3b231e;border-color:#c0522f;}

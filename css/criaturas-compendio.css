@@ -90,6 +90,10 @@
   gap:14px;
   margin-bottom:34px;
 }
+.cpd-refresh{align-self:center;background:var(--panel-2);border:1px solid var(--line);
+  color:var(--paper-dim);padding:8px 14px;cursor:pointer;font:11px 'Oswald',sans-serif;
+  letter-spacing:.08em;text-transform:uppercase;}
+.cpd-refresh:hover,.cpd-refresh:focus-visible{color:var(--paper);border-color:var(--amber-bright);}
 
 .cpd-search-box{
   position:relative;
