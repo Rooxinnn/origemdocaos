@@ -1489,9 +1489,66 @@
 
     <div class="action-bar">
       <button class="save-agent-btn" id="cr_btn_save">💾 Salvar Criatura</button>
+      <button type="button" id="cr_btn_catalog" class="cr-catalog-action">+ Adicionar ao Compêndio</button>
+      <button type="button" id="cr_btn_catalog_remove" class="cr-catalog-action" hidden>Retirar do Compêndio</button>
       <span id="creature_cloud_sync_badge" class="cloud-sync-badge" title="Estado da sincronização com a nuvem"></span>
     </div>
+    <input type="hidden" id="cr_catalogado">
+    <input type="hidden" id="cr_catalogo_dimensao">
+    <input type="hidden" id="cr_catalogo_tipo">
+    <input type="hidden" id="cr_catalogo_descricao">
+    <input type="hidden" id="cr_catalogo_comportamento">
+    <input type="hidden" id="cr_catalogo_origem">
+    <input type="hidden" id="cr_catalogo_curiosidades">
+    <input type="hidden" id="cr_catalogo_relacao">
+    <input type="hidden" id="cr_catalogo_resistencias">
+    <input type="hidden" id="cr_catalogo_imunidades">
 
+  </div>
+</div>
+
+<div class="modal-overlay" id="cr_catalog_modal" role="dialog" aria-modal="true" aria-labelledby="cr_catalog_modal_title">
+  <div class="modal-box cr-catalog-modal-box">
+    <h2 id="cr_catalog_modal_title">Catalogar criatura</h2>
+    <p>Escolha como esta criatura aparecerá no seu compêndio.</p>
+    <label for="cr_catalog_modal_dim">Dimensão</label>
+    <select id="cr_catalog_modal_dim" required>
+      <option value="">Selecione uma dimensão</option>
+      <option value="infernal">Infernal</option>
+      <option value="arkanjerial">Arkanjerial</option>
+      <option value="terrena">Terrena</option>
+      <option value="carnical">Carnical</option>
+      <option value="sombria">Sombria</option>
+      <option value="perdicao">Perdição</option>
+      <option value="limbica">Límbica</option>
+    </select>
+    <label for="cr_catalog_modal_tipo">Tipo</label>
+    <input type="text" id="cr_catalog_modal_tipo" placeholder="Ex.: Raposa, Entidade, Aberração">
+    <p class="cr-catalog-note">Ataques sem custo de PB vão para Ações; poderes que gastam PB vão para Habilidades; passivas e habilidades de 50 pontos vão para Passivas, mesmo quando gastam PB. Separe entradas do texto livre com uma linha em branco.</p>
+    <details class="cr-catalog-details">
+      <summary>Resistências e imunidades (opcional)</summary>
+      <label for="cr_catalog_modal_resistencias">Resistências</label>
+      <textarea id="cr_catalog_modal_resistencias" rows="2" placeholder="Ex.: resistência ao fogo"></textarea>
+      <label for="cr_catalog_modal_imunidades">Imunidades</label>
+      <textarea id="cr_catalog_modal_imunidades" rows="2" placeholder="Uma por linha ou separadas por vírgula"></textarea>
+    </details>
+    <details class="cr-catalog-details">
+      <summary>Descrição da ficha catalogada (opcional)</summary>
+      <label for="cr_catalog_modal_desc">Aparência</label>
+      <textarea id="cr_catalog_modal_desc" rows="2" placeholder="Como é a criatura"></textarea>
+      <label for="cr_catalog_modal_behavior">Comportamento</label>
+      <textarea id="cr_catalog_modal_behavior" rows="2"></textarea>
+      <label for="cr_catalog_modal_origin">Origem</label>
+      <textarea id="cr_catalog_modal_origin" rows="2"></textarea>
+      <label for="cr_catalog_modal_curiosities">Curiosidades</label>
+      <textarea id="cr_catalog_modal_curiosities" rows="2"></textarea>
+      <label for="cr_catalog_modal_relation">Relação com a Dimensão</label>
+      <textarea id="cr_catalog_modal_relation" rows="2"></textarea>
+    </details>
+    <div class="modal-actions">
+      <button type="button" id="cr_catalog_cancel">Cancelar</button>
+      <button type="button" id="cr_catalog_confirm" class="primary">Salvar no Compêndio</button>
+    </div>
   </div>
 </div>
 
@@ -1520,6 +1577,7 @@
     </div>
 
     <div class="cpd-toolbar">
+      <button type="button" id="cpd_refresh" class="cpd-refresh">↻ Atualizar compêndio</button>
       <div class="cpd-search-box">
         <span class="cpd-search-icon">⌕</span>
         <input type="text" id="cpd_search" placeholder="Buscar criatura pelo nome…" autocomplete="off">
@@ -1561,6 +1619,10 @@
         </div>
       </div>
     </div>
+    <div class="cpd-detail-actions">
+      <button type="button" id="cpd_reg_convert">Criar ficha editável</button>
+      <button type="button" id="cpd_reg_remove" hidden>Retirar do Compêndio</button>
+    </div>
 
   </div>
 </div>
@@ -1581,6 +1643,13 @@
         <div class="crf-nivel-line" id="crf_nivel"></div>
       </div>
     </div>
+    <div class="cpd-detail-actions">
+      <button type="button" id="crf_convert">Criar ficha editável</button>
+      <button type="button" id="crf_edit" hidden>Editar minha criatura</button>
+      <button type="button" id="crf_image_button" hidden>Adicionar imagem</button>
+      <input type="file" id="crf_image_input" accept="image/*" hidden aria-label="Escolher imagem da criatura">
+      <button type="button" id="crf_remove" hidden>Retirar do Compêndio</button>
+    </div>
     <div class="crf-tabs" aria-label="Seções da ficha catalogada">
       <button type="button" class="crf-tab-btn" data-crf-tab="status">Status</button>
       <button type="button" class="crf-tab-btn" data-crf-tab="poderes">Poderes</button>
@@ -1589,6 +1658,14 @@
     <div class="crf-panel" id="crf_panel_status"></div>
     <div class="crf-panel" id="crf_panel_poderes" style="display:none;"></div>
     <div class="crf-panel" id="crf_panel_descricao" style="display:none;"></div>
+  </div>
+</div>
+<div id="crf_detail_modal" class="crf-detail-modal" hidden role="dialog" aria-modal="true" aria-labelledby="crf_detail_title" aria-describedby="crf_detail_text">
+  <div class="crf-detail-card">
+    <div class="crf-detail-top"><span id="crf_detail_category"></span><button type="button" id="crf_detail_close" aria-label="Fechar detalhes">×</button></div>
+    <h2 id="crf_detail_title"></h2>
+    <div class="crf-detail-rule"></div>
+    <div id="crf_detail_text" class="crf-detail-text"></div>
   </div>
 </div>
 
@@ -7915,6 +7992,7 @@ const ORIGINAL_PDF_BASE64 = "JVBERi0xLjYNJeLjz9MNCjIxMTMgMCBvYmoNPDwvRmlsdGVyL0Z
 <script src="js/equipamentos-custom-destaque.js"></script>
 <script src="js/condicoes-ativas-agente.js"></script>
 <script src="js/criaturas.js"></script>
+<script src="js/creature-public-catalog.js"></script>
 <script src="js/criaturas-compendio.js"></script>
 <script src="js/criaturas-ficha.js"></script>
 <script src="js/criaturas-regras.js"></script>

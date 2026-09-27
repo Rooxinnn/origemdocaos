@@ -226,7 +226,25 @@
           sincronização conhecida (provável edição em outro
           dispositivo), NÃO sobrescreve — marca conflito pendente.
      ============================================================ */
-  async function syncSheetToCloud(localId, agentData) {
+  // Autosave e fila podem solicitar o envio da mesma ficha ao mesmo tempo.
+  // A verificação de updated_at precisa esperar o envio anterior terminar,
+  // inclusive a gravação do metadado local que confirma a nova versão.
+  const sheetSyncFlights = new Map();
+  function syncSheetToCloud(localId, agentData) {
+    const previous = sheetSyncFlights.get(localId);
+    const generation = currentGeneration();
+    const run = (previous ? previous.catch(() => {}) : Promise.resolve()).then(() => {
+      if (generation !== currentGeneration()) return { ok: false, stale: true };
+      return syncSheetToCloudOnce(localId, agentData);
+    });
+    sheetSyncFlights.set(localId, run);
+    run.finally(() => {
+      if (sheetSyncFlights.get(localId) === run) sheetSyncFlights.delete(localId);
+    }).catch(() => {});
+    return run;
+  }
+
+  async function syncSheetToCloudOnce(localId, agentData) {
     const client = getClient();
     if (!client) {
       setBadge("offline");
@@ -276,6 +294,13 @@
     };
 
     const meta = await readCloudMeta(localId);
+
+    // O primeiro conflito já abriu a resolução. Autosaves seguintes
+    // continuam locais, sem reabrir o mesmo popup nem sobrescrever a nuvem.
+    if (meta && meta.conflict) {
+      setBadge("conflict");
+      return { ok: false, conflict: true };
+    }
 
     try {
       if (meta && meta.cloudId) {

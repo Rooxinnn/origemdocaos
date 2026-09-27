@@ -270,7 +270,24 @@
     return { status: e.status || (e.originalError && e.originalError.status) || null, code: e.code || null, message: e.message || String(e) };
   }
 
-  async function syncCreatureToCloud(localId, name, dataObj) {
+  // Impede que autosave e fila tratem o UPDATE anterior desta mesma
+  // criatura como uma alteração feita em outro dispositivo.
+  const creatureSyncFlights = new Map();
+  function syncCreatureToCloud(localId, name, dataObj) {
+    const previous = creatureSyncFlights.get(localId);
+    const generation = currentGeneration();
+    const run = (previous ? previous.catch(() => {}) : Promise.resolve()).then(() => {
+      if (generation !== currentGeneration()) return { ok: false, stale: true };
+      return syncCreatureToCloudOnce(localId, name, dataObj);
+    });
+    creatureSyncFlights.set(localId, run);
+    run.finally(() => {
+      if (creatureSyncFlights.get(localId) === run) creatureSyncFlights.delete(localId);
+    }).catch(() => {});
+    return run;
+  }
+
+  async function syncCreatureToCloudOnce(localId, name, dataObj) {
     const client = getClient();
     if (!client) {
       setBadge("offline");
@@ -286,6 +303,10 @@
 
     setBadge("syncing");
     const meta = await readCloudMeta(localId);
+    if (meta && meta.conflict) {
+      setBadge("conflict");
+      return { ok: false, conflict: true };
+    }
     const safeName = (name || "").trim() || "Criatura sem nome";
     const safeData = dataObj && typeof dataObj === "object" ? dataObj : {};
 
@@ -535,6 +556,7 @@
         window.flashIndicator("☁ " + cloudOnly.length + " criatura(s) carregada(s) da nuvem.", false, 3200);
       }
       if (typeof window.renderCreatureListIfVisible === "function") window.renderCreatureListIfVisible();
+      if (typeof window.CPD_refreshIfVisible === "function") window.CPD_refreshIfVisible();
     }
 
     if (genAtLogin !== currentGeneration()) { logGenStale("onLogin (antes da seção 'linked')"); return; }

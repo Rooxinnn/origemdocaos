@@ -100,6 +100,7 @@
   const crPendingDrafts = new Map();
   const crSkillMaxBaseline = new WeakMap();
   const CR_DRAFT_PREFIX = "criaturas:rascunho:";
+  const CR_CATALOG_DIMS = new Set(["infernal","arkanjerial","terrena","carnical","sombria","perdicao","limbica"]);
 
   // Backups automáticos são cópias auxiliares. Se o navegador estiver sem
   // espaço, libera os mais antigos antes de desistir de gravar uma ficha ou
@@ -188,6 +189,7 @@
   }
 
   function crSheetKey(id){ return "criatura:sheet:" + id; }
+  function crText(v){ return v === null || v === undefined || v === "—" ? "" : String(v); }
   function genCreatureId(){
     return "criatura_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8);
   }
@@ -274,6 +276,15 @@
     if(preview){ preview.style.display = "none"; preview.src = ""; }
     if(placeholder) placeholder.style.display = "block";
     updateAllCrDiceTiers();
+    refreshCrCatalogAction();
+  }
+
+  function refreshCrCatalogAction(){
+    const cataloged = document.getElementById("cr_catalogado")?.value === "1";
+    const add = document.getElementById("cr_btn_catalog");
+    const remove = document.getElementById("cr_btn_catalog_remove");
+    if(add) add.textContent = cataloged ? "Editar no Compêndio" : "+ Adicionar ao Compêndio";
+    if(remove) remove.hidden = !cataloged;
   }
 
   function applyPhotoFromField(){
@@ -352,11 +363,14 @@
     const ids = ["secret_files_screen", "creature_list_screen", "creature_sheet_screen"];
     ids.forEach(id => { const el = document.getElementById(id); if(el) el.style.display = "none"; });
   }
-  function showCreatureListScreen(){
+  async function showCreatureListScreen(){
     hideAllCreatureAndSecretScreens();
     document.getElementById("welcome_screen").style.display = "none";
-    renderCreatureList();
     document.getElementById("creature_list_screen").style.display = "block";
+    // A lista em memória nasce vazia a cada atualização da página.
+    // Releia o índice persistido também ao entrar pelo menu inicial.
+    await loadCreaturesIndex();
+    renderCreatureList();
   }
   function showCreatureSheetScreen(){
     hideAllCreatureAndSecretScreens();
@@ -431,6 +445,7 @@
       crDirty = true;
       scheduleCrAutosave();
     }
+    refreshCrCatalogAction();
     applyPhotoFromField();
     fallbackCrSkillAtualFromMax();
     CR_ALL_SKILLS.forEach(([skillId]) => {
@@ -461,7 +476,20 @@
     if(btn && !isAutosave){ btn.disabled = true; btn.textContent = "Salvando…"; }
     const operation = (async () => {
     try{
-      const data = {};
+      // Conserve campos de versões anteriores que esta interface ainda não
+      // conhece. A ficha publicada pode ganhar/perder campos visuais sem
+      // descartar informações já salvas ao editar um campo conhecido.
+      const previousRaw = await storageGet(crSheetKey(savedId));
+      let data = {};
+      let wasCataloged = false;
+      if(previousRaw){
+        const previous = JSON.parse(previousRaw);
+        if(!previous || typeof previous !== "object" || Array.isArray(previous)){
+          throw new Error("A ficha existente tem um formato inválido; salvamento interrompido para preservar os dados.");
+        }
+        data = previous;
+        wasCataloged = previous.cr_catalogado === "1";
+      }
       crFieldIds().forEach(id => data[id] = document.getElementById(id).value);
       const res = await crStorageSet(crSheetKey(savedId), JSON.stringify(data));
       if(res){
@@ -488,6 +516,13 @@
           try { await window.CRISCreaturesSync.syncCreatureToCloud(savedId, nome, data); }
           catch (e) { console.error("[Criaturas] Erro ao sincronizar salvamento com a nuvem:", e); }
         }
+        if(window.CRISCreatureCatalog){
+          const published = data.cr_catalogado === "1"
+            ? await window.CRISCreatureCatalog.publish(savedId,data)
+            : wasCataloged ? await window.CRISCreatureCatalog.unpublish(savedId) : {ok:true};
+          if(!published.ok && !isAutosave && typeof flashIndicator === "function")
+            flashIndicator("Ficha salva neste dispositivo. A atualização do compêndio público está pendente.",true,4500);
+        }
         return true;
       } else {
         if(!isAutosave && typeof flashIndicator === "function") flashIndicator("✕ Não foi possível salvar a criatura. Tente novamente.", true, 3000);
@@ -510,10 +545,389 @@
     }
   }
 
+  function crHasPbCost(value){
+    const text = crText(value);
+    // Ganhos de PB e descontos no custo não transformam uma passiva em habilidade ativa.
+    return /(?:\bP\.?B\.?\s*(?:[:=]\s*)?[1-9]\d*\b|\b(?:gasta|gastar|gastando|consome|consumir|consumindo|custa|custo)\s+\d+\s*P\.?B\.?\b|(?<![+\d])\b\d+\s*P\.?B\.?(?!\w))/i.test(text) &&
+      !/^(?:ganha|recupera|restaura)\s*\+?\d+\s*P\.?B\.?\s*$/i.test(text.trim());
+  }
+
+  function crIsFiftyPower(item){
+    const name = crText(item && item.nome).trim();
+    if(/[—–-]\s*50\s*[—–-]|\b50\s+pontos?\b/i.test(name)) return true;
+    const normalize = value => crText(value).normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .toLocaleLowerCase("pt-BR").trim();
+    const key = normalize(name);
+    return !!key && (window.CRRCreature50 || []).some(rule => {
+      const title = crText(rule.nome);
+      return key === normalize(title) || key === normalize(title.split(" — 50 — ").pop());
+    });
+  }
+
+  function crSplitPowerBlocks(text){
+    const blocks = [];
+    let current = "";
+    crText(text).split("\n").forEach(line => {
+      const trimmed = line.trim();
+      // O campo do PDF costuma trazer vários golpes em linhas consecutivas,
+      // sem parágrafos em branco. Cabeçalhos de golpe e marcadores iniciam
+      // uma entrada; linhas comuns continuam a descrição anterior.
+      const bullet = /^[-•*]\s*\S/.test(trimmed);
+      const attack = /^[^|:\n]{2,90}\s*\|\s*(?:ATK|DEF|DESV)\b/i.test(trimmed);
+      const named = /^[^:—–|\n]{2,75}\s+[—–]\s+\S/.test(trimmed) &&
+        !/^(?:Dano|Efeito|Consumo|Condição|Consequência|Aprimorar)\s+[—–]/i.test(trimmed);
+      if(current && (bullet || attack || named)){
+        blocks.push(current.trim());
+        current = "";
+      }
+      current += (current ? "\n" : "") + line;
+    });
+    if(current.trim()) blocks.push(current.trim());
+    return blocks;
+  }
+
+  function parseCrCatalogText(raw){
+    const result = {acoes:[],habilidades:[],passivas:[],descricao:{},sentidos:"",imunidades:[],resistencias:""};
+    let section = "acoes";
+    const chunks = crText(raw).replace(/\r\n?/g,"\n").split(/\n\s*\n+/).map(s => s.trim()).filter(Boolean);
+    chunks.forEach(chunk => {
+      let text = chunk;
+      const heading = text.match(/^(Ações|Habilidades(?: Passivas| Especiais| (?:em|de) 50(?: Pontos)?)?|Passivas(?: Gerais)?)\s*:?\s*$/i);
+      if(heading){ section = /^Ações/i.test(heading[1]) ? "acoes" : /Passivas|50/i.test(heading[1]) ? "passivas" : "habilidades"; return; }
+      // Um título de seção pode vir na mesma linha do primeiro registro.
+      const inlineHeading = text.match(/^(Ações|Habilidades(?: Passivas| Especiais| (?:em|de) 50(?: Pontos)?)?|Passivas(?: Gerais)?)\s*:\s*\n([\s\S]+)$/i);
+      if(inlineHeading){section = /^Ações/i.test(inlineHeading[1]) ? "acoes" : /Passivas|50/i.test(inlineHeading[1]) ? "passivas" : "habilidades";text = inlineHeading[2].trim();}
+      const info = text.match(/^(Apar[êe]ncia|Comportamento|Origem|Curiosidades|Rela[çc][ãa]o com a Dimens[ãa]o|Sentidos|Imunidades?|Resist[êe]ncias?)\s*:\s*([\s\S]+)$/i);
+      if(info){
+        const key = info[1].normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+        const value = info[2].trim();
+        if(key === "aparencia") result.descricao.aparencia = value;
+        else if(key === "comportamento") result.descricao.comportamento = value;
+        else if(key === "origem") result.descricao.origem = value;
+        else if(key === "curiosidades") result.descricao.curiosidades = value;
+        else if(key.startsWith("relacao")) result.descricao.relacaoDimensao = value;
+        else if(key === "sentidos") result.sentidos = value;
+        else if(key.startsWith("imunidade")) result.imunidades = value.split(/[,;\n]+/).map(s => s.trim()).filter(Boolean);
+        else result.resistencias = value;
+        return;
+      }
+      const blocks = crSplitPowerBlocks(text);
+      blocks.forEach(block => {
+        block = block.replace(/^[-•*]\s*/,"").trim();
+        const pipedMatch = block.match(/^([^|\n]{2,90}?)\s*\|\s*([\s\S]+)$/);
+        const piped = pipedMatch && (!/\s+[—–]\s+/.test(pipedMatch[1]) || /[—–]\s*50\s*[—–]/.test(pipedMatch[1]))
+          ? pipedMatch : null;
+        const named = block.match(/^([^\n:]{2,130}?\s+[—–]\s*50\s+[—–]\s*[^\n:—–]{2,75}?)(?:\s+[—–]\s+|:\s+)([\s\S]+)$/) ||
+          block.match(/^([^\n:—–]{2,75}?)(?:\s+[—–]\s+|:\s+)([\s\S]+)$/);
+        const lines = block.split("\n");
+        let nome, corpo;
+        if(piped){nome=piped[1].trim();corpo=piped[2].trim();}
+        else if(named){nome=named[1].trim();corpo=named[2].trim();}
+        else if(lines.length > 1 && lines[0].length <= 75){nome=lines[0].trim();corpo=lines.slice(1).join("\n").trim();}
+        else {nome="";corpo=block;}
+        // O marco de 50 e a indicação explícita de passiva têm prioridade
+        // sobre um gasto eventual de PB descrito dentro do efeito.
+        const group = crIsFiftyPower({nome}) || section === "passivas" ||
+          /\bpassiv[ao]\b/i.test(block.slice(0,130)) ? "passivas" :
+          crHasPbCost(block) ? "habilidades" : section === "habilidades" ? "passivas" : "acoes";
+        if(!nome) nome = (group === "acoes" ? "Ação " : group === "habilidades" ? "Habilidade " : "Passiva ") + (result[group].length+1);
+        result[group].push({nome,corpo});
+      });
+    });
+    return result;
+  }
+
+  function crCatalogEntry(entry, data){
+    const skills = group => group.filter(([id]) => crText(data[id]) !== "")
+      .map(([id,label]) => [label, crText(data[id])]);
+    const pair = (current,max) => ({atual:crText(data[current]),max:crText(data[max])});
+    const combatFields = [
+      ["ATK N","cr_atk_n"],["ATK AB","cr_atk_ab"],["ATK AF","cr_atk_af"],["ATK C","cr_atk_c"],
+      ["DEF N","cr_def_n"],["DEF AB","cr_def_ab"],["DEF C","cr_def_c"],
+      ["DESV N","cr_desv_n"],["DESV O","cr_desv_o"]
+    ];
+    const interpreted = parseCrCatalogText(data.cr_movimentos);
+    const conditions = parseCrCatalogText(data.cr_condicoes);
+    const physicalConditions = crText(data.cr_condicoes).replace(/\r\n?/g,"\n")
+      .split(/\n\s*\n+/)
+      .filter(chunk => !/^\s*(?:Imunidades?|Resist[êe]ncias?)\s*:/i.test(chunk))
+      .join("\n\n").trim();
+    const catalogImmunities = crText(data.cr_catalogo_imunidades).split(/[,;\n]+/).map(s => s.trim()).filter(Boolean);
+    const immunities = [...new Set([...catalogImmunities,...interpreted.imunidades,...conditions.imunidades])];
+    const resistances = [...new Set([crText(data.cr_catalogo_resistencias),interpreted.resistencias,conditions.resistencias]
+      .map(s => s.trim()).filter(Boolean))].join("\n");
+    const createdAbilities = (() => {
+      try{
+        const saved = JSON.parse(data.cf_habilidades_data || "[]");
+        if(!Array.isArray(saved)) return [];
+        return saved.filter(h => h && typeof h === "object").map(h => ({
+          nome:crText(h.nome).trim() || "Habilidade",
+          corpo:[h.atk ? "ATK: " + crText(h.atk) : "",h.pb ? "PB: " + crText(h.pb) : "",crText(h.descricao)]
+            .filter(Boolean).join("\n")
+        }));
+      }catch(e){ return []; }
+    })();
+    // O importador do PDF também transforma "Habilidades Especiais" em
+    // cards editáveis. Se o mesmo nome aparece no texto integral, usa a
+    // versão estruturada para não exibir o mesmo poder duas vezes.
+    const createdNames = new Set(createdAbilities.map(item => crText(item.nome).normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("pt-BR").trim()));
+    const uniqueRaw = items => items.filter(item => !createdNames.has(crText(item.nome).normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("pt-BR").trim()));
+    interpreted.acoes = uniqueRaw(interpreted.acoes);
+    interpreted.habilidades = uniqueRaw(interpreted.habilidades);
+    interpreted.passivas = uniqueRaw(interpreted.passivas);
+    const unlocked = (() => {
+      try{ const ids = JSON.parse(data.cr_hab50_unlocked || "[]"); return Array.isArray(ids) ? ids : []; }
+      catch(e){ return []; }
+    })();
+    const existingPowerNames = [...interpreted.acoes,...interpreted.habilidades,...interpreted.passivas,...createdAbilities]
+      .map(item => crText(item.nome).trim().toLocaleLowerCase("pt-BR"));
+    const fifty = (window.CRRCreature50 || []).filter(item => {
+      const label = String(item.nome || "").split(" — 50 — ")[0];
+      return CR_ALL_SKILLS.some(([id,name]) =>
+        (unlocked.includes(id) || Number(data[id]) >= 50) && name.toLocaleLowerCase("pt-BR") === label.toLocaleLowerCase("pt-BR"));
+    }).filter(item => {
+      const title = String(item.nome || "").trim().toLocaleLowerCase("pt-BR");
+      const shortTitle = title.split(" — 50 — ").pop().trim();
+      return !existingPowerNames.includes(title) && !existingPowerNames.includes(shortTitle);
+    })
+      .map(item => ({nome:item.nome,corpo:item.desc}));
+    const isPassiveCard = item => crIsFiftyPower(item) || /\bpassiv[ao]\b/i.test(crText(item.corpo).slice(0,130));
+    const abilities = [...interpreted.habilidades,
+      ...createdAbilities.filter(item => !isPassiveCard(item) && crHasPbCost(item.corpo))];
+    const passives = [...interpreted.passivas,
+      ...createdAbilities.filter(item => isPassiveCard(item) || !crHasPbCost(item.corpo)), ...fifty];
+    return {
+      id:"minha:" + entry.id,
+      sourceSheetId:entry.id,
+      nome:crText(data.cr_nome).trim() || entry.nome || "Criatura sem nome",
+      dimensao:data.cr_catalogo_dimensao,
+      tipo:crText(data.cr_catalogo_tipo).trim() || crText(data.cr_raca).trim(),
+      imagem:crText(data.cr_foto) || null,
+      descricao:crText(data.cr_catalogo_descricao) || interpreted.descricao.aparencia || null,
+      sheetData:data,
+      ficha:{
+        periculosidade:crText(data.cr_periculosidade), nivel:crText(data.cr_nivel),
+        impactoSanidade:crText(data.cr_impacto_sanidade), raca:crText(data.cr_raca),
+        pontos:{vida:pair("cr_hp_atual","cr_hp_max"),sanidade:pair("cr_san_atual","cr_san_max"),
+          protecao:pair("cr_protecao_atual","cr_protecao_max"),resistenciaNatural:crText(data.cr_res_n),
+          pb:pair("cr_pb_atual","cr_pb_max")},
+        combate:{movs:crText(data.cr_movs),valores:combatFields.map(([label,id]) => [label,crText(data[id]) || "—"])},
+        habilidades:skills(CR_HABILIDADES),talentos:skills(CR_TALENTOS),
+        atributos:skills(CR_ATRIBUTOS),pericias:skills(CR_PERICIAS),
+        sentidos:interpreted.sentidos || null,
+        resistencias:{imunidades:immunities,observacoes:resistances},
+        condicoesFisicas:{tamanhoPeso:crText(data.cr_peso_total),registro:physicalConditions},
+        itens:crText(data.cr_itens),
+        acoes:interpreted.acoes,
+        habilidadesPb:abilities,
+        passivas:passives,
+        descricao:{
+          aparencia:crText(data.cr_catalogo_descricao) || interpreted.descricao.aparencia || null,
+          comportamento:crText(data.cr_catalogo_comportamento) || interpreted.descricao.comportamento || null,
+          origem:crText(data.cr_catalogo_origem) || interpreted.descricao.origem || null,
+          curiosidades:crText(data.cr_catalogo_curiosidades) || interpreted.descricao.curiosidades || null,
+          relacaoDimensao:crText(data.cr_catalogo_relacao) || interpreted.descricao.relacaoDimensao || null
+        }
+      }
+    };
+  }
+
+  async function listCatalogedCreatures(){
+    const raw = await storageGet(CR_INDEX_KEY);
+    let index = [];
+    try{ index = JSON.parse(raw || "[]"); if(!Array.isArray(index)) index = []; }catch(e){}
+    const found = [];
+    for(const entry of index){
+      if(!entry || !entry.id) continue;
+      try{
+        const sheet = JSON.parse(await storageGet(crSheetKey(entry.id)) || "null");
+        if(sheet && !Array.isArray(sheet) && sheet.cr_catalogado === "1" && CR_CATALOG_DIMS.has(sheet.cr_catalogo_dimensao)){
+          found.push(crCatalogEntry(entry,sheet));
+        }
+      }catch(e){ console.warn("[Criaturas] Registro de compêndio inválido:",entry.id,e); }
+    }
+    return found;
+  }
+
+  async function ownedCatalogSheet(id){
+    if(!id || typeof id !== "string") return null;
+    const rawIndex = await storageGet(CR_INDEX_KEY);
+    let index;
+    try{ index = JSON.parse(rawIndex || "[]"); }catch(e){ return null; }
+    if(!Array.isArray(index) || !index.some(entry => entry?.id === id)) return null;
+    const raw = await storageGet(crSheetKey(id));
+    try{
+      const data = JSON.parse(raw || "null");
+      return data && !Array.isArray(data) && data.cr_catalogado === "1" ? data : null;
+    }catch(e){ return null; }
+  }
+
+  async function editOwnedCatalogCreature(id){
+    if(!await ownedCatalogSheet(id)) return false;
+    return openCreature(id);
+  }
+
+  async function updateOwnedCatalogImage(id, image){
+    if(typeof image !== "string" || !/^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(image)) return false;
+    if(currentCreatureId === id && !await flushCrBeforeSwitch()) return false;
+    const data = await ownedCatalogSheet(id);
+    if(!data) return false;
+    data.cr_foto = image;
+    if(!await crStorageSet(crSheetKey(id), JSON.stringify(data))) return false;
+    if(currentCreatureId === id){
+      const field = document.getElementById("cr_foto");
+      if(field) field.value = image;
+      applyPhotoFromField();
+    }
+    if(window.CRISCreaturesSync?.syncCreatureToCloud){
+      try{ await window.CRISCreaturesSync.syncCreatureToCloud(id,crText(data.cr_nome) || "Criatura sem nome",data); }
+      catch(e){ console.error("[Criaturas] Falha ao sincronizar imagem:",e); }
+    }
+    const published = await window.CRISCreatureCatalog?.publish(id,data);
+    if(published && !published.ok && typeof flashIndicator === "function")
+      flashIndicator("Imagem salva localmente. Publicação no compêndio pendente.",true,4000);
+    return true;
+  }
+
+  async function setCataloged(id, active){
+    const raw = await storageGet(crSheetKey(id));
+    if(!raw) return false;
+    let data;
+    try{ data = JSON.parse(raw); if(!data || typeof data !== "object" || Array.isArray(data)) return false; }
+    catch(e){ return false; }
+    data.cr_catalogado = active ? "1" : "";
+    if(!await crStorageSet(crSheetKey(id), JSON.stringify(data))) return false;
+    if(currentCreatureId === id){
+      const field = document.getElementById("cr_catalogado");
+      if(field) field.value = data.cr_catalogado;
+      refreshCrCatalogAction();
+    }
+    if(window.CRISCreaturesSync?.syncCreatureToCloud){
+      try{ await window.CRISCreaturesSync.syncCreatureToCloud(id,crText(data.cr_nome) || "Criatura sem nome",data); }
+      catch(e){ console.error("[Criaturas] Falha ao sincronizar catálogo:",e); }
+    }
+    const publication = active ? await window.CRISCreatureCatalog?.publish(id,data)
+      : await window.CRISCreatureCatalog?.unpublish(id);
+    if(publication && !publication.ok && typeof flashIndicator === "function")
+      flashIndicator("Alteração salva localmente. Sincronização do compêndio público pendente.",true,4200);
+    return true;
+  }
+
+  function addCatalogPowersToSheetCards(data, ficha){
+    let cards;
+    try{
+      cards = JSON.parse(data.cf_habilidades_data || "[]");
+      if(!Array.isArray(cards)) return; // mantém um campo antigo inválido intacto
+    }catch(e){ return; }
+
+    const normalize = value => crText(value).normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .toLocaleLowerCase("pt-BR").trim();
+    const keys = name => {
+      const title = normalize(name);
+      return [title,title.split(" — 50 — ").pop()].filter(Boolean);
+    };
+    const seen = new Set(cards.flatMap(card => keys(card && card.nome)));
+    const isPassive = item => crIsFiftyPower(item) || /\bpassiv[ao]\b/i.test(crText(item.corpo).slice(0,130));
+    const powers = [
+      ...(ficha.habilidadesPb || []).map(item => ({item,passive:isPassive(item)})),
+      ...(ficha.passivas || []).map(item => ({item,passive:true})),
+      ...(ficha.habilidadesPassivas || []).map(item => ({item,passive:isPassive(item) || !crHasPbCost(item.corpo)})),
+      ...(ficha.acoes || []).filter(isPassive).map(item => ({item,passive:true}))
+    ];
+    let added = 0;
+    powers.forEach(({item,passive}) => {
+      if(!item || !crText(item.nome).trim() || keys(item.nome).some(key => seen.has(key))) return;
+      const body = crText(item.corpo).trim();
+      const cost = crHasPbCost(body)
+        ? body.match(/\bP\.?B\.?\s*(?:[:=]\s*)?([1-9]\d*)\b|(?<!\+)\b([1-9]\d*)\s*P\.?B\.?(?!\w)/i) : null;
+      const atkMatch = body.match(/\b(?:ATK|DEF|DESV)\s*(?:N|AB|AF|C|O)\b/i);
+      const description = body.replace(/^(?:(?:ATK\s*:\s*)?(?:ATK|DEF|DESV)\s*(?:N|AB|AF|C|O)|P\.?B\.?\s*:?\s*\d+|PASSIVA)\s*(?:\||\n|:\s*)\s*/i, "")
+        .replace(/^(?:P\.?B\.?\s*:?\s*\d+|PASSIVA)\s*(?:\||\n)\s*/i, "")
+        .replace(/^Efeito\s*:\s*/i, "").trim() || body;
+      cards.push({
+        id:"cfhab_catalog_" + Date.now().toString(36) + "_" + cards.length,
+        nome:crText(item.nome).trim(),
+        atk:passive ? "PASSIVA" : atkMatch ? atkMatch[0].toUpperCase() : "",
+        pb:cost ? (cost[1] || cost[2]) : "",
+        descricao:description
+      });
+      keys(item.nome).forEach(key => seen.add(key));
+      added++;
+    });
+    if(added) data.cf_habilidades_data = JSON.stringify(cards);
+  }
+
+  async function createFromCatalog(c){
+    if(!c) return false;
+    const data = c.sheetData ? { ...c.sheetData } : {};
+    const f = c.ficha || {};
+    if(!c.sheetData){
+      const oldPowers = f.habilidadesPassivas || [];
+      const isPassive = item => crIsFiftyPower(item) || /\bpassiv[ao]\b/i.test(crText(item.corpo).slice(0,130));
+      const freeActions = (f.acoes || []).filter(item => !isPassive(item) && !crHasPbCost(item.corpo));
+      const pbPowers = [...(f.habilidadesPb || []),...oldPowers,...(f.acoes || [])]
+        .filter(item => !isPassive(item) && crHasPbCost(item.corpo));
+      const passivePowers = [...(f.passivas || []),
+        ...(f.habilidadesPb || []).filter(isPassive),
+        ...oldPowers.filter(item => isPassive(item) || !crHasPbCost(item.corpo)),
+        ...(f.acoes || []).filter(isPassive)];
+      const p = f.pontos || {};
+      const resource = (key,value) => {
+        if(value && typeof value === "object"){
+          data[key + "_atual"] = crText(value.atual);
+          data[key + "_max"] = crText(value.max);
+        }
+      };
+      resource("cr_hp",p.vida);resource("cr_san",p.sanidade);
+      resource("cr_protecao",p.protecao);resource("cr_pb",p.pb);
+      Object.assign(data,{
+        cr_periculosidade:crText(f.periculosidade),cr_nivel:crText(f.nivel),
+        cr_impacto_sanidade:crText(f.impactoSanidade),cr_raca:crText(f.raca),
+        cr_res_n:crText(p.resistenciaNatural),cr_movs:crText(f.combate?.movs),
+        cr_peso_total:crText(f.condicoesFisicas?.tamanhoPeso),
+        cr_foto:crText(c.imagem),cr_catalogo_descricao:crText(c.descricao || f.descricao?.aparencia),
+        cr_catalogo_comportamento:crText(f.descricao?.comportamento),
+        cr_catalogo_origem:crText(f.descricao?.origem),
+        cr_catalogo_curiosidades:crText(f.descricao?.curiosidades),
+        cr_catalogo_relacao:crText(f.descricao?.relacaoDimensao),
+        cr_catalogo_resistencias:crText(f.resistencias?.observacoes),
+        cr_catalogo_imunidades:(f.resistencias?.imunidades || []).join("\n"),
+        cr_condicoes:[crText(f.condicoesFisicas?.registro),
+          (f.resistencias?.imunidades || []).length ? "Imunidades: " + f.resistencias.imunidades.join(", ") : "",
+          f.resistencias?.observacoes ? "Resistências: " + f.resistencias.observacoes : ""
+        ].filter(Boolean).join("\n\n"),
+        cr_itens:crText(f.itens),
+        cr_movimentos:[
+          freeActions.length ? "Ações:\n\n" + freeActions.map(item => [item.nome,item.corpo].filter(Boolean).join(" — ")).join("\n\n") : "",
+          pbPowers.length ? "Habilidades:\n\n" + pbPowers.map(item => [item.nome,item.corpo].filter(Boolean).join(" — ")).join("\n\n") : "",
+          passivePowers.length ? "Passivas:\n\n" + passivePowers.map(item => [item.nome,item.corpo].filter(Boolean).join(" — ")).join("\n\n") : ""
+        ].filter(Boolean).join("\n\n")
+      });
+      const combatIds = {"ATK N":"cr_atk_n","ATK AB":"cr_atk_ab","ATK AF":"cr_atk_af","ATK C":"cr_atk_c",
+        "DEF N":"cr_def_n","DEF AB":"cr_def_ab","DEF C":"cr_def_c","DESV N":"cr_desv_n","DESV O":"cr_desv_o"};
+      (f.combate?.valores || []).forEach(([label,value]) => { if(combatIds[label]) data[combatIds[label]] = crText(value); });
+      const simplify = value => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+      [[f.habilidades,CR_HABILIDADES],[f.talentos,CR_TALENTOS],[f.atributos,CR_ATRIBUTOS],[f.pericias,CR_PERICIAS]]
+        .forEach(([items,group]) => (items || []).forEach(([label,value]) => {
+          const field = group.find(([,name]) => simplify(name) === simplify(label));
+          if(field){ data[field[0]] = crText(value); data[field[0] + "_atual"] = crText(value); }
+        }));
+    }
+    addCatalogPowersToSheetCards(data,f);
+    data.cr_nome = crText(c.nome) || "Criatura sem nome";
+    data.cr_catalogado = "";
+    data.cr_catalogo_dimensao = crText(c.dimensao);
+    data.cr_catalogo_tipo = crText(c.tipo);
+    const result = await window.CRISCreatureSheets.importFromPdf(data,{preserveExtra:true});
+    return result;
+  }
+
   // Entrada usada pelo importador de PDF. Mantém a mesma estrutura de dados,
   // índice e sincronização das criaturas criadas pela interface.
   window.CRISCreatureSheets = window.CRISCreatureSheets || {};
-  window.CRISCreatureSheets.importFromPdf = async function(data){
+  window.CRISCreatureSheets.importFromPdf = async function(data, options){
     if(!data || typeof data !== "object" || !Object.keys(data).length){
       throw new Error("Nenhum campo de criatura foi reconhecido.");
     }
@@ -523,9 +937,11 @@
     await loadCreaturesIndex();
     buildAllCrGrids();
     const allowed = new Set(crFieldIds());
-    const clean = {};
+    // Cópias do Compêndio mantêm campos de versões antigas da ficha;
+    // a importação de PDF continua restrita aos campos reconhecidos.
+    const clean = Object.create(null);
     Object.keys(data).forEach(id => {
-      if(allowed.has(id) && typeof data[id] === "string") clean[id] = data[id];
+      if((allowed.has(id) || options?.preserveExtra) && typeof data[id] === "string") clean[id] = data[id];
     });
     if(!Object.keys(clean).length) throw new Error("Nenhum campo compatível foi reconhecido.");
     const id = genCreatureId();
@@ -642,6 +1058,7 @@
           onConfirm: function (result) {
             foto.value = result.dataUrl;
             applyPhotoFromField();
+            markCrDirty();
           }
         });
         return;
@@ -650,6 +1067,7 @@
       reader.onload = () => {
         foto.value = reader.result;
         applyPhotoFromField();
+        markCrDirty();
       };
       reader.readAsDataURL(file);
     });
@@ -683,6 +1101,70 @@
     // Salvar
     const btnSave = document.getElementById("cr_btn_save");
     if(btnSave) btnSave.addEventListener("click", () => saveCreature(false));
+
+    const catalogModal = document.getElementById("cr_catalog_modal");
+    const closeCatalog = () => { if(catalogModal) catalogModal.style.display = "none"; };
+    const catalogDescriptionFields = [
+      ["cr_catalogo_descricao","cr_catalog_modal_desc","aparencia"],
+      ["cr_catalogo_comportamento","cr_catalog_modal_behavior","comportamento"],
+      ["cr_catalogo_origem","cr_catalog_modal_origin","origem"],
+      ["cr_catalogo_curiosidades","cr_catalog_modal_curiosities","curiosidades"],
+      ["cr_catalogo_relacao","cr_catalog_modal_relation","relacaoDimensao"]
+    ];
+    document.getElementById("cr_btn_catalog")?.addEventListener("click", () => {
+      if(!currentCreatureId || !catalogModal) return;
+      document.getElementById("cr_catalog_modal_dim").value = document.getElementById("cr_catalogo_dimensao").value;
+      document.getElementById("cr_catalog_modal_tipo").value = document.getElementById("cr_catalogo_tipo").value || document.getElementById("cr_raca").value;
+      const inferred = parseCrCatalogText(document.getElementById("cr_movimentos")?.value).descricao;
+      const powerTags = parseCrCatalogText(document.getElementById("cr_movimentos")?.value);
+      const conditionTags = parseCrCatalogText(document.getElementById("cr_condicoes")?.value);
+      document.getElementById("cr_catalog_modal_resistencias").value =
+        document.getElementById("cr_catalogo_resistencias").value || powerTags.resistencias || conditionTags.resistencias || "";
+      document.getElementById("cr_catalog_modal_imunidades").value =
+        document.getElementById("cr_catalogo_imunidades").value ||
+        [...powerTags.imunidades,...conditionTags.imunidades].join("\n");
+      catalogDescriptionFields.forEach(([field,control,key]) => {
+        document.getElementById(control).value = document.getElementById(field).value || inferred[key] || "";
+      });
+      catalogModal.style.display = "flex";
+    });
+    document.getElementById("cr_catalog_cancel")?.addEventListener("click", closeCatalog);
+    catalogModal?.addEventListener("click", e => { if(e.target === catalogModal) closeCatalog(); });
+    document.getElementById("cr_catalog_confirm")?.addEventListener("click", async e => {
+      const dim = document.getElementById("cr_catalog_modal_dim").value;
+      if(!CR_CATALOG_DIMS.has(dim)){
+        document.getElementById("cr_catalog_modal_dim").focus();
+        if(typeof flashIndicator === "function") flashIndicator("Escolha a dimensão para catalogar a criatura.",true,3200);
+        return;
+      }
+      const btn = e.currentTarget;
+      btn.disabled = true;
+      const ids = ["cr_catalogado","cr_catalogo_dimensao","cr_catalogo_tipo",
+        "cr_catalogo_resistencias","cr_catalogo_imunidades",...catalogDescriptionFields.map(([field]) => field)];
+      const old = ids.map(id => document.getElementById(id).value);
+      ["1",dim,document.getElementById("cr_catalog_modal_tipo").value.trim(),
+        document.getElementById("cr_catalog_modal_resistencias").value.trim(),
+        document.getElementById("cr_catalog_modal_imunidades").value.trim(),
+        ...catalogDescriptionFields.map(([,control]) => document.getElementById(control).value.trim())]
+        .forEach((value,i) => { document.getElementById(ids[i]).value = value; });
+      markCrDirty();
+      const saved = await saveCreature(false);
+      if(!saved) ids.forEach((id,i) => { document.getElementById(id).value = old[i]; });
+      else closeCatalog();
+      refreshCrCatalogAction();
+      btn.disabled = false;
+    });
+    document.getElementById("cr_btn_catalog_remove")?.addEventListener("click", async e => {
+      if(!currentCreatureId) return;
+      const btn = e.currentTarget;
+      btn.disabled = true;
+      const field = document.getElementById("cr_catalogado");
+      field.value = "";
+      markCrDirty();
+      if(!await saveCreature(false)) field.value = "1";
+      refreshCrCatalogAction();
+      btn.disabled = false;
+    });
 
     // Dado (4/6/8/12/20) + regra ATUAL/MÁX. reagem ao campo Máx. de cada skill
     const creatureScreen = document.getElementById("creature_sheet_screen");
@@ -735,7 +1217,11 @@
       // nuvem é tentada em seguida e, se não conseguir, fica na fila com
       // retry automático.
       await crAutoBackup("Antes de excluir criatura", true);
+      const deletedRaw = await storageGet(crSheetKey(id));
+      let wasPublished = false;
+      try{ wasPublished = JSON.parse(deletedRaw || "null")?.cr_catalogado === "1"; }catch(e){}
       await storageDeleteKey(crSheetKey(id));
+      if(wasPublished) await window.CRISCreatureCatalog?.unpublish(id);
       if(currentCreatureId === id){
         clearTimeout(crAutosaveTimer);
         currentCreatureId = null;
@@ -792,4 +1278,13 @@
   // Navegação entre áreas: confirma o salvamento local antes de sair da ficha.
   window.CRISCreatureSheets.beforeLeave = safeLeaveCreature;
   window.CRISCreatureSheets.save = saveCreature;
+  window.CRISCreatureSheets.listCataloged = listCatalogedCreatures;
+  window.CRISCreatureSheets.catalogEntryFromSheet = function(id,data){
+    if(!id || !data || data.cr_catalogado !== "1" || !CR_CATALOG_DIMS.has(data.cr_catalogo_dimensao)) return null;
+    return crCatalogEntry({id,nome:data.cr_nome},data);
+  };
+  window.CRISCreatureSheets.editCataloged = editOwnedCatalogCreature;
+  window.CRISCreatureSheets.updateCatalogImage = updateOwnedCatalogImage;
+  window.CRISCreatureSheets.setCataloged = setCataloged;
+  window.CRISCreatureSheets.createFromCatalog = createFromCatalog;
 })();

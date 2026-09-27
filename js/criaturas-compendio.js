@@ -3,9 +3,9 @@
 
    Módulo isolado. Não reescreve, não refatora e não altera nenhum
    sistema já existente do Origem do Caos (Agentes, Backup, Ficha
-   de Criatura, Minhas Criaturas, Habilidades de Criaturas). Não
-   depende de storageGet/storageSet — nesta etapa o Compêndio é
-   somente leitura, então os dados vivem em CPD_CREATURES, abaixo.
+   de Criatura, Minhas Criaturas, Habilidades de Criaturas). Os
+   registros fixos vivem em CPD_CREATURES; os adicionados pelo usuário
+   são lidos das fichas persistidas por js/criaturas.js.
 
    Reaproveita apenas o padrão visual genérico já usado pelos
    Arquivos Secretos (.secret-wrap/.secret-header/.secret-eyebrow/
@@ -54,8 +54,8 @@
     { key:"limbica",     label:"Límbica",      emoji:"⚪" }
   ];
 
-  // Dado real de cada criatura. Novas criaturas entram aqui, no
-  // mesmo formato — nenhum outro arquivo precisa ser tocado.
+  // Registros publicados com o site. Fichas dos usuários são unidas
+  // a esta lista em tempo de execução, sem alterar este catálogo fixo.
   const CPD_CREATURES = [
     {
       id: "solis",
@@ -124,10 +124,12 @@
         acoes: [
           { nome: "Mordida", corpo: "Dano: 5d4+1/3FF | Sucesso Extremo causa QUEIMAR." },
           { nome: "Derrubar", corpo: "Dano: 1d4 + CAÍDO." },
-          { nome: "Atropelar", corpo: "Dano: 2d4 + Desvantagem na próxima ação. Se sucesso Extremo: CAÍDO." },
+          { nome: "Atropelar", corpo: "Dano: 2d4 + Desvantagem na próxima ação. Se sucesso Extremo: CAÍDO." }
+        ],
+        habilidadesPb: [
           { nome: "Corrida de Chamas", corpo: "ATK N | P.B.: 3 | Efeito: a criatura corre em um movimento de costura (zigue-zague) por 10m, até localizar o seu alvo e então mordê-lo com a ferocidade de um caçador. Todo o caminho percorrido por esta criatura fica em chamas por 1d6 rodadas, e todos no caminho desta trilha de costura deverão realizar um teste (trecho final ilegível no documento original)." }
         ],
-        habilidadesPassivas: [
+        passivas: [
           { nome: "Forma Corpórea", corpo: "PASSIVA | Efeito: a criatura é capaz de controlar suas chamas para que, embora ainda quentes, não causem QUEIMAR a um personagem, objeto ou cenário." },
           { nome: "Imortalidade do Fogo", corpo: "PASSIVA | Efeito: quando a criatura alcança 0 de HP, ela não morre ou entra em MORRENDO — ela apenas se desfaz e se perde no ar para se recuperar e regenerar sua forma. Ficará ausente por 24h." },
           { nome: "Ataque Surpresa", corpo: "PASSIVA | Efeito: assim que esta criatura é invocada, ela é capaz de imediatamente realizar um ataque, e seu alvo terá Desvantagem em sua reação." },
@@ -223,6 +225,43 @@
   let cpdActiveFilter = "todas";
   let cpdSearchTerm = "";
   let cpdReturnScroll = 0;
+  let cpdMyCreatures = [];
+  let cpdPublicCreatures = [];
+  let cpdPendingPublish = new Set();
+  let cpdCloudWarningShown = false;
+  function allCpdCreatures(){
+    const own=new Map(cpdMyCreatures.map(item=>[item.id,item]));
+    const published=cpdPublicCreatures.map(item=>{
+      const mine=own.get(item.id);
+      own.delete(item.id);
+      return mine ? {...(cpdPendingPublish.has(item.id)?mine:item),sourceSheetId:mine.sourceSheetId} : item;
+    });
+    return [...CPD_CREATURES,...published,...own.values()];
+  }
+  function findCpdCreature(id){ return allCpdCreatures().find(c => c.id === id) || null; }
+  async function loadMyCpdCreatures(){
+    cpdMyCreatures = window.CRISCreatureSheets?.listCataloged
+      ? await window.CRISCreatureSheets.listCataloged() : [];
+    const cloud=window.CRISCreatureCatalog;
+    if(!cloud) return;
+    const first=await cloud.list();
+    if(!first.ok){
+      cpdPublicCreatures=[];
+      cpdPendingPublish=new Set();
+      if(!cpdCloudWarningShown && window.CRISAuth?.client){
+        window.flashIndicator?.("Compêndio público indisponível. Confira a configuração do Supabase ou sua conexão.",true,4600);
+        cpdCloudWarningShown=true;
+      }
+      return;
+    }
+    cpdCloudWarningShown=false;
+    cpdPublicCreatures=first.items;
+    if(await cloud.reconcile(cpdMyCreatures,first.items)){
+      const refreshed=await cloud.list();
+      if(refreshed.ok) cpdPublicCreatures=refreshed.items;
+    }
+    cpdPendingPublish=new Set(await cloud.pendingPublishIds());
+  }
 
   /* ---------- navegação entre telas ----------
      Mesmo padrão (display none/block) já usado por showWelcomeScreen/
@@ -244,15 +283,18 @@
     });
   }
 
-  function showCompendioScreen(){
+  async function showCompendioScreen(){
     hideAllCpdAndOtherScreens();
     cpdActiveFilter = "todas";
     cpdSearchTerm = "";
     const search = document.getElementById("cpd_search");
     if(search) search.value = "";
     renderCpdFilters();
-    renderCpdGrid();
     document.getElementById("creature_compendio_screen").style.display = "block";
+    const grid=document.getElementById("cpd_grid");
+    if(grid) grid.innerHTML='<div class="cpd-empty">Carregando compêndio…</div>';
+    await loadMyCpdCreatures();
+    renderCpdGrid();
   }
 
   function backToSecretFilesFromCpd(){
@@ -329,6 +371,8 @@
       </div>
       <div class="cpd-card-action">
         <button type="button" class="cpd-card-btn" data-cpd-open="${esc(c.id)}">Ficha</button>
+        <button type="button" class="cpd-card-btn cpd-card-secondary" data-cpd-convert="${esc(c.id)}">Criar ficha</button>
+        ${c.sourceSheetId ? `<button type="button" class="cpd-card-btn cpd-card-remove" data-cpd-remove="${esc(c.id)}">Retirar</button>` : ""}
       </div>
     `;
     return card;
@@ -338,7 +382,7 @@
       btn.addEventListener("click", () => {
         cpdReturnScroll = window.scrollY || 0;
         const id = btn.dataset.cpdOpen;
-        const c = CPD_CREATURES.find(x => x.id === id);
+        const c = findCpdCreature(id);
         // Só criaturas com registro completo (Etapa 2 — ver campo "ficha")
         // abrem a nova Ficha de Criatura; as demais continuam exatamente
         // como antes, no registro simples (placeholder).
@@ -349,6 +393,47 @@
         }
       });
     });
+    scope.querySelectorAll("[data-cpd-convert]").forEach(btn => {
+      btn.addEventListener("click", () => convertCpdCreature(btn.dataset.cpdConvert, btn));
+    });
+    scope.querySelectorAll("[data-cpd-remove]").forEach(btn => {
+      btn.addEventListener("click", () => removeCpdCreature(btn.dataset.cpdRemove, btn));
+    });
+  }
+  async function convertCpdCreature(id, button){
+    const creature = findCpdCreature(id);
+    if(!creature || !window.CRISCreatureSheets?.createFromCatalog) return false;
+    if(button) button.disabled = true;
+    try{
+      await window.CRISCreatureSheets.createFromCatalog(creature);
+      if(typeof window.flashIndicator === "function") window.flashIndicator("✓ Ficha editável criada em Minhas Criaturas.",false,3200);
+      return true;
+    }catch(e){
+      console.error("[Compêndio] Erro ao criar ficha:",e);
+      if(typeof window.flashIndicator === "function") window.flashIndicator("Não foi possível criar a ficha desta criatura.",true,3600);
+      return false;
+    }finally{ if(button) button.disabled = false; }
+  }
+  async function removeCpdCreature(id, button){
+    const creature = findCpdCreature(id);
+    if(!creature?.sourceSheetId || !window.CRISCreatureSheets?.setCataloged) return false;
+    if(button) button.disabled = true;
+    try{
+      const saved = await window.CRISCreatureSheets.setCataloged(creature.sourceSheetId,false);
+      if(!saved) throw new Error("Não foi possível salvar a alteração.");
+      await loadMyCpdCreatures();
+      returnToCompendioScreen();
+      renderCpdGrid();
+      const pending = await window.CRISCreatureCatalog?.isPending?.(creature.sourceSheetId,"remove");
+      if(typeof window.flashIndicator === "function") window.flashIndicator(pending
+        ? "Retirada salva nesta conta. A remoção para todos será concluída ao sincronizar."
+        : "Criatura retirada do Compêndio para todos. A ficha original foi mantida.",!!pending,4000);
+      return true;
+    }catch(e){
+      console.error("[Compêndio] Erro ao retirar criatura:",e);
+      if(typeof window.flashIndicator === "function") window.flashIndicator("Não foi possível retirar esta criatura do Compêndio.",true,3500);
+      return false;
+    }finally{ if(button) button.disabled = false; }
   }
   function buildCpdSection(dim, list){
     const section = document.createElement("div");
@@ -385,7 +470,7 @@
     const term = cpdSearchTerm.trim().toLowerCase();
 
     if(term){
-      const results = CPD_CREATURES.filter(c => {
+      const results = allCpdCreatures().filter(c => {
         if(cpdActiveFilter !== "todas" && c.dimensao !== cpdActiveFilter) return false;
         return c.nome.toLowerCase().includes(term);
       });
@@ -404,7 +489,7 @@
     if(cpdActiveFilter === "todas"){
       let visibleSections = 0;
       CPD_DIMENSOES.forEach(dim => {
-        const list = CPD_CREATURES.filter(c => c.dimensao === dim.key);
+        const list = allCpdCreatures().filter(c => c.dimensao === dim.key);
         if(list.length){
           container.appendChild(buildCpdSection(dim, list));
           visibleSections++;
@@ -416,14 +501,14 @@
     }
 
     const dim = dimInfo(cpdActiveFilter);
-    const list = CPD_CREATURES.filter(c => c.dimensao === cpdActiveFilter);
+    const list = allCpdCreatures().filter(c => c.dimensao === cpdActiveFilter);
     container.appendChild(buildCpdSection(dim, list));
     wireCpdCardButtons(container);
   }
 
   /* ---------- registro da criatura (placeholder, sem ficha completa) ---------- */
   function showCpdRegistro(id){
-    const c = CPD_CREATURES.find(x => x.id === id);
+    const c = findCpdCreature(id);
     if(!c) return;
     const dim = dimInfo(c.dimensao);
 
@@ -432,6 +517,10 @@
     document.getElementById("cpd_reg_tipo").textContent = c.tipo || "Tipo não catalogado";
     document.getElementById("cpd_reg_desc").textContent = c.descricao || "Em desenvolvimento.";
     document.getElementById("cpd_reg_ficha").textContent = c.fichaCompleta || "Em desenvolvimento.";
+    const convert = document.getElementById("cpd_reg_convert");
+    const remove = document.getElementById("cpd_reg_remove");
+    if(convert) convert.dataset.cpdId = id;
+    if(remove){remove.hidden = !c.sourceSheetId;remove.dataset.cpdId = id;}
 
     const photo = document.getElementById("cpd_reg_photo");
     const fallback = document.getElementById("cpd_reg_photo_fallback");
@@ -471,12 +560,23 @@
   function wireCompendioModule(){
     const card = document.getElementById("secret_card_compendio");
     if(card) card.addEventListener("click", showCompendioScreen);
+    document.getElementById("cpd_refresh")?.addEventListener("click",async e=>{
+      e.currentTarget.disabled=true;
+      try{await loadMyCpdCreatures();renderCpdGrid();}
+      finally{e.currentTarget.disabled=false;}
+    });
+    document.addEventListener("visibilitychange",()=>{
+      if(!document.hidden && document.getElementById("creature_compendio_screen")?.style.display==="block")
+        loadMyCpdCreatures().then(renderCpdGrid);
+    });
 
     const backBtn = document.getElementById("cpd_back_btn");
     if(backBtn) backBtn.addEventListener("click", backToSecretFilesFromCpd);
 
     const regBackBtn = document.getElementById("cpd_reg_back_btn");
     if(regBackBtn) regBackBtn.addEventListener("click", returnToCompendioScreen);
+    document.getElementById("cpd_reg_convert")?.addEventListener("click", e => convertCpdCreature(e.currentTarget.dataset.cpdId,e.currentTarget));
+    document.getElementById("cpd_reg_remove")?.addEventListener("click", e => removeCpdCreature(e.currentTarget.dataset.cpdId,e.currentTarget));
 
     const search = document.getElementById("cpd_search");
     if(search){
@@ -497,9 +597,18 @@
      Não expõe CPD_CREATURES/CPD_DIMENSOES diretamente (evita qualquer
      módulo externo mutá-los por engano) — apenas getters e a navegação
      de volta, reaproveitando showCompendioScreen já existente. */
-  window.__cpdGetCreature = function(id){ return CPD_CREATURES.find(x => x.id === id) || null; };
+  window.__cpdGetCreature = findCpdCreature;
   window.__cpdGetDimInfo = dimInfo;
-  window.__cpdBackToCompendioScreen = function(){
+  window.CPD_convertCreature = convertCpdCreature;
+  window.CPD_removeCreature = removeCpdCreature;
+  window.CPD_refreshIfVisible = async function(){
+    if(document.getElementById("creature_compendio_screen")?.style.display !== "block") return;
+    await loadMyCpdCreatures();
+    renderCpdGrid();
+  };
+  window.__cpdBackToCompendioScreen = async function(){
     returnToCompendioScreen();
+    await loadMyCpdCreatures();
+    renderCpdGrid();
   };
 })();

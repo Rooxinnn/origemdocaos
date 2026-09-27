@@ -132,6 +132,8 @@
   const ACCOUNT_EXACT_KEYS = [
     "agentes:index",     // 1) Agentes — índice
     "criaturas:index",   // 2) Criaturas — índice
+    "criaturas:catalog:pending", // Publicações removidas offline, isoladas por conta.
+    "criaturas:catalog:pending_publish", // Publicações novas/editadas aguardando rede.
     "xp:diario",         // 5) Diário de XP
     "paranormal:data",   // 4) Paranormal
     "conteudo:profissoes_customizadas", // Biblioteca privada de Profissões/Skills próprias.
