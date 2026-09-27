@@ -214,6 +214,16 @@
 
   // A ficha consulta esta mesma lista para desbloquear habilidades em 50.
   window.CRRCreature50 = CRR_HABILIDADES_50;
+  // Mantém o requisito visível em todas as fichas, inclusive nas entradas
+  // antigas que foram salvas apenas com o nome curto da habilidade.
+  window.CRRCreature50Name = function(value){
+    const name = String(value || "").trim();
+    const normalize = text => String(text || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("pt-BR").trim();
+    const explicit = name.match(/^(.+?)\s*[—–-]\s*50\s*[—–-]\s*(.+)$/);
+    if(explicit) return explicit[1].trim() + " — 50 — " + explicit[2].trim();
+    const match = CRR_HABILIDADES_50.find(item => normalize(item.nome.split(" — 50 — ")[1]) === normalize(name));
+    return match ? match.nome : name;
+  };
 
   const CRR_CATEGORIES = [
     {key:"RegrasGerais",  label:"Regras Gerais",         items: CRR_REGRAS_GERAIS},

@@ -87,7 +87,7 @@
     }
     const active = index.filter(x => unlocked.has(x.id));
     grid.innerHTML = active.length ? active.map(x =>
-      '<article class="cr-auto-50-card"><h4>' + escape(x.title) + '</h4>' +
+      '<article class="cr-auto-50-card"><h4>' + escape(x.item.nome) + '</h4>' +
       '<p>' + escape(x.item.desc) + '</p><small>' + escape(x.requirement + " — 50 pontos") + '</small></article>'
     ).join("") : '<div class="cr-auto-note">Nenhuma habilidade em 50 desbloqueada.</div>';
     return unlocked;

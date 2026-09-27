@@ -85,37 +85,49 @@
     return { atual:value.trim(), max:value.trim(), inferred:true };
   }
 
-  // Só interpreta o bloco explicitamente chamado "Habilidades Especiais".
-  // Os golpes e as condições físicas continuam no texto integral do PDF.
+  // O campo de movimentos do PDF mistura ações, conexões e habilidades.
+  // Preserva-se o texto original; cada entrada reconhecida também ganha um card.
   function parseSpecialAbilities(source){
     const text = String(source || "").replace(/\r\n?/g, "\n");
-    const heading = text.search(/^\s*Habilidades\s+Especiais\s*:/im);
-    if(heading < 0) return { abilities:[], unparsed:0 };
-    const body = text.slice(heading).split("\n").slice(1);
+    const sectionHeading = /^(?:a[çc][õo]es|movimentos|conex[õo]es|habilidades(?:\s+(?:especiais|conectadas|passivas|em\s+50\s+pontos))?|passivas)(?:\s*:)?$/i;
+    const entryStart = /^(?:[*•-]\s*)?([^|:\n]{2,100}?)\s*\|\s*(?=(?:ATK|DEF|DESV|P\.?B\.?|PASSIVA|EFEITO)\b|\d+\s*P\.?B\.?\b)/i;
+    const dashStart = /^(?:[*•-]\s*)?([^\n:—–]{2,90}?)\s+[—–]\s+(?=\S)/;
     const chunks = [];
-    let chunk = "";
-    for(const line of body){
-      if(/^\s*[*•]\s+\S/.test(line)){
-        if(chunk) chunks.push(chunk.trim());
-        chunk = line.replace(/^\s*[*•]\s*/, "");
-      }else if(chunk){
-        chunk += " " + line.trim();
+    let current = "";
+    function flush(){ if(current.trim()) chunks.push(current.trim()); current = ""; }
+    for(const rawLine of text.split("\n")){
+      const line = rawLine.trim();
+      if(!line) { flush(); continue; }
+      if(sectionHeading.test(line)){ flush(); continue; }
+      const starts = entryStart.test(line) || dashStart.test(line) || /^[*•]\s+\S/.test(line);
+      if(starts) flush();
+      if(starts || current){
+        current += (current ? "\n" : "") + line;
       }
     }
-    if(chunk) chunks.push(chunk.trim());
+    flush();
     const abilities = [];
     let unparsed = 0;
     chunks.forEach((chunk, i) => {
-      const parts = chunk.split(/\s*\|\s*/);
-      const nome = (parts.shift() || "").trim();
-      const effect = parts.findIndex(p => /^\s*efeito\s*:/i.test(p));
-      if(!nome || effect < 0){ unparsed++; return; }
-      const meta = parts.slice(0, effect);
-      const pbPart = meta.find(p => /^\s*p\s*\.?\s*b\s*\.?\s*:?\s*\d+/i.test(p));
-      const pb = pbPart ? (pbPart.match(/\d+/) || [""])[0] : "";
-      const atk = meta.filter(p => p !== pbPart).join(" | ").trim();
-      const descricao = parts.slice(effect).join(" | ").replace(/^\s*efeito\s*:\s*/i, "").trim();
-      abilities.push({ id:"cfhab_pdf_" + (i + 1), nome, atk, pb, descricao });
+      const clean = chunk.replace(/^[*•-]\s*/, "");
+      const match = clean.match(/^([^\n:—–]{2,90}\s+[—–]\s*50\s+[—–]\s*[^\n:—–|]{2,90}?)\s+[—–]\s+(?=(?:ATK|DEF|DESV|PASSIVA|EFEITO|P\.?B\.?)\b)([\s\S]+)$/i) ||
+        clean.match(/^([^|:\n]{2,100}?)\s*\|\s*([\s\S]+)$/) ||
+        clean.match(/^([^\n:—–]{2,90}?)\s+[—–]\s+([\s\S]+)$/) ||
+        clean.match(/^([^\n:]{2,90}?)\s*:\s*([\s\S]+)$/) ||
+        clean.match(/^([^\n]{2,90})\n([\s\S]+)$/);
+      if(!match){ unparsed++; return; }
+      const nome = match[1].trim();
+      const body = match[2].trim();
+      // Evita transformar linhas internas da descrição em habilidades.
+      if(/^(?:efeito|dano|consumo|condi[çc][ãa]o|consequ[êe]ncia|aprimorar|origem|sentidos|imunidades|resist[êe]ncias)$/i.test(nome) || !body){ unparsed++; return; }
+      const pbMatch = body.match(/\bP\.?B\.?\s*[:=]?\s*(\d+)\b|(?<!\+)\b(\d+)\s*P\.?B\.?\b/i);
+      const pb = pbMatch ? (pbMatch[1] || pbMatch[2]) : "";
+      const atkMatch = body.match(/\b(?:ATK|DEF|DESV)\s*(?:N|AB|AF|C|O)\b|\bPASSIVA\b/i);
+      const atk = atkMatch ? atkMatch[0].toUpperCase() : "";
+      const parts = body.split(/\s*\|\s*/);
+      while(parts.length > 1 && /^(?:(?:ATK|DEF|DESV)\s*(?:N|AB|AF|C|O)|PASSIVA|P\.?B\.?\s*:?\s*\d+|\d+\s*P\.?B\.?)$/i.test(parts[0].trim())) parts.shift();
+      const descricao = parts.join(" | ").replace(/^Efeito\s*:\s*/i, "").trim() || body;
+      abilities.push({ id:"cfhab_pdf_" + (i + 1), nome:typeof window.CRRCreature50Name === "function" ? window.CRRCreature50Name(nome) : nome, atk, pb, descricao });
     });
     return { abilities, unparsed };
   }

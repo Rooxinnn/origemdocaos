@@ -37,9 +37,6 @@
      descricao      -> texto livre ou null (mostra placeholder)
      fichaCompleta  -> reservado para etapa futura (ficha completa)
 
-   Nenhuma informação foi inventada: Solis usa somente os dados
-   confirmados (nome, dimensão, tipo). Descrição e ficha completa
-   ficam como "Em desenvolvimento" até serem fornecidas.
    ========================================================== */
 (function(){
   "use strict";
@@ -57,100 +54,6 @@
   // Registros publicados com o site. Fichas dos usuários são unidas
   // a esta lista em tempo de execução, sem alterar este catálogo fixo.
   const CPD_CREATURES = [
-    {
-      id: "solis",
-      nome: "Solis",
-      dimensao: "terrena",
-      tipo: "Raposa",
-      imagem: "img/solis.png",
-      descricao: null,
-      fichaCompleta: null,
-
-      /* ---- registro completo (Etapa 2 — Ficha de Criatura) ----
-         Todos os valores abaixo vêm exclusivamente da ficha em PDF
-         enviada para a Solis. Nada foi inventado: campos sem dado
-         legível no documento original (ex.: valores numéricos de
-         ATK/DEF/DESV, que só aparecem em um gráfico sem números
-         legíveis, e os blocos de Descrição, para os quais nenhum
-         texto de lore foi enviado ainda) ficam como "—" ou "Em
-         desenvolvimento.", no mesmo padrão já usado pelo restante
-         do Compêndio. Esta estrutura é lida por js/criaturas-ficha.js
-         — nenhum outro arquivo depende deste campo.
-         Fonte: Solis.pdf ("Ficha do RPG Ordem do Caos"). */
-      ficha: {
-        periculosidade: "7",
-        nivel: "8",
-        impactoSanidade: "3",
-        raca: "Ignifay",
-        pontos: {
-          vida:      { atual: 194, max: 194 },
-          sanidade:  { atual: 80,  max: 80  },
-          protecao:  { atual: 50,  max: 50  },
-          resistenciaNatural: 6,
-          pb:        { atual: 0,   max: 15  }
-        },
-        combate: {
-          movs: 9,
-          valores: [
-            ["ATK N","—"], ["ATK AB","—"], ["ATK AF","—"], ["ATK C","—"],
-            ["DEF N","—"], ["DEF AB","—"], ["DEF C","—"],
-            ["DESV N","—"], ["DESV O","—"]
-          ]
-        },
-        // Habilidades / Talentos / Atributos / Perícias — só os campos
-        // que tinham valor preenchido na ficha original entram aqui.
-        habilidades: [
-          ["Arrombamento",1], ["Flexibilidade",6], ["Sentido Paranormal",50],
-          ["Ilusionismo",6], ["Roubo",1], ["Atletismo",8], ["Manipulação",1]
-        ],
-        talentos: [
-          ["Intimidação",6], ["Rastrear",8], ["Trabalho em Equipe",50],
-          ["Combate",20], ["Silencioso",1], ["Observador",6], ["Percepção",8]
-        ],
-        atributos: [
-          ["Agilidade",50], ["Inteligência",1], ["Ocultismo",12], ["Velocidade",8],
-          ["Força Física",6], ["Assimilação",6], ["Resistência",8],
-          ["Resistência Psíquica",6], ["Saúde",12]
-        ],
-        pericias: [
-          ["Idiomas",1], ["Perícia Investigativa",6], ["Idioma Antigo",1],
-          ["Perícia em Radar",1]
-        ],
-        sentidos: null,
-        resistencias: {
-          imunidades: ["Sangrar","Hemorragia","Fraturar","Envenenar","Corroendo","Agarrado*","Imobilizado**","Febril","Doente","Enjoado"],
-          observacoes: "Regras de benefícios, punições, resistências e agravantes do elemento fogo são utilizadas para esta criatura. Danos elétricos são dobrados e causam uma explosão que arremessa a criatura 1d4m de distância."
-        },
-        acoes: [
-          { nome: "Mordida", corpo: "Dano: 5d4+1/3FF | Sucesso Extremo causa QUEIMAR." },
-          { nome: "Derrubar", corpo: "Dano: 1d4 + CAÍDO." },
-          { nome: "Atropelar", corpo: "Dano: 2d4 + Desvantagem na próxima ação. Se sucesso Extremo: CAÍDO." }
-        ],
-        habilidadesPb: [
-          { nome: "Corrida de Chamas", corpo: "ATK N | P.B.: 3 | Efeito: a criatura corre em um movimento de costura (zigue-zague) por 10m, até localizar o seu alvo e então mordê-lo com a ferocidade de um caçador. Todo o caminho percorrido por esta criatura fica em chamas por 1d6 rodadas, e todos no caminho desta trilha de costura deverão realizar um teste (trecho final ilegível no documento original)." }
-        ],
-        passivas: [
-          { nome: "Forma Corpórea", corpo: "PASSIVA | Efeito: a criatura é capaz de controlar suas chamas para que, embora ainda quentes, não causem QUEIMAR a um personagem, objeto ou cenário." },
-          { nome: "Imortalidade do Fogo", corpo: "PASSIVA | Efeito: quando a criatura alcança 0 de HP, ela não morre ou entra em MORRENDO — ela apenas se desfaz e se perde no ar para se recuperar e regenerar sua forma. Ficará ausente por 24h." },
-          { nome: "Ataque Surpresa", corpo: "PASSIVA | Efeito: assim que esta criatura é invocada, ela é capaz de imediatamente realizar um ataque, e seu alvo terá Desvantagem em sua reação." },
-          { nome: "Rastreamento Caçador", corpo: "PASSIVA | Efeito: uma vez por invocação, esta criatura é capaz de dobrar 1 rolagem de: Perícia em Radar, Perícia Investigativa, Rastrear, Observador ou Percepção." },
-          { nome: "Cria do Paranormal", corpo: "ATK C, DEF C e DESV O possuem Vantagem. É capaz de identificar e sentir com perfeição qualquer personagem ou criatura dentro de um raio de 50m." },
-          { nome: "Caçada Conjunta", corpo: "É capaz de gastar 1 P.B. + 1 Ponto de Trabalho em Equipe para realizar um ataque junto de outra criatura. O alvo do ataque estará Flanqueado e terá -5 em sua rolagem de reação." },
-          { nome: "Paranormal Inatingível", corpo: "Ações que envolvam Agilidade têm Vantagem — isso inclui ATK N, DEF N, DEF AB, DEF C, DESV N e DESV O (trecho final ilegível no documento original)." }
-        ],
-        condicoesFisicas: {
-          tamanhoPeso: "60cm (1,60m quando de pé nas patas traseiras) | 7,1"
-        },
-        descricao: {
-          aparencia: null,
-          comportamento: null,
-          origem: null,
-          curiosidades: null,
-          relacaoDimensao: null
-        }
-      }
-    },
-
     /* ---- placeholders de teste visual (etapa de design) ----
        Fictícios, sem ficha/habilidades/regras — apenas para testar
        a identidade visual das 7 dimensões. Podem ser removidos

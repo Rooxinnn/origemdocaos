@@ -173,11 +173,12 @@
 
   /* ---------- render dos cards ---------- */
   function buildCard(h){
+    var displayName = typeof window.CRRCreature50Name === "function" ? window.CRRCreature50Name(h.nome) : h.nome;
     var pbLabel = (h.pb !== "" ? esc(h.pb) : "—") + " PB";
     return (
       '<div class="cfh-hab-card" data-cfh-id="' + esc(h.id) + '">' +
-        '<button type="button" class="cfh-hab-card-head" data-cfh-view="' + esc(h.id) + '" aria-label="Ver detalhes de ' + esc(h.nome || "habilidade sem nome") + '">' +
-          '<span class="cfh-hab-card-name">' + (h.nome ? esc(h.nome) : "Habilidade sem nome") + '</span>' +
+        '<button type="button" class="cfh-hab-card-head" data-cfh-view="' + esc(h.id) + '" aria-label="Ver detalhes de ' + esc(displayName || "habilidade sem nome") + '">' +
+          '<span class="cfh-hab-card-name">' + (displayName ? esc(displayName) : "Habilidade sem nome") + '</span>' +
           '<span class="cfh-hab-card-end"><span class="cfh-hab-card-pb">' + pbLabel + '</span><span class="cfh-hab-card-hint">Ver detalhes ›</span></span>' +
         '</button>' +
       '</div>'
@@ -252,7 +253,7 @@
     var overlay = document.getElementById("cfh_hab_detail_modal");
     overlay.dataset.habId = id;
     detailTrigger = trigger || null;
-    document.getElementById("cfh_detail_name").textContent = h.nome || "Habilidade sem nome";
+    document.getElementById("cfh_detail_name").textContent = (typeof window.CRRCreature50Name === "function" ? window.CRRCreature50Name(h.nome) : h.nome) || "Habilidade sem nome";
     document.getElementById("cfh_detail_atk").textContent = h.atk || "—";
     document.getElementById("cfh_detail_pb").textContent = h.pb !== "" ? h.pb + " PB" : "—";
     document.getElementById("cfh_detail_desc").textContent = h.descricao || "Sem descrição cadastrada.";

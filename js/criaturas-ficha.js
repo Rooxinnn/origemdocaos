@@ -92,6 +92,7 @@
   }
 
   function buildAccordionItem(nome, corpo, idx, groupKey){
+    if(groupKey !== "desc" && typeof window.CRRCreature50Name === "function") nome = window.CRRCreature50Name(nome);
     crfDetails.set(`${groupKey}-${idx}`,{nome,corpo,category:groupKey === "desc" ? "Descrição" :
       ({acoes:"Ação",habilidades:"Habilidade",passivas:"Passiva"})[groupKey]});
     return `
