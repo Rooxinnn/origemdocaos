@@ -1,0 +1,117 @@
+/* Ajustes exclusivos do fluxo de criaturas em telas de toque. */
+@media (max-width:760px){
+  #secret_files_screen .secret-wrap,
+  :is(#creature_list_screen,#creature_compendio_screen,#creature_registro_screen,#creature_ficha_completa_screen,#creature_regras_screen) .secret-wrap{
+    box-sizing:border-box;width:100%;padding-inline:12px;
+  }
+  #secret_files_screen .secret-header,
+  :is(#creature_list_screen,#creature_compendio_screen,#creature_registro_screen,#creature_ficha_completa_screen,#creature_regras_screen) .secret-header{margin-bottom:20px;}
+  #secret_files_screen .secret-header h2,
+  :is(#creature_list_screen,#creature_compendio_screen,#creature_registro_screen,#creature_regras_screen) .secret-header h2{
+    font-size:clamp(23px,7vw,34px);line-height:1.18;overflow-wrap:anywhere;
+  }
+  #secret_files_screen .secret-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:26px;}
+  #secret_files_screen .secret-card{min-width:0;min-height:128px;padding:17px 13px;overflow-wrap:anywhere;}
+  #secret_files_screen .secret-card-title{font-size:15px;line-height:1.3;}
+  #secret_files_screen .secret-card-sub{font-size:12px;line-height:1.5;}
+
+  /* O menu ocupa apenas seu próprio espaço enquanto a página rola. */
+  :is(#creature_list_screen,#creature_sheet_screen,#creature_compendio_screen,#creature_registro_screen,#creature_ficha_completa_screen,#creature_regras_screen) .cr-area-nav{
+    position:relative;top:auto;margin-bottom:16px;padding:10px;
+  }
+  .cr-area-nav-top{align-items:center;flex-wrap:wrap;}
+  .cr-area-nav-name{min-width:0;overflow-wrap:anywhere;}
+  .cr-area-nav-links{gap:7px;}
+  .cr-area-nav-links button{min-height:44px;line-height:1.25;white-space:normal;overflow-wrap:anywhere;}
+
+  #creature_list_screen .cr-import-toolbar{gap:9px;}
+  #creature_list_screen .cr-import-toolbar :is(input,select,button){min-height:46px;font-size:16px;}
+  #creature_list_screen .sheet-list{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;}
+  #creature_list_screen .sheet-card{box-sizing:border-box;min-width:0;width:100%;padding:16px;}
+  #creature_list_screen .sheet-card-name{overflow-wrap:anywhere;line-height:1.35;}
+  #creature_list_screen .sheet-card-actions{width:100%;gap:8px;}
+  #creature_list_screen .sheet-card-actions button{min-height:44px;flex:1 1 110px;font-size:12px;}
+
+  #creature_sheet_screen .cr-titlebar{padding:16px;gap:14px;}
+  #creature_sheet_screen .cr-titlebar > div[style*="flex:1"]{min-width:0;flex-basis:100%!important;}
+  #creature_sheet_screen .cr-titlebar h2{font-size:19px;line-height:1.25;}
+  #creature_sheet_screen .cr-photo-box{width:80px;height:80px;}
+  #creature_sheet_screen .cfh-view-toggle-btn{min-height:44px;margin:0;}
+  #creature_sheet_screen .panel{min-width:0;padding:16px 13px;}
+  #creature_sheet_screen .panel h2{line-height:1.3;overflow-wrap:anywhere;}
+  #creature_sheet_screen .panel h2 .tag{display:block;width:max-content;max-width:100%;margin-top:7px;}
+  #creature_sheet_screen .cr-vitals-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+  #creature_sheet_screen .cr-vitals-grid .combat-hero-box{padding:11px 8px;min-width:0;}
+  #creature_sheet_screen .cr-vitals-grid .hp-values{min-width:0;display:flex;align-items:center;}
+  #creature_sheet_screen .cr-vitals-grid .hp-values input{min-width:0;width:calc(50% - 8px);font-size:16px;}
+  #creature_sheet_screen .cr-combat-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+  #creature_sheet_screen .combat-minor-cell{min-width:0;}
+  #creature_sheet_screen .combat-minor-cell input{min-width:0;width:100%;box-sizing:border-box;font-size:16px;}
+  #creature_sheet_screen .cr-combat-weight{max-width:none;}
+  #creature_sheet_screen .cr-auto-actions{flex-wrap:wrap;gap:8px;}
+  #creature_sheet_screen .cr-auto-actions button{min-height:44px;}
+  #creature_sheet_screen :is(textarea,.field input){max-width:100%;box-sizing:border-box;font-size:16px;}
+  #creature_sheet_screen .cr-skill-row{min-width:0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px 10px;align-items:center;padding:11px 2px;}
+  #creature_sheet_screen .cr-skill-name{grid-column:1;grid-row:1;min-width:0;font-size:13px;line-height:1.3;overflow-wrap:anywhere;}
+  #creature_sheet_screen .cr-dice-tiers{grid-column:1;grid-row:2;gap:3px;min-width:0;flex-wrap:wrap;}
+  #creature_sheet_screen .cr-pts-wrap{grid-column:2;grid-row:1 / span 2;max-width:100%;box-sizing:border-box;padding:5px 8px;}
+  #creature_sheet_screen .cr-pts-wrap input{width:36px;min-height:34px;font-size:18px;}
+  #creature_sheet_screen .cfh-hab-toolbar{flex-wrap:wrap;gap:10px;}
+  #creature_sheet_screen .cfh-hab-add-btn{min-height:44px;}
+  #creature_sheet_screen .cfh-hab-card-head{min-height:54px;gap:10px;}
+  #creature_sheet_screen .cfh-hab-card-name{min-width:0;overflow-wrap:anywhere;}
+  #creature_sheet_screen .action-bar{gap:8px;}
+  #creature_sheet_screen .action-bar > button{min-height:46px;flex:1 1 100%;}
+
+  #creature_compendio_screen .cpd-toolbar{gap:12px;padding:12px;margin-bottom:18px;}
+  #creature_compendio_screen .cpd-refresh{width:100%;min-height:44px;}
+  #creature_compendio_screen .cpd-search-box input{font-size:16px;}
+  #creature_compendio_screen .cpd-filter-btn{min-height:46px;white-space:normal;line-height:1.2;overflow-wrap:anywhere;}
+  #creature_compendio_screen .cpd-grid{gap:16px;margin-bottom:28px;}
+  #creature_compendio_screen .cpd-section{min-width:0;}
+  #creature_compendio_screen .cpd-flat-grid{min-width:0;padding:10px;}
+  #creature_compendio_screen .cpd-card{min-width:0;}
+  #creature_compendio_screen .cpd-card-name{line-height:1.3;}
+  #creature_compendio_screen .cpd-card-btn{min-height:44px;white-space:normal;}
+
+  :is(#creature_registro_screen,#creature_ficha_completa_screen) .cpd-detail-actions{justify-content:stretch;gap:8px;}
+  :is(#creature_registro_screen,#creature_ficha_completa_screen) .cpd-detail-actions button:not([hidden]){flex:1 1 145px;min-height:44px;white-space:normal;}
+  #creature_registro_screen .cpd-reg-body{min-width:0;}
+  #creature_registro_screen .cpd-reg-photo-box{width:min(100%,220px);height:auto;aspect-ratio:1;}
+  #creature_ficha_completa_screen .crf-header{padding:16px;gap:12px;}
+  #creature_ficha_completa_screen .crf-header-info h2{font-size:21px;line-height:1.25;overflow-wrap:anywhere;}
+  #creature_ficha_completa_screen .crf-tabs{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin:16px 0;}
+  #creature_ficha_completa_screen .crf-tab-btn{min-width:0;min-height:52px;padding:8px 5px;white-space:normal;line-height:1.2;letter-spacing:.02em;}
+  #creature_ficha_completa_screen .crf-subtabs{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;overflow:visible;padding-bottom:0;}
+  #creature_ficha_completa_screen .crf-subtab-btn{min-width:0;min-height:44px;padding:7px 5px;white-space:normal;line-height:1.2;letter-spacing:.02em;}
+  #creature_ficha_completa_screen .crf-hero-row{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+  #creature_ficha_completa_screen .crf-combat-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+  #creature_ficha_completa_screen .crf-chip{max-width:100%;box-sizing:border-box;overflow-wrap:anywhere;}
+  #creature_ficha_completa_screen .crf-accordion-head{min-height:48px;line-height:1.35;overflow-wrap:anywhere;}
+
+  #creature_regras_screen .crr-toolbar{min-width:0;}
+  #creature_regras_screen #crr_search{box-sizing:border-box;width:100%;font-size:16px;min-height:46px;}
+  #creature_regras_screen .compendio-card{overflow-wrap:anywhere;}
+
+  :is(#cr_catalog_modal,#cr_pdfimp_modal,#creature_delete_modal,.cfh-hab-detail-modal,.cfh-hab-modal,.cfh-hab-delete-modal){padding:12px;box-sizing:border-box;}
+  :is(#cr_catalog_modal,#cr_pdfimp_modal,#creature_delete_modal) .modal-box,
+  .cfh-hab-modal-box{box-sizing:border-box;width:100%;max-width:min(100%,560px);max-height:calc(100dvh - 24px);overflow-y:auto;overscroll-behavior:contain;}
+  :is(#cr_catalog_modal,#cr_pdfimp_modal,#creature_delete_modal) .modal-actions,
+  .cfh-hab-modal-box .modal-actions{display:flex;flex-wrap:wrap;gap:8px;}
+  :is(#cr_catalog_modal,#cr_pdfimp_modal,#creature_delete_modal) .modal-actions button,
+  .cfh-hab-modal-box .modal-actions button{min-height:44px;flex:1 1 125px;}
+  .cfh-hab-detail-box{width:100%;box-sizing:border-box;}
+  .cfh-detail-actions button{min-height:44px;}
+  #crf_detail_modal{padding:12px;}
+  #crf_detail_modal .crf-detail-card{box-sizing:border-box;width:100%;max-height:calc(100dvh - 24px);overflow-y:auto;}
+}
+
+@media (max-width:390px){
+  #secret_files_screen .secret-grid{grid-template-columns:minmax(0,1fr);}
+  #secret_files_screen .secret-card{min-height:95px;}
+  .cr-area-nav-top .cr-area-exit{width:100%;}
+  #creature_sheet_screen .cr-vitals-grid .combat-hero-box{padding:10px 5px;}
+  #creature_sheet_screen .cr-dice-tiers span{width:18px;height:18px;font-size:8px;}
+  #creature_sheet_screen .cr-pts-wrap{padding-inline:5px;}
+  #creature_sheet_screen .cr-pts-wrap input{width:30px;}
+}
