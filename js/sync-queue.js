@@ -147,7 +147,7 @@
       if (__memQueue === null) __memQueue = await loadQueueRaw();
       const result = await fn(__memQueue);
       if (result && result.dirty) {
-        await saveQueueRaw(__memQueue);
+        if (await saveQueueRaw(__memQueue)) notifyOtherTabs();
       }
       return result ? result.value : undefined;
     });
@@ -561,7 +561,6 @@
   function $(id) { return document.getElementById(id); }
 
   async function updateBadge(forceState) {
-    notifyOtherTabs();
     const el = $("cris_global_sync_indicator");
     if (!el) return;
 
