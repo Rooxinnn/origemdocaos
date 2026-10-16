@@ -1,0 +1,12 @@
+/* Conteúdo extenso deve encolher/quebrar dentro do card, sem expulsar ações. */
+#inv_list .entry-card,#list-conexoes_par .entry-card{min-width:0;display:flex;flex-wrap:wrap;align-items:flex-start;gap:12px;}
+#inv_list .entry-body,#list-conexoes_par .entry-body{flex:1 1 240px;min-width:0;max-width:100%;overflow-wrap:anywhere;}
+#inv_list .entry-title,#inv_list .entry-desc,#list-conexoes_par .entry-desc{min-width:0;overflow-wrap:anywhere;}
+#inv_list .entry-del,#inv_list .eqcustom-edit-btn,#list-conexoes_par .entry-del{flex:0 0 auto;max-width:100%;margin-left:0;white-space:normal;}
+#app_screen .topbar>div,#app_screen .topbar .tabs{min-width:0;}
+#app_screen .topbar{flex-wrap:wrap;}
+#app_screen .topbar .tabs{max-width:100%;}
+#tab-agentes .field-row,#creature_sheet_screen .field-row{min-width:0;}
+#tab-agentes .field,#creature_sheet_screen .field{min-width:0;}
+#tab-agentes .field>input,#tab-agentes .field>select,#creature_sheet_screen .field>input{min-width:0;max-width:100%;}
+@media(max-width:600px){#inv_list .entry-body{flex-basis:100%;}#inv_list .entry-del,#inv_list .eqcustom-edit-btn{margin-top:0;}}
