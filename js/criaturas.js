@@ -463,6 +463,10 @@
   }
 
   async function saveCreature(isAutosave){
+    if(window.QuickValueAdjustments?.hasPending()){
+      if(isAutosave) return;
+      window.QuickValueAdjustments.commitPending();
+    }
     if(!currentCreatureId) return false;
     if(crSavePromise){
       await crSavePromise;

@@ -1009,6 +1009,7 @@
 <link rel="stylesheet" href="css/creature-mobile.css">
 <link rel="stylesheet" href="css/agentes-bestiario.css">
 <link rel="stylesheet" href="css/quick-navigation.css">
+<link rel="stylesheet" href="css/layout-fixes.css">
 </head>
 <body>
 
@@ -3707,6 +3708,10 @@ function markAgentDirty(){
 }
 
 async function saveAgent(isAutosave){
+  if(window.QuickValueAdjustments?.hasPending()){
+    if(isAutosave) return;
+    window.QuickValueAdjustments.commitPending();
+  }
   if(__agentSaveInFlight){
     if(isAutosave) scheduleAgentAutosave();
     return;
@@ -3747,7 +3752,6 @@ async function saveAgent(isAutosave){
 
     if(res){
       // 4. só confirma sucesso depois da gravação realmente confirmada
-      if(currentAgentId === savedAgentId && __agentChangeRevision === savedRevision) __agentDirty = false;
       const idx = sheetsIndex.findIndex(e => e.id === savedAgentId);
       const nomeFicha = (data.nome || "").trim() || "Ficha sem nome";
       if(idx >= 0){
@@ -3756,7 +3760,13 @@ async function saveAgent(isAutosave){
       } else {
         sheetsIndex.push({ id: savedAgentId, nome: nomeFicha, updatedAt: Date.now() });
       }
-      await saveSheetsIndex();
+      const indexSaved = await saveSheetsIndex();
+      if(!indexSaved){
+        if(currentAgentId === savedAgentId) __agentDirty = true;
+        flashIndicator("⚠ A ficha foi gravada, mas a lista de fichas não pôde ser salva. Tente salvar novamente antes de sair.", true, 5000);
+        return false;
+      }
+      if(currentAgentId === savedAgentId && __agentChangeRevision === savedRevision) __agentDirty = false;
       flashIndicator(isAutosave ? "✓ Salvo automaticamente" : "✓ Ficha salva com sucesso!", false, isAutosave ? 1200 : 2500);
       // Backup automático (ver script "BACKUP E RESTAURAÇÃO"): registra o
       // estado após um salvamento manual bem-sucedido — cobre alterações
@@ -3772,10 +3782,13 @@ async function saveAgent(isAutosave){
       if(typeof window.CRISSync === "object" && window.CRISSync){
         window.CRISSync.syncSheetToCloud(savedAgentId, data).catch(() => {});
       }
+      return true;
     } else {
+      if(currentAgentId === savedAgentId) __agentDirty = true;
       flashIndicator("✕ Não foi possível salvar a ficha. Tente novamente.", true, 3000);
     }
   }catch(e){
+    if(currentAgentId === savedAgentId) __agentDirty = true;
     flashIndicator("✕ Não foi possível salvar a ficha. Tente novamente.", true, 3000);
   }finally{
     if(!isAutosave){
@@ -3799,17 +3812,19 @@ window.addEventListener("beforeunload", (e) => {
   }
 });
 
-async function loadAgent(sheetId){
-  const raw = await storageGet(sheetStorageKey(sheetId));
-  if(!raw) return;
+async function loadAgent(sheetId, preparedData){
   try{
-    const data = JSON.parse(raw);
-    Object.keys(data).forEach(id => {
+    const raw = preparedData === undefined ? await storageGet(sheetStorageKey(sheetId)) : null;
+    if(preparedData === undefined && !raw) return false;
+    const data = preparedData === undefined ? JSON.parse(raw) : preparedData;
+    if(!data || typeof data !== "object" || Array.isArray(data)) return false;
+    agentFieldIds().forEach(id => {
       const el = document.getElementById(id);
-      if(el) el.value = data[id];
+      if(el) el.value = Object.prototype.hasOwnProperty.call(data,id) ? data[id] : (el.type === "hidden" ? "" : (el.defaultValue || ""));
     });
-  }catch(e){}
-  __agentDirty = false;
+    __agentDirty = false;
+    return true;
+  }catch(e){ return false; }
 }
 
 /* ==========================================================
@@ -3908,7 +3923,7 @@ async function loadSheetsIndex(){
   }
 }
 async function saveSheetsIndex(){
-  await storageSet(SHEETS_INDEX_KEY, JSON.stringify(sheetsIndex), 1, true);
+  return await storageSet(SHEETS_INDEX_KEY, JSON.stringify(sheetsIndex), 1, true);
 }
 
 // Migração: se ainda não existir nenhuma ficha no índice novo, mas existir a
@@ -4080,14 +4095,47 @@ async function createNewSheet(){
   if(tabBtnAgentesNovo) tabBtnAgentesNovo.click();
 }
 
+let __agentOpening = false;
 async function openSheet(id){
+  if(__agentOpening) return false;
+  __agentOpening = true;
+  try{
+  // Valida antes de mudar o ID, os campos ou as referências da ficha atual.
+  const raw = await storageGet(sheetStorageKey(id));
+  if(!raw) throw new Error("Não foi possível ler a ficha selecionada. A ficha atual foi mantida.");
+  let data = JSON.parse(raw);
+  if(!data || typeof data !== "object" || Array.isArray(data)) throw new Error("A ficha selecionada tem um formato inválido. A ficha atual foi mantida.");
+  const invRaw = await storageGet(inventoryStorageKey(id));
+  let targetInventory = invRaw ? JSON.parse(invRaw) : [];
+  if(!Array.isArray(targetInventory)) throw new Error("Não foi possível ler o inventário da ficha selecionada.");
+  const foreign = window.CRISCampaignAgentView?.isActive();
+  if(currentAgentId && !foreign){
+    window.QuickValueAdjustments?.commitPending();
+    const deadline = Date.now() + 6000;
+    while(__agentSaveInFlight){
+      if(Date.now() > deadline) throw new Error("Aguarde o salvamento atual antes de trocar de ficha.");
+      await new Promise(resolve => setTimeout(resolve, 40));
+    }
+    if(__agentDirty) await saveAgent(true);
+    if(__agentDirty) throw new Error("Não foi possível salvar a ficha atual. A troca foi cancelada.");
+    const savedInventory = await storageSet(inventoryStorageKey(currentAgentId), JSON.stringify(getOpenInventorySnapshot()), 1, true);
+    if(!savedInventory) throw new Error("Não foi possível salvar o inventário atual. A troca foi cancelada.");
+  }
+  if(currentAgentId === id && !foreign){
+    const latestRaw = await storageGet(sheetStorageKey(id));
+    if(!latestRaw) throw new Error("Não foi possível reler a ficha salva. A ficha atual foi mantida.");
+    data = JSON.parse(latestRaw);
+    if(!data || typeof data !== "object" || Array.isArray(data)) throw new Error("A ficha salva não pôde ser validada.");
+    targetInventory = getOpenInventorySnapshot();
+  }
+  clearTimeout(__agentAutosaveTimer); __agentAutosaveTimer = null;
   // FASE G — mesmo guard: abrir uma ficha de verdade (a própria ou
   // outra do gerenciador) sempre sai do modo "ficha de terceiro" antes.
   if (window.CRISCampaignAgentView && typeof window.CRISCampaignAgentView.isActive === "function" && window.CRISCampaignAgentView.isActive()) {
     window.CRISCampaignAgentView.exitIfNeeded();
   }
   currentAgentId = id;
-  await loadAgent(id);
+  await loadAgent(id, data);
   agentFieldIds().forEach(fid => {
     const el = document.getElementById(fid);
     if(el && el.dataset.skill) updateDiceTiers(fid);
@@ -4106,7 +4154,8 @@ async function openSheet(id){
   // deste bug).
   const hpMaxEl = document.getElementById("hp_max");
   if(hpMaxEl && hpMaxEl.value === "") updateHP();
-  updateFatigue();
+  const fadigaMaxEl = document.getElementById("fadiga_max");
+  if(fadigaMaxEl && fadigaMaxEl.value === "") updateFatigue();
   // Estado visual de HP/SAN a partir dos valores recém-carregados
   // (cobre o teste de persistência: recarregar deve manter o estado).
   if(typeof window.updateAgentVitalStates === "function") window.updateAgentVitalStates();
@@ -4135,7 +4184,8 @@ async function openSheet(id){
   // Carrega o Inventário PRÓPRIO desta ficha (corrige o compartilhamento
   // entre fichas — cada ficha tem seu próprio Inventário associado pelo
   // mesmo id usado por sheetStorageKey()).
-  await loadInventory(id);
+  invItems = targetInventory;
+  renderInventory();
   if(window.CustomProfessions && typeof window.CustomProfessions.refresh === "function") window.CustomProfessions.refresh();
   // ETAPA 2 — Supabase: atualiza o indicador ☁ (só lê o metadado local
   // de sincronização já salvo; nenhuma chamada de rede é feita aqui).
@@ -4146,6 +4196,12 @@ async function openSheet(id){
   // fichas estando com a aba "Campanhas" ativa por baixo).
   const tabBtnAgentesAbrir = document.querySelector('.tab-btn[data-tab="agentes"]');
   if(tabBtnAgentesAbrir) tabBtnAgentesAbrir.click();
+  return true;
+  }catch(e){
+    flashIndicator(e.message || "Não foi possível abrir a ficha. Tente novamente.", true, 4200);
+    return false;
+  }finally{ __agentOpening = false; }
+
 }
 
 async function duplicateSheet(id){
@@ -4272,12 +4328,6 @@ document.getElementById("tab-agentes").addEventListener("input", (e) => {
   if(!e.target.matches("input, textarea, select")) return;
   if(e.target.dataset.skill){
     updateDiceTiers(e.target.id);
-    const atualEl = document.getElementById(e.target.id + "_atual");
-    if(atualEl){
-      const max = parseInt(e.target.value) || 0;
-      const atual = parseInt(atualEl.value) || 0;
-      if(atual === 0 || atual > max) atualEl.value = max;
-    }
     // Campo "Máx." de Habilidade/Talento/Atributo/Perícia mudou: reavalia
     // os desbloqueios de Habilidades em 50 (regra genérica, ver acima).
     checkHabilidades50Unlock();
@@ -4294,9 +4344,9 @@ document.getElementById("tab-agentes").addEventListener("input", (e) => {
       if(atual > max) e.target.value = max;
     }
   }
-  if(SAN_IDS.includes(e.target.id) || e.target.id === "ocultismo") updateSAN();
-  if(e.target.id === "saude") updateHP();
-  if(FADIGA_IDS.includes(e.target.id)) updateFatigue();
+  if(!e.target.dataset.skill && (SAN_IDS.includes(e.target.id) || e.target.id === "ocultismo")) updateSAN();
+  if(!e.target.dataset.skill && e.target.id === "saude") updateHP();
+  if(!e.target.dataset.skill && FADIGA_IDS.includes(e.target.id)) updateFatigue();
   // Estados visuais de HP/SAN (100% visual — ver js/vital-states.js).
   // Reaproveita este mesmo listener central em vez de criar um novo.
   if(e.target.id === "hp" || e.target.id === "san_atual"){
@@ -4326,6 +4376,12 @@ document.getElementById("tab-agentes").addEventListener("change", (e) => {
         if(novoAtual < 0) novoAtual = 0;
         atualEl.value = String(novoAtual);
         markAgentDirty();
+      }
+      if(delta < 0 && (parseInt(atualEl.value) || 0) > newMax) atualEl.value = String(newMax);
+      if(delta !== 0){
+        if(SAN_IDS.includes(id) || id === "ocultismo") updateSAN();
+        if(id === "saude") updateHP();
+        if(FADIGA_IDS.includes(id)) updateFatigue();
       }
       skillBaseline[id] = { max: newMax, atual: parseInt(atualEl.value) || 0 };
     }

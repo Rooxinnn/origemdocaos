@@ -1,146 +1,69 @@
-/* ==========================================================
-   AJUSTE RÁPIDO DE VALORES (+N / -N)
-   Módulo independente e isolado (nenhum outro arquivo foi
-   reescrito para isto) que permite, nos campos "Atual" de
-   Atributos, Perícias, Habilidades, Talentos, HP, SAN e Fadiga,
-   digitar "+N" ou "-N" para somar/subtrair do valor já presente
-   no campo, em vez de precisar calcular o resultado manualmente.
-
-   IMPORTANTE — este módulo:
-   - NÃO cria um novo sistema de armazenamento nem intercepta
-     saveAgent()/loadAgent(). Ele só reescreve, no próprio campo
-     já existente, o valor final (ex.: troca "-5" por "15"),
-     exatamente como se o usuário tivesse digitado "15" direto.
-     Dali em diante o campo é salvo/carregado normalmente pelos
-     mecanismos GENÉRICOS que já existem (agentFieldIds()).
-   - NÃO cria novas regras de jogo: não trava o valor em 0, não
-     trava no máximo, não inventa limites que o projeto não tinha.
-   - NÃO altera o campo "Máx." de nenhuma pontuação — a operação
-     só é aplicada ao campo "Atual" (ou ao HP/SAN/Fadiga atuais).
-   - Depois de aplicar o resultado, dispara os eventos padrão
-     "input" e "change" no campo, para que toda a lógica que já
-     existia (clamp Atual ≤ Máx., recálculo de SAN/HP/Fadiga,
-     marcação de "ficha não salva" etc.) continue funcionando
-     exatamente como antes, sem precisar duplicar essa lógica aqui.
-
-   Campos alvo (ver 1.1 do pedido): apenas os campos "Atual" que
-   representam pontuação/recurso de jogo modificável durante a
-   sessão. Habilidades em 50, Habilidades Desbloqueadas, Compêndio
-   e Aborto Límbico não possuem campos desse tipo e por isso não
-   são tocados por este módulo.
-
-   Namespace: window.QuickValueAdjustments
-   ========================================================== */
-(function () {
-  "use strict";
-
-  // Campos "Atual" de Atributos/Perícias/Habilidades/Talentos —
-  // todos compartilham o atributo data-skill-atual (ver renderGrid /
-  // buildSkillRow no index.html). Não inclui o campo "Máx." (esse
-  // usa data-skill, não data-skill-atual).
-  var GRID_ATUAL_SELECTOR = "[data-skill-atual]";
-
-  // Demais recursos "Atual" que já existem na ficha, fora dos grids
-  // de skill. Os campos "Máximo"/"Máxima" correspondentes (hp_max,
-  // san_max, fadiga_max) propositalmente NÃO estão nesta lista.
-  var EXTRA_FIELD_IDS = ["hp", "san_atual", "fadiga_atual"];
-
-  // Aceita "+5", "-5", "+ 5", "-5.5", "-5,5" (vírgula como separador
-  // decimal também é aceita, já que o teclado numérico de celular
-  // costuma usar vírgula). Espaços nas pontas são ignorados.
-  var QUICK_ADJUST_RE = /^([+-])\s*(\d+(?:[.,]\d+)?)$/;
-
-  // Guarda o valor confirmado mais recente de cada campo, para servir
-  // de base ao aplicar "+N"/"-N". Um WeakMap não interfere em nada
-  // fora deste módulo e é limpo automaticamente pelo garbage collector
-  // caso o campo seja removido do DOM.
-  var baseline = new WeakMap();
-  var slashMaximum = new WeakMap();
-
-  function isTargetField(el) {
-    if (!el || typeof el.matches !== "function") return false;
-    if (el.matches(GRID_ATUAL_SELECTOR)) return true;
-    if (el.id && EXTRA_FIELD_IDS.indexOf(el.id) !== -1) return true;
-    // Campos numéricos editáveis da ficha (incluindo máximos, EXP, idade,
-    // peso e quantidades). Campos de texto livre permanecem intocados.
-    if (!el.closest || !el.closest("#tab-agentes") || el.readOnly || el.type === "hidden") return false;
-    return el.type === "number" || el.inputMode === "decimal" || el.inputMode === "numeric";
+/* Ajustes +N/-N: confirma antes dos cálculos existentes e nunca usa eval. */
+(function(){
+  'use strict';
+  const states=new WeakMap();
+  const resources=new Set(['hp','hp_max','san_atual','san_max','fadiga_atual','fadiga_max','dinheiro','protecao','corrupcao','infeccao','exp','idade','pontos_acumulados','nivel_mov','inv_qtd','inv_peso','eqcustom_f_qtd','eqcustom_f_peso','cr_hp','cr_san','cr_pb','cr_protecao','cr_hp_atual','cr_hp_max','cr_san_atual','cr_san_max','cr_pb_atual','cr_pb_max','cr_protecao_atual','cr_protecao_max','cr_pontos','cr_peso_total']);
+  const scope='#tab-agentes,#tab-inventario,#tab-paranormal,#creature_sheet_screen,#eqcustom_form_modal';
+  function isTargetField(el){
+    if(!el||el.tagName!=='INPUT'||el.readOnly||el.disabled||el.type==='hidden')return false;
+    if(el.matches('[data-skill-atual],[data-skill],[data-cr-skill-atual],[data-cr-skill]'))return true;
+    if(resources.has(el.id))return true;
+    return !!el.closest(scope)&&(el.type==='number'||el.dataset.qvaNumber==='1'||el.inputMode==='decimal'||el.inputMode==='numeric');
   }
-
-  function parseNumber(str) {
-    var n = parseFloat(String(str || "").replace(",", "."));
-    return isNaN(n) ? 0 : n;
+  function number(s){
+    s=String(s).trim().replace(/\s/g,'');
+    const k=/k$/i.test(s);if(k)s=s.slice(0,-1);
+    if(s.includes(',')){s=s.replace(/\./g,'').replace(',','.');}
+    else if(/^[1-9]\d{0,2}(?:\.\d{3})+$/.test(s))s=s.replace(/\./g,'');
+    if(!/^[+-]?(?:\d+(?:\.\d+)?|\.\d+)$/.test(s))return null;
+    const n=Number(s)*(k?1000:1);return Number.isFinite(n)?n:null;
   }
-
-  function formatResult(n) {
-    // Evita ruído de ponto flutuante (ex.: 0.1 + 0.2) e mantém
-    // números inteiros sem casas decimais desnecessárias, já que a
-    // imensa maioria dos valores da ficha são inteiros.
-    var rounded = Math.round(n * 1000) / 1000;
-    return String(rounded);
+  function parts(raw){
+    raw=String(raw??'');if(!raw.trim())return {value:0,suffix:''};
+    const m=raw.match(/^\s*([+-]?[\d.,]+\s*k?)(\s*\/\s*[^\n]+|\s+\([^\n]*\))?\s*$/i);
+    if(!m)return null;const n=number(m[1]);return n===null?null:{value:n,suffix:m[2]||''};
   }
-
-  function captureBaseline(el) {
-    baseline.set(el, parseNumber(el.value));
-    var slash = String(el.value || "").match(/^\s*-?\d+(?:[.,]\d+)?\s*\/\s*(.+)\s*$/);
-    if (slash) slashMaximum.set(el, slash[1]); else slashMaximum.delete(el);
+  function calculate(base,expression){
+    const m=String(expression).trim().match(/^([+-])\s*([\d.,]+\s*k?)$/i);
+    if(!m)return null;const p=parts(base),amount=number(m[2]);if(!p||amount===null)return null;
+    const value=Math.round((p.value+(m[1]==='-'?-amount:amount))*1e6)/1e6;
+    return Number.isFinite(value)?String(value)+p.suffix:null;
   }
-
-  // Retorna true se o valor do campo era uma expressão "+N"/"-N" e foi
-  // convertida para o resultado final; false se o campo deve ser
-  // deixado exatamente como o usuário digitou (preenchimento normal).
-  function applyQuickAdjust(el) {
-    var raw = (el.value || "").trim();
-    var match = raw.match(QUICK_ADJUST_RE);
-    if (!match) return false;
-
-    var sign = match[1] === "-" ? -1 : 1;
-    var amount = parseNumber(match[2]);
-    var base = baseline.has(el) ? baseline.get(el) : parseNumber(el.value);
-    var result = base + sign * amount;
-
-    // Para campos que usam o formato Atual/Máx. no mesmo input, altera
-    // somente a parte Atual e preserva o máximo (ex.: 20/30 - 5 = 15/30).
-    var maximum = slashMaximum.get(el);
-    el.value = maximum !== undefined ? formatResult(result) + "/" + maximum : formatResult(result);
-    return true;
+  function prepare(el){
+    if(el.type==='number'){el.dataset.qvaNumber='1';el.type='text';el.inputMode='decimal';}
+    states.set(el,{base:el.value,pending:false,emitting:false});
   }
-
-  function confirmField(el) {
-    var wasQuickAdjust = applyQuickAdjust(el);
-    // Atualiza a base para o valor já confirmado (seja ele resultado de
-    // "+N"/"-N" ou um número normal digitado direto).
-    baseline.set(el, parseNumber(el.value));
-
-    if (wasQuickAdjust) {
-      // Só dispara os eventos padrão quando o módulo de fato reescreveu
-      // o campo — assim, o resto do projeto reage à mudança exatamente
-      // como reagiria se o usuário tivesse digitado o resultado final.
-      el.dispatchEvent(new Event("input", { bubbles: true }));
-      el.dispatchEvent(new Event("change", { bubbles: true }));
-    }
+  function signed(el){return /^[+-]/.test(el.value.trim());}
+  function emit(el,type){el.dispatchEvent(new Event(type,{bubbles:true}));}
+  function confirm(el,sendChange){
+    const state=states.get(el);if(!state||!state.pending)return false;
+    const result=calculate(state.base,el.value);state.pending=false;state.emitting=true;
+    el.value=result===null?state.base:result;
+    if(result===null&&typeof flashIndicator==='function')flashIndicator('Ajuste inválido. Use +100 ou -100 em um valor numérico.',true,2800);
+    emit(el,'input');if(sendChange)emit(el,'change');
+    state.base=el.value;state.emitting=false;return true;
   }
-
-  document.addEventListener("focusin", function (e) {
-    if (!isTargetField(e.target)) return;
-    captureBaseline(e.target);
-  });
-
-  document.addEventListener("focusout", function (e) {
-    if (!isTargetField(e.target)) return;
-    confirmField(e.target);
-  });
-
-  // Confirma também ao pressionar Enter, sem esperar o campo perder o
-  // foco — comportamento comum durante uma sessão de RPG, quando o
-  // jogador quer ver o resultado na hora.
-  document.addEventListener("keydown", function (e) {
-    if (e.key !== "Enter") return;
-    if (!isTargetField(e.target)) return;
-    confirmField(e.target);
-  });
-
-  window.QuickValueAdjustments = {
-    isTargetField: isTargetField
+  document.addEventListener('focusin',e=>{if(isTargetField(e.target))prepare(e.target);},true);
+  document.addEventListener('input',e=>{
+    const el=e.target;if(!isTargetField(el))return;const state=states.get(el);if(!state||state.emitting)return;
+    state.pending=signed(el);
+    if(state.pending){e.stopImmediatePropagation();return;}
+    // Digitação comum segue pelas regras de jogo já existentes.
+  },true);
+  document.addEventListener('change',e=>{
+    const el=e.target;if(!isTargetField(el))return;const state=states.get(el);if(!state||state.emitting)return;
+    if(state.pending)confirm(el,false);state.base=el.value;
+  },true);
+  document.addEventListener('focusout',e=>{
+    const el=e.target;if(!isTargetField(el))return;confirm(el,true);
+    const state=states.get(el);if(state)state.base=el.value;
+  },true);
+  document.addEventListener('keydown',e=>{
+    if(e.key!=='Enter'||!isTargetField(e.target))return;
+    if(confirm(e.target,true))e.preventDefault();
+  },true);
+  window.QuickValueAdjustments={isTargetField,calculate,
+    hasPending:()=>!!states.get(document.activeElement)?.pending,
+    commitPending:()=>{const el=document.activeElement;if(el)confirm(el,true);}
   };
 })();

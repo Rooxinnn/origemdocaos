@@ -1318,14 +1318,10 @@
     if(typeof openSheet === "function"){
       var _origOpenSheet = openSheet;
       openSheet = async function(id){
-        // Evita que a referência da ficha anterior "vaze" para a
-        // próxima antes do carregamento real (relevante só para
-        // fichas antigas, salvas antes de agente_conexoes_ids
-        // existir — loadAgent() sobrescreve normalmente quando o
-        // campo já foi salvo).
-        resetConnRefsSilent();
-        await _origOpenSheet(id);
+        const opened = await _origOpenSheet(id);
+        if(opened === false) return false;
         renderAll();
+        return true;
       };
     }
     if(typeof createNewSheet === "function"){

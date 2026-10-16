@@ -447,9 +447,10 @@
     if(typeof openSheet === "function"){
       var _origOpenSheet = openSheet;
       openSheet = async function(id){
-        resetRefsSilent();
-        await _origOpenSheet(id);
+        const opened = await _origOpenSheet(id);
+        if(opened === false) return false;
         renderAll();
+        return true;
       };
     }
     if(typeof createNewSheet === "function"){

@@ -299,6 +299,10 @@
      nunca falham silenciosamente.
      ------------------------------------------------------------ */
   async function saveForeignAgentSheet(isAutosave) {
+    if(window.QuickValueAdjustments?.hasPending()){
+      if(isAutosave) return;
+      window.QuickValueAdjustments.commitPending();
+    }
     if (!__foreignActive || !__foreignAgentId) return;
     if (__foreignSaveInFlight) {
       // Já existe um salvamento em andamento (autosave ou clique manual):

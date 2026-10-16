@@ -130,9 +130,8 @@
       if (!data || Array.isArray(data) || typeof data !== 'object') throw Error('A ficha selecionada não pôde ser lida.');
       await beforeSwitch();
       if (stamp !== generation || !(window.sheetsIndex || []).some(x => x.id === id)) throw Error('A sessão mudou. Abra o seletor novamente.');
-      // Campos novos ausentes numa ficha antiga não herdam valores do agente anterior.
-      agentFieldIds().forEach(key => { if (!(key in data)) { const input = $(key); if (input) input.value = input.defaultValue || ''; } });
-      await openSheet(id);
+      const opened = await openSheet(id);
+      if(opened === false) throw Error('Não foi possível abrir a ficha. A ficha anterior foi mantida.');
       refreshContext(); picker.close(); window.scrollTo({ top: 0, behavior: 'auto' });
     } catch (e) { feedback.textContent = e.message || 'Não foi possível trocar de ficha.'; }
     finally { switching = false; picker.querySelectorAll('button,input').forEach(n => n.disabled = false); }
