@@ -1010,7 +1010,7 @@
 <link rel="stylesheet" href="css/agentes-bestiario.css">
 <link rel="stylesheet" href="css/quick-navigation.css">
 <link rel="stylesheet" href="css/layout-fixes.css">
-<script src="js/performance-tuning.js"></script>
+<script src="js/performance-tuning.js?v=20261017-multitab2"></script>
 </head>
 <body>
 
@@ -2862,12 +2862,26 @@ async function storageDeleteKey(key){
 /* ==========================================================
    TABS
    ========================================================== */
+// Monta as referências somente no primeiro acesso, em vez de repetir
+// o catálogo completo durante o login de cada aba aberta.
+const __referenceViewsReady = new Set();
+function ensureReferenceView(tab){
+  if(__referenceViewsReady.has(tab)) return;
+  if(tab === "compendio"){
+    renderCompendio();
+    renderConexoes();
+  }else if(tab === "guialivro"){
+    renderGuiaLivro();
+  }else return;
+  __referenceViewsReady.add(tab);
+}
 document.querySelectorAll(".tab-btn").forEach(btn => {
   btn.addEventListener("click", () => {
     if(btn.dataset.tab === "campanhas" && window.CRISGuest && window.CRISGuest.isGuest && window.CRISGuest.isGuest()){
       window.CRISGuest.requireLoginForCampaigns();
       return;
     }
+    ensureReferenceView(btn.dataset.tab);
     document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
     document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
     btn.classList.add("active");
@@ -5306,6 +5320,7 @@ function renderGuiaLivro(){
         document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
         document.querySelector('.tab-btn[data-tab="compendio"]').classList.add("active");
         document.getElementById("tab-compendio").classList.add("active");
+        ensureReferenceView("compendio");
         openSections.add(item.key);
         renderCompendio();
         document.getElementById("tab-compendio").scrollIntoView({behavior:"smooth", block:"start"});
@@ -5839,9 +5854,7 @@ async function crisStartAppIfNeeded(){
     // qualquer ficha ser aberta, permanece vazio.
     renderInventory();
     await loadParanormal();
-    renderCompendio();
-    renderConexoes();
-    renderGuiaLivro();
+    // Compêndio, conexões e guia são montados no primeiro acesso às abas.
   } catch (e) {
     console.error("[C.R.I.S.] Erro ao inicializar o app após login:", e);
   } finally {
@@ -5866,9 +5879,7 @@ async function crisStartGuestApp(){
     await migrateLegacySheetIfNeeded();
     renderInventory();
     await loadParanormal();
-    renderCompendio();
-    renderConexoes();
-    renderGuiaLivro();
+    // Compêndio, conexões e guia são montados no primeiro acesso às abas.
     if(window.CharacterConnections && typeof window.CharacterConnections.reloadLibrary === "function"){
       await window.CharacterConnections.reloadLibrary();
     }
@@ -8026,40 +8037,40 @@ const ORIGINAL_PDF_BASE64 = "JVBERi0xLjYNJeLjz9MNCjIxMTMgMCBvYmoNPDwvRmlsdGVyL0Z
 </script>
 <script src="js/character-connections.js"></script>
 <script src="js/custom-professions.js"></script>
-<script src="js/text-view-mode.js"></script>
+<script src="js/text-view-mode.js?v=20261017-multitab2"></script>
 <script src="js/image-cropper.js"></script>
-<script src="js/character-image.js"></script>
+<script src="js/character-image.js?v=20261017-multitab2"></script>
 <script src="js/quick-value-adjustments.js"></script>
 <script src="js/restore-agent-points.js"></script>
 <script src="js/creation-guide.js"></script>
 <script src="js/guest-mode.js"></script>
 <script src="js/creation-assistant.js"></script>
 <script src="js/sheet-search.js"></script>
-<script src="js/combat-dice-auto.js"></script>
+<script src="js/combat-dice-auto.js?v=20261017-multitab2"></script>
 <script src="js/vital-states.js"></script>
 <script src="js/limbic-panel-toggle.js"></script>
 <script src="js/sede-skills.js"></script>
 <script src="js/marcos-corrupcao.js"></script>
-<script src="js/agente-dimensoes.js"></script>
-<script src="js/marcos-corrupcao-agente.js"></script>
+<script src="js/agente-dimensoes.js?v=20261017-multitab2"></script>
+<script src="js/marcos-corrupcao-agente.js?v=20261017-multitab2"></script>
 <script src="js/marcos-infeccao.js"></script>
-<script src="js/marcos-infeccao-agente.js"></script>
+<script src="js/marcos-infeccao-agente.js?v=20261017-multitab2"></script>
 <script src="js/limbica-anomalia.js"></script>
 <script src="js/ficha-search.js"></script>
 <script src="js/equipamentos.js"></script>
 <script src="js/equipamentos-agente.js"></script>
 <script src="js/equipamentos-custom.js"></script>
 <script src="js/equipamentos-custom-destaque.js"></script>
-<script src="js/condicoes-ativas-agente.js"></script>
+<script src="js/condicoes-ativas-agente.js?v=20261017-multitab2"></script>
 <script src="js/criaturas.js"></script>
 <script src="js/creature-public-catalog.js"></script>
 <script src="js/criaturas-compendio.js"></script>
 <script src="js/criaturas-ficha.js"></script>
 <script src="js/criaturas-regras.js"></script>
-<script src="js/creature-features.js"></script>
+<script src="js/creature-features.js?v=20261017-multitab2"></script>
 <script src="js/pdf-agent-import.js"></script>
 <script src="js/pdf-creature-import.js"></script>
-<script src="js/creature-auto.js"></script>
+<script src="js/creature-auto.js?v=20261017-multitab2"></script>
 <script src="js/creature-navigation.js"></script>
 <!-- ETAPA 1: precisa vir por último, depois que crisStartAppIfNeeded() e
      todos os elementos de #auth_screen/#btn_logout já existem no DOM. -->
@@ -8076,7 +8087,7 @@ const ORIGINAL_PDF_BASE64 = "JVBERi0xLjYNJeLjz9MNCjIxMTMgMCBvYmoNPDwvRmlsdGVyL0Z
 <!-- NICKNAME/PERFIL — precisa vir depois de js/supabase-auth.js
      (reaproveita window.CRISAuth.client e os elementos #account_name/
      #account_email/#account_popover que ele já preenche/controla). -->
-<script src="js/profile.js"></script>
+<script src="js/profile.js?v=20261017-multitab2"></script>
 <!-- ETAPA 6: precisa vir depois de js/supabase-auth.js (reaproveita
      window.CRISAuth.client) e depois do script principal (reaproveita
      storageGet/storageSet/flashIndicator) e ANTES de js/supabase-sync.js
@@ -8085,7 +8096,7 @@ const ORIGINAL_PDF_BASE64 = "JVBERi0xLjYNJeLjz9MNCjIxMTMgMCBvYmoNPDwvRmlsdGVyL0Z
      IIFE), então window.CRISSyncQueue precisa já existir nesse momento.
      js/character-connections.js se registra separadamente, dentro do
      próprio DOMContentLoaded, então não depende dessa ordem. -->
-<script src="js/sync-queue.js"></script>
+<script src="js/sync-queue.js?v=20261017-multitab2"></script>
 <!-- ETAPA 2: precisa vir depois de js/supabase-auth.js (reaproveita
      window.CRISAuth.client) e depois do script principal (reaproveita
      storageGet/storageSet/sheetsIndex/sheetStorageKey()/etc.). -->
@@ -8122,7 +8133,7 @@ const ORIGINAL_PDF_BASE64 = "JVBERi0xLjYNJeLjz9MNCjIxMTMgMCBvYmoNPDwvRmlsdGVyL0Z
      Ambos só movem/agrupam elementos já existentes; nenhuma lógica de
      dados, salvamento, sincronização ou autenticação foi alterada. -->
 <script src="js/action-bar-more.js"></script>
-<script src="js/account-bar-dock.js"></script>
+<script src="js/account-bar-dock.js?v=20261017-multitab2"></script>
 <!-- Camada visual isolada: transicoes de documentos/modais e feedback
      de edicao. Nao le, grava ou altera dados da ficha. -->
 <script src="js/visual-polish.js"></script>

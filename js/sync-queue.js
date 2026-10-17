@@ -535,16 +535,19 @@
   let __bc = null;
   try {
     if (typeof BroadcastChannel !== "undefined") {
-      __bc = new BroadcastChannel("cris-sync-queue");
+      __bc = new BroadcastChannel("cris-sync-queue-v2");
       __bc.onmessage = function (ev) {
-        if (ev && ev.data === "queue-changed") {
+        const message = ev && ev.data;
+        // Protocolo isolado: avisos de scripts antigos não entram neste canal.
+        if (message && message.type === "queue-changed" && message.version === 2 && message.source !== TAB_ID) {
           invalidateQueueCache();
-          updateBadge();
+          // O indicador global está oculto. Receber um aviso não precisa
+          // reescrever o DOM e nunca pode produzir outra mensagem.
         }
       };
     }
   } catch (e) { __bc = null; }
-  function notifyOtherTabs() { try { if (__bc) __bc.postMessage("queue-changed"); } catch (e) {} }
+  function notifyOtherTabs() { try { if (__bc) __bc.postMessage({ type:"queue-changed", version:2, source:TAB_ID }); } catch (e) {} }
 
   // Rede de segurança: tenta processar periodicamente (cobre o caso de
   // "voltou a internet mas o evento 'online' não disparou" — acontece
