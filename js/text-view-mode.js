@@ -178,7 +178,7 @@
   }
 
   function startPolling() {
-    setInterval(function () { renderAll(false); }, POLL_INTERVAL_MS);
+    (window.CRISPerformance ? window.CRISPerformance.every : window.setInterval.bind(window))(function () { renderAll(false); }, POLL_INTERVAL_MS);
   }
 
   function init() {

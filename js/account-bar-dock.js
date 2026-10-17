@@ -52,7 +52,7 @@
 
   function init() {
     sync();
-    setInterval(sync, CHECK_MS);
+    (window.CRISPerformance ? window.CRISPerformance.every : window.setInterval.bind(window))(sync, CHECK_MS);
   }
 
   if (document.readyState === "loading") {

@@ -498,7 +498,7 @@
   }
 
   function cvStartPolling(){
-    setInterval(function(){ cvRenderAll(false); }, CV_POLL_INTERVAL_MS);
+    (window.CRISPerformance ? window.CRISPerformance.every : window.setInterval.bind(window))(function(){ cvRenderAll(false); }, CV_POLL_INTERVAL_MS);
   }
 
   /* Ganchos ADICIONAIS (addEventListener soma-se, nunca substitui) sobre
@@ -563,7 +563,7 @@
     cfHabilidades = parseHabilidades(lastSeenRaw);
     renderHabilidades();
 
-    setInterval(pollHiddenField, POLL_INTERVAL_MS);
+    (window.CRISPerformance ? window.CRISPerformance.every : window.setInterval.bind(window))(pollHiddenField, POLL_INTERVAL_MS);
 
     cvInit();
   }

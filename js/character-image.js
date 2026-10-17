@@ -251,7 +251,7 @@
     createEditorControl();
     editorState.lastValue = getCurrentValue();
     updateEditorPreview(editorState.lastValue);
-    setInterval(pollEditorField, EDITOR_POLL_MS);
+    (window.CRISPerformance ? window.CRISPerformance.every : window.setInterval.bind(window))(pollEditorField, EDITOR_POLL_MS);
   }
 
   /* ---------------------------------------------------------
@@ -325,7 +325,7 @@
   }
 
   function initManagerWatcher() {
-    setInterval(decorateManagerCards, MANAGER_POLL_MS);
+    (window.CRISPerformance ? window.CRISPerformance.every : window.setInterval.bind(window))(decorateManagerCards, MANAGER_POLL_MS);
   }
 
   /* ---------------------------------------------------------

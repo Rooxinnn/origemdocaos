@@ -349,7 +349,7 @@
     reconcileWithLegacyIfNeeded();
     renderChips();
     poll();
-    setInterval(poll, POLL_INTERVAL_MS);
+    (window.CRISPerformance ? window.CRISPerformance.every : window.setInterval.bind(window))(poll, POLL_INTERVAL_MS);
   }
 
   window.CRISAgenteDimensoes = {

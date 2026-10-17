@@ -285,7 +285,7 @@
     });
   }
 
-  setInterval(poll, POLL_INTERVAL_MS);
+  (window.CRISPerformance ? window.CRISPerformance.every : window.setInterval.bind(window))(poll, POLL_INTERVAL_MS);
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", poll);
   } else {

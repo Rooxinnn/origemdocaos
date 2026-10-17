@@ -132,6 +132,8 @@
   async function saveQueueRaw(arr) {
     try {
       const ok = await window.storageSet(QUEUE_KEY, JSON.stringify(arr), 1, true);
+      // Publica somente uma mudança real e gravada. Receber um aviso não gera outro.
+      if(ok) notifyOtherTabs();
       return !!ok;
     } catch (e) {
       logErr("Falha ao persistir a fila", e);
@@ -561,7 +563,6 @@
   function $(id) { return document.getElementById(id); }
 
   async function updateBadge(forceState) {
-    notifyOtherTabs();
     const el = $("cris_global_sync_indicator");
     if (!el) return;
 

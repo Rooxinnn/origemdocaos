@@ -241,7 +241,7 @@
       refresh();
     });
     refresh();
-    setInterval(refresh, 400); // cobre criação, importação e abertura sem reescrever o fluxo de armazenamento
+    (window.CRISPerformance ? window.CRISPerformance.every : window.setInterval.bind(window))(refresh, 400); // cobre criação, importação e abertura sem reescrever o fluxo de armazenamento
   }
   window.CRISCreatureAuto = { tierDie, fiftyIndex, formula, refresh };
   if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);

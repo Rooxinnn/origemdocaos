@@ -167,7 +167,7 @@
     ensureReadOnly();
     lastSnapshot = null; // força o primeiro cálculo já no load
     poll();
-    setInterval(poll, POLL_INTERVAL_MS);
+    (window.CRISPerformance ? window.CRISPerformance.every : window.setInterval.bind(window))(poll, POLL_INTERVAL_MS);
   }
 
   window.CombatDiceAuto = {
