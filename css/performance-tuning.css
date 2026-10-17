@@ -12,3 +12,6 @@
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}
 }
+
+/* Efeitos gráficos de uma aba oculta não precisam continuar animando. */
+html.oc-tab-hidden *,html.oc-tab-hidden *::before,html.oc-tab-hidden *::after{animation-play-state:paused!important;}
