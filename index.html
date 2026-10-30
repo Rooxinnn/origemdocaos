@@ -443,6 +443,9 @@
     box-shadow:0 0 14px rgba(240,168,60,0.45);
   }
   .al-toggle-row{display:flex; align-items:center; gap:14px; flex-wrap:wrap;}
+  .al-fog-color-control{display:flex;align-items:center;gap:10px;padding:7px 10px;border:1px solid var(--line);background:var(--panel-2);color:var(--paper-dim);font-size:11px;letter-spacing:.06em;text-transform:uppercase;}
+  .al-fog-color-control input[type="color"]{width:34px;height:28px;padding:2px;border:1px solid var(--line);background:var(--panel);cursor:pointer;}
+  .al-fog-color-control .al-fog-color-value{font-family:monospace;color:var(--paper);text-transform:none;letter-spacing:0;}
   .al-toggle-btn{
     background:rgba(240,168,60,0.12); border:1px solid var(--amber-bright); color:var(--paper);
     padding:9px 18px; font-size:12px; text-transform:uppercase; cursor:pointer; letter-spacing:0.08em;
@@ -484,9 +487,9 @@
     pointer-events:none;
     border-radius:inherit;
     background:
-      radial-gradient(ellipse 55% 38% at 6% 6%, rgba(255,255,255,0.10), transparent 70%),
-      radial-gradient(ellipse 50% 34% at 96% 94%, rgba(255,255,255,0.08), transparent 72%),
-      radial-gradient(ellipse 42% 30% at 50% 46%, rgba(255,255,255,0.035), transparent 75%);
+      radial-gradient(ellipse 55% 38% at 6% 6%, color-mix(in srgb, var(--limbo-fog-color, #ffffff) 10%, transparent), transparent 70%),
+      radial-gradient(ellipse 50% 34% at 96% 94%, color-mix(in srgb, var(--limbo-fog-color, #ffffff) 8%, transparent), transparent 72%),
+      radial-gradient(ellipse 42% 30% at 50% 46%, color-mix(in srgb, var(--limbo-fog-color, #ffffff) 3.5%, transparent), transparent 75%);
     mix-blend-mode:screen;
     opacity:0.75;
     animation:limbo-fog-drift 28s ease-in-out infinite alternate;
@@ -499,8 +502,8 @@
     pointer-events:none;
     border-radius:inherit;
     background:
-      linear-gradient(180deg, rgba(255,255,255,0.05), transparent 32%),
-      radial-gradient(ellipse 68% 18% at 50% 0%, rgba(255,255,255,0.06), transparent 72%);
+      linear-gradient(180deg, color-mix(in srgb, var(--limbo-fog-color, #ffffff) 5%, transparent), transparent 32%),
+      radial-gradient(ellipse 68% 18% at 50% 0%, color-mix(in srgb, var(--limbo-fog-color, #ffffff) 6%, transparent), transparent 72%);
     mix-blend-mode:screen;
     opacity:0.55;
     animation:limbo-mist-pulse 10s ease-in-out infinite;
@@ -519,7 +522,7 @@
      bordas dos painéis. */
   #agent-sheet-capture.limbo-active .panel,
   #agent-sheet-capture.limbo-active .titlebar{
-    box-shadow:0 0 14px rgba(255,255,255,0.05), 0 1px 3px rgba(0,0,0,0.25);
+    box-shadow:0 0 14px color-mix(in srgb, var(--limbo-fog-color, #ffffff) 5%, transparent), 0 1px 3px rgba(0,0,0,0.25);
     transition:box-shadow 0.7s ease;
   }
 
@@ -2265,8 +2268,14 @@
         <h2>Aborto Límbico <span class="tag" id="al_status_tag">Desativado</span></h2>
         <input type="hidden" id="aborto_limbico_ativo" value="">
         <input type="hidden" id="aborto_limbico_habilidades" value="">
+        <input type="hidden" id="al_fog_color" value="#ffffff">
         <div class="al-toggle-row">
           <button type="button" class="al-toggle-btn" id="al_toggle_btn">Ativar Aborto Límbico</button>
+          <label class="al-fog-color-control" for="al_fog_color_picker">
+            Cor da névoa
+            <input type="color" id="al_fog_color_picker" value="#ffffff" aria-label="Personalizar cor da névoa do Aborto Límbico">
+            <span class="al-fog-color-value" id="al_fog_color_value">#FFFFFF</span>
+          </label>
         </div>
         <div class="al-buff-area" id="al_buff_area" style="display:none;">
           <div class="combat-subgroup-label">Skills com Buff Límbico</div>
@@ -3275,9 +3284,18 @@ function renderAbortoLimbico(){
   if(panel) panel.classList.toggle("al-active", ativo);
   if(badge) badge.style.display = ativo ? "" : "none";
   if(area) area.style.display = ativo ? "" : "none";
-  // Visual de Limbo na ficha inteira (instrução #7/#8): a mesma classe liga
-  // e desliga o tema pálido/dessaturado e some por completo ao desativar.
-  if(sheet) sheet.classList.toggle("limbo-active", ativo);
+  // Visual de Limbo na ficha inteira. A cor é configurável por ficha e
+  // aplicada via variável CSS, sem alterar a paleta original do restante da UI.
+  const fogColor = document.getElementById("al_fog_color");
+  const fogPicker = document.getElementById("al_fog_color_picker");
+  const fogValue = document.getElementById("al_fog_color_value");
+  const color = /^#[0-9a-f]{6}$/i.test(fogColor?.value || "") ? fogColor.value : "#ffffff";
+  if(sheet){
+    sheet.style.setProperty("--limbo-fog-color", color);
+    sheet.classList.toggle("limbo-active", ativo);
+  }
+  if(fogPicker && fogPicker.value.toLowerCase() !== color.toLowerCase()) fogPicker.value = color;
+  if(fogValue) fogValue.textContent = color.toUpperCase();
   updateSkillBuffIndicators();
   if(!ativo) return; // desativado: as seleções continuam salvas, só não é preciso re-renderizar a lista agora
 
@@ -3300,6 +3318,17 @@ function renderAbortoLimbico(){
     grid.appendChild(card);
   });
 }
+
+document.getElementById("al_fog_color_picker").addEventListener("input", event => {
+  const color = event.target.value;
+  const stored = document.getElementById("al_fog_color");
+  if(stored) stored.value = color;
+  const value = document.getElementById("al_fog_color_value");
+  if(value) value.textContent = color.toUpperCase();
+  const sheet = document.getElementById("agent-sheet-capture");
+  if(sheet) sheet.style.setProperty("--limbo-fog-color", color);
+  markAgentDirty();
+});
 
 document.getElementById("al_toggle_btn").addEventListener("click", () => {
   const el = document.getElementById("aborto_limbico_ativo");
