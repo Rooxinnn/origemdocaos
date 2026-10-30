@@ -53,7 +53,7 @@
        Sombria:     pág. 137–139
        Carniçal:    pág. 140–142
        Límbica:     pág. 144–146
-       Perdição:    pág. 148–149
+       Perdição:    pág. 140–141 (Sistema de OdC 2026)
 
      Campo "dimensao" usa exatamente as mesmas chaves já existentes
      em CONEXOES_DATA/CONEXOES_DIM_LABELS (index.html) — infernal,
@@ -176,23 +176,23 @@
     { id:"limbica-200", dimensao:"limbica", corrupcao:200, titulo:"200 de Corrupção", pagina:146,
       descricao:`Quem alcança 200 de corrupção pela conexão Límbica têm seu espectro perdido no vazio eterno e sua existência apagada da história e da memória de todos, se tornando apenas um eco, uma pergunta, uma coceira, um borrão.` },
 
-    /* ---------------- PERDIÇÃO (pág. 148–149) ---------------- */
-    { id:"perdicao-020", dimensao:"perdicao", corrupcao:20, titulo:"20 de Corrupção", pagina:148,
+    /* ---------------- PERDIÇÃO (pág. 140–141) ---------------- */
+    { id:"perdicao-020", dimensao:"perdicao", corrupcao:20, titulo:"20 de Corrupção", pagina:140,
       descricao:`Ao usar a Conexão, o local onde se localiza o símbolo ou círculo falhará como um glitch. Diminua a Sanidade Total e Atual do Personagem em -1. Aumente a pontuação de Sentido Paranormal em +1.` },
-    { id:"perdicao-040", dimensao:"perdicao", corrupcao:40, titulo:"40 de Corrupção", pagina:148,
+    { id:"perdicao-040", dimensao:"perdicao", corrupcao:40, titulo:"40 de Corrupção", pagina:140,
       descricao:`Ao usar uma Conexão, todo o braço que toca o símbolo treme e falha como um glitch. Sempre que usar uma Conexão, o personagem receberá 1 de dano de Sanidade. Aumente a pontuação de Sentido Paranormal em +2.` },
-    { id:"perdicao-080", dimensao:"perdicao", corrupcao:80, titulo:"80 de Corrupção", pagina:148,
+    { id:"perdicao-080", dimensao:"perdicao", corrupcao:80, titulo:"80 de Corrupção", pagina:140,
       descricao:`Todo o corpo falha como glitch ao usar uma Conexão. Sempre que utilizar uma Conexão, o personagem receberá 1d4 de dano de Sanidade. Aumente a pontuação de Sentido Paranormal em +1d4. Uma vez por sessão, você pode rolar um dado de sorte (1d6), caso o resultado seja 4 ou maior, então o personagem obterá um bônus de +2 em sua próxima rolagem.` },
-    { id:"perdicao-110", dimensao:"perdicao", corrupcao:110, titulo:"110 de Corrupção", pagina:149,
-      descricao:`Por 1 rodada, durante uma cena de combate após usar a Conexão, o personagem ficará PARALISADO como um glitch, porém, não poderá ser acertado. Perde 1d4 da Sanidade Total e atual. Não perde mais Sanidade ao ativar uma Conexão. Aumente a pontuação de Sentido Paranormal em +1d8.` },
-    { id:"perdicao-140", dimensao:"perdicao", corrupcao:140, titulo:"140 de Corrupção", pagina:149,
-      descricao:`Por 3 rodadas após usar a Conexão, o personagem ficará PARALISADO como um glitch, porém, não poderá ser acertado. O personagem perde 1d6 de Sanidade Total e atual. O personagem aumenta sua pontuação de Sentido Paranormal em +1d8. Uma vez por sessão, você pode rolar um dado de sorte (1d6), caso o resultado seja 4 ou mais, então o personagem obterá um bônus de +5 em sua próxima rolagem.` },
-    { id:"perdicao-165", dimensao:"perdicao", corrupcao:165, titulo:"165 de Corrupção", pagina:149,
+    { id:"perdicao-110", dimensao:"perdicao", corrupcao:110, titulo:"110 de Corrupção", pagina:141,
+      descricao:`Por 1 rodada, durante uma cena de combate após usar a Conexão, o personagem ficará PARALISADO como um glitch, entretanto, não poderá ser acertado. Perde 1d4 da Sanidade Total e atual. Não perde mais Sanidade ao ativar uma Conexão. Aumente a pontuação de Sentido Paranormal em +1d8.` },
+    { id:"perdicao-140", dimensao:"perdicao", corrupcao:140, titulo:"140 de Corrupção", pagina:141,
+      descricao:`Por 2 rodadas após usar a Conexão, o personagem ficará PARALISADO como um glitch, porém, não poderá ser acertado, e ao fim destas duas rodadas, role RES+SP para superar a DT 15; caso falhe, o personagem será teletransportado aleatoriamente para outra parte do mapa. O personagem perde 1d6 de Sanidade Total e atual. O personagem aumenta sua pontuação de Sentido Paranormal em +1d8. Uma vez por sessão, você pode rolar um dado de sorte (1d6), caso o resultado seja 4 ou mais, então o personagem obterá um bônus de +5 em sua próxima rolagem.` },
+    { id:"perdicao-165", dimensao:"perdicao", corrupcao:165, titulo:"165 de Corrupção", pagina:141,
       descricao:`Um vasto e poderoso conhecimento sobre a Dimensão da Perdição passa a invadir a mente do utilitário corrompido, assim como conhecimento subconsciente sobre os círculos e símbolos de conexão. O personagem é capaz de compreender o funcionamento caótico da Perdição. Sempre que utilizar uma Conexão da Perdição, aumente o resultado da rolagem em +2. Aumente a Pontuação de Sentido Paranormal em +1d8.` },
-    { id:"perdicao-190", dimensao:"perdicao", corrupcao:190, titulo:"190 de Corrupção", pagina:149,
-      descricao:`O personagem não perde HP como Consumo de Conexões, porém, após três usos de Conexão, ele fica PARALISADO como Glitch por 1d8 Rodadas, reiniciando a contagem de três usos de Conexões ao fim das rodadas de paralisia, não podendo ser acertado ao longo deste período. A imagem do personagem fica oscilando como um glitch, ou estática permanentemente. O personagem perde 1d20 de sua Sanidade Total e Atual. O personagem aumenta a pontuação de Sentido Paranormal em +1d12. O personagem poderá rerrolar seus dados de Sorte.` },
-    { id:"perdicao-200", dimensao:"perdicao", corrupcao:200, titulo:"200 de Corrupção", pagina:149,
-      descricao:`O personagem se torna uma imagem corrompida, e sem sentido, que possui uma forma semelhante à um corpo humano, porém, irreconhecível, reduzido a pura estática, sendo puxado para a Perdição.` }
+    { id:"perdicao-190", dimensao:"perdicao", corrupcao:190, titulo:"190 de Corrupção", pagina:141,
+      descricao:`O personagem não perde HP como Consumo de Conexões, porém, após três usos de Conexão, ele fica PARALISADO como Glitch por 1d4 rodadas, reiniciando a contagem de três usos de Conexões ao fim das rodadas de paralisia, não podendo ser acertado ao longo deste período. A imagem do personagem fica oscilando como um glitch, ou estática permanentemente. O personagem perde 1d20 de sua Sanidade Total e Atual. O personagem aumenta a pontuação de Sentido Paranormal em +1d12. O personagem poderá rerrolar seus dados de Sorte.` },
+    { id:"perdicao-200", dimensao:"perdicao", corrupcao:200, titulo:"200 de Corrupção", pagina:141,
+      descricao:`O personagem se torna uma imagem corrompida, e sem sentido, que possui uma forma semelhante a um corpo humano, porém, irreconhecível, reduzido a pura estática, sendo puxado para a Perdição ou corrompido como uma criatura ao ser completamente invadido pela Perdição e ter sua forma física alterada, enquanto seu espectro é infectado e corrompido por Kaos’R Ai.` }
   ];
 
   /* ---------------------------------------------------------
@@ -256,7 +256,7 @@
     panel.className = "subtab-panel";
     panel.id = "sub-comp-marcos";
     panel.innerHTML =
-      '<p class="note" style="text-align:left; margin:0 0 14px;">Acontecimentos e efeitos que um personagem sofre ao atingir determinados níveis de Corrupção, organizados por Dimensão (Sistema de OdC, cap. Corrupção). Selecione uma Dimensão para ver seus Marcos, ou clique em um Marco para ver a descrição completa.</p>' +
+      '<p class="note" style="text-align:left; margin:0 0 14px;">Acontecimentos e efeitos que um personagem sofre ao atingir determinados níveis de Corrupção, organizados por Dimensão (Sistema de OdC 2026). Na Dimensão da Perdição, as consequências duram ao longo do combate, exceto quando a descrição disser o contrário, e são as mesmas para humanos ou animais. Selecione uma Dimensão para ver seus Marcos, ou clique em um Marco para ver a descrição completa.</p>' +
       '<div id="mc_filters" class="cx-filters"></div>' +
       '<div id="mc_count" class="note" style="text-align:left;"></div>' +
       '<div id="mc_grid" class="cx-grid"></div>';

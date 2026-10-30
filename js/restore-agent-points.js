@@ -1,10 +1,10 @@
 /* ==========================================================
-   RECUPERAR PONTOS DA FICHA
+   RECUPERAR PONTOS DAS SKILLS DA FICHA DE AGENTES
    ==========================================================
-   Recupera apenas valores que possuem um máximo explícito:
-   HP, SAN, Fadiga e cada Habilidade/Talento/Atributo/Perícia.
-   Não altera máximos, Corrupção, Infecção, inventário ou qualquer
-   outra regra da ficha. O salvamento continua manual, como antes.
+   A quantidade informada é recuperada individualmente em cada skill,
+   respeitando o máximo de cada uma. Não altera HP, SAN, Fadiga,
+   Proteção ou qualquer outro recurso da ficha.
+   O salvamento continua manual, como antes.
    ========================================================== */
 (function () {
   "use strict";
@@ -20,48 +20,27 @@
     return String(Math.round(value * 1000) / 1000);
   }
 
-  function restorePair(currentId, maximumId) {
-    var current = document.getElementById(currentId);
-    var maximum = document.getElementById(maximumId);
-    if (!current || !maximum) return false;
-    var maxValue = numberFrom(maximum.value);
-    if (maxValue === null) return false;
-    var next = displayNumber(maxValue);
-    if (current.value === next) return false;
-    current.value = next;
-    return true;
-  }
-
   function dispatchFieldUpdate(field) {
     field.dispatchEvent(new Event("input", { bubbles: true }));
     field.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
-  function restoreAllPoints() {
+  function restoreSkillPoints(amount) {
     var restored = [];
 
-    // As skills são recuperadas primeiro. Assim, qualquer máximo automático
-    // (especialmente SAN/Fadiga) é recalculado antes da recuperação final.
     document.querySelectorAll("#tab-agentes [data-skill-atual]").forEach(function (current) {
-      var maximumId = current.dataset.skillAtual;
-      var maximum = document.getElementById(maximumId);
+      var maximum = document.getElementById(current.dataset.skillAtual);
       if (!maximum) return;
+
+      var currentValue = numberFrom(current.value);
       var maxValue = numberFrom(maximum.value);
-      if (maxValue === null) return;
-      var next = displayNumber(maxValue);
-      if (current.value !== next) {
-        current.value = next;
+      if (currentValue === null || maxValue === null || currentValue >= maxValue) return;
+
+      var nextValue = Math.min(currentValue + amount, maxValue);
+      if (nextValue !== currentValue) {
+        current.value = displayNumber(nextValue);
         restored.push(current);
       }
-    });
-
-    // Reaproveita os cálculos normais existentes antes de copiar SAN/Fadiga.
-    if (typeof window.updateSAN === "function") window.updateSAN();
-    if (typeof window.updateFatigue === "function") window.updateFatigue();
-
-    [["hp", "hp_max"], ["san_atual", "san_max"], ["fadiga_atual", "fadiga_max"]].forEach(function (pair) {
-      var current = document.getElementById(pair[0]);
-      if (restorePair(pair[0], pair[1]) && current) restored.push(current);
     });
 
     restored.forEach(dispatchFieldUpdate);
@@ -71,16 +50,35 @@
     if (typeof window.markAgentDirty === "function") window.markAgentDirty();
 
     if (typeof window.flashIndicator === "function") {
-      window.flashIndicator(restored.length ? "✦ Pontos recuperados. Salve a ficha para confirmar." : "✦ Todos os pontos já estão no máximo.", false, 2800);
+      window.flashIndicator(
+        restored.length
+          ? "✦ " + displayNumber(amount) + " ponto(s) recuperado(s) em cada skill. Salve a ficha para confirmar."
+          : "✦ Nenhuma skill precisava de recuperação.",
+        false,
+        2800
+      );
     }
   }
 
   function init() {
     var button = document.getElementById("btn_restore_agent_points");
     if (!button) return;
+
     button.addEventListener("click", function () {
-      if (!confirm("Recuperar HP, SAN, Fadiga e todos os campos Atual/Máx. preenchidos?")) return;
-      restoreAllPoints();
+      var rawAmount = window.prompt("Quantos pontos deseja recuperar em cada skill?", "10");
+      if (rawAmount === null) return;
+
+      var amount = numberFrom(rawAmount);
+      if (amount === null || amount <= 0) {
+        if (typeof window.flashIndicator === "function") {
+          window.flashIndicator("Informe uma quantidade válida maior que zero.", true, 2800);
+        } else {
+          window.alert("Informe uma quantidade válida maior que zero.");
+        }
+        return;
+      }
+
+      restoreSkillPoints(amount);
     });
   }
 

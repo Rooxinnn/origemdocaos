@@ -90,7 +90,7 @@
       id: "sede-russia",
       n: "Eterno Espião",
       sede: "Russia",
-      d: 'Ao realizar um teste que peça P. Investigativa, poderá também adicionar "Militar" em sua rolagem. Uma vez por cena , rolagens que envolvam Inteligência podem ser rerroladas em troca de um consumo de 5 pontos.'
+      d: 'Ao realizar um teste que peça P. Investigativa, poderá também adicionar "Tática" em sua rolagem. Uma vez por cena , rolagens que envolvam Inteligência podem ser rerroladas em troca de um consumo de 5 pontos.'
     },
     {
       id: "sede-dubai",
