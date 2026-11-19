@@ -2963,7 +2963,8 @@ const HABILIDADES = [
   ["conducao","Condução"], ["manipulacao","Manipulação"],
   ["computacao","Computação"], ["marcial","Marcial"],
   ["ferramenta","Ferramenta"], ["sentido_paranormal","Sentido Paranormal"], ["tatica","Tática"],
-  ["ilusionismo","Ilusionismo"], ["gastronomia","Gastronomia"], ["natacao","Natação"]
+  ["ilusionismo","Ilusionismo"], ["gastronomia","Gastronomia"], ["natacao","Natação"],
+  ["criminalidade","Criminalidade"]
 ];
 const TALENTOS = [
   ["silencioso","Silencioso"], ["intimidacao","Intimidação"],
@@ -3887,7 +3888,7 @@ window.addEventListener("beforeunload", (e) => {
 });
 
 const ODC_SKILL_MIGRATION_VERSION = 3;
-const ODC_REMOVED_SKILL_IDS = ["roubo","psicologia","medicina","flexibilidade","sobrevivencia","criminalidade","matematica","inteligencia_emocional","logica","pericia_mecanica","pericia_ti"];
+const ODC_REMOVED_SKILL_IDS = ["roubo","psicologia","medicina","flexibilidade","sobrevivencia","matematica","inteligencia_emocional","logica","pericia_mecanica","pericia_ti"];
 function migrationOldOccultismoBonus(value){
   const val = parseInt(value, 10) || 0;
   if(val <= 0) return 5;
