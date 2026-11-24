@@ -1819,16 +1819,12 @@
       <h3>Criar Backup Completo</h3>
       <p>Será criado um arquivo contendo:</p>
       <ul class="bkp-checklist">
-        <li>Todas as fichas</li>
-        <li>Dados dos personagens</li>
-        <li>Inventário</li>
-        <li>Habilidades</li>
-        <li>Conexões</li>
-        <li>Corrupção</li>
-        <li>Infecção</li>
-        <li>Dimensão</li>
-        <li>Condições</li>
-        <li>Configurações</li>
+        <li>Todas as fichas de Agentes (dados, inventário, pontos de restauração)</li>
+        <li>Todas as fichas de Criaturas (Minhas Criaturas)</li>
+        <li>Habilidades, Conexões, Corrupção, Infecção, Dimensão e Condições</li>
+        <li>Conexões, profissões e equipamentos personalizados</li>
+        <li>Dice Tray, XP, Paranormal e Configurações</li>
+        <li>Criaturas publicadas no compêndio e dados de Campanhas (cópia de consulta, quando logado)</li>
       </ul>
       <p>Deseja criar o backup?</p>
       <div class="modal-actions">
@@ -2837,6 +2833,31 @@ async function storageSet(key, value, attempt, silent){
       if(!silent) flashIndicator("Salvo");
       return {key, value};
     }catch(e){
+      // CORREÇÃO (inventário/conexões "sumindo"): com o armazenamento do navegador
+      // cheio (QuotaExceeded), a gravação falhava em silêncio e, ao recarregar, o
+      // dado novo não existia. Backups automáticos são só cópias auxiliares:
+      // libera os mais antigos, um a um, e tenta de novo antes de desistir.
+      if((e && (e.name === "QuotaExceededError" || e.code === 22)) && key.indexOf("backup:auto:") === -1){
+        try{
+          const idxKey = (window.CRISGuest && typeof window.CRISGuest.mapStorageKey === "function") ? window.CRISGuest.mapStorageKey("backup:auto:index") : "backup:auto:index";
+          let list = [];
+          try{ list = JSON.parse(localStorage.getItem(idxKey) || "[]"); }catch(_){ list = []; }
+          if(!Array.isArray(list)) list = [];
+          while(list.length){
+            const old = list.pop();
+            if(old && old.id){
+              const dk = (window.CRISGuest && typeof window.CRISGuest.mapStorageKey === "function") ? window.CRISGuest.mapStorageKey("backup:auto:" + old.id) : "backup:auto:" + old.id;
+              try{ localStorage.removeItem(dk); }catch(_){}
+            }
+            try{ localStorage.setItem(idxKey, JSON.stringify(list)); }catch(_){}
+            try{
+              localStorage.setItem(key, value);
+              if(!silent) flashIndicator("Salvo");
+              return {key, value};
+            }catch(_){ /* continua liberando */ }
+          }
+        }catch(_){}
+      }
       if(!silent) flashIndicator("Erro ao salvar", true);
       return null;
     }
@@ -3767,9 +3788,19 @@ let __agentSaveInFlight = false;   // evita cliques concorrentes no botão
 let __agentChangeRevision = 0;     // impede um save em andamento de limpar uma edição mais nova
 let __agentAutosaveTimer = null;
 
+// CORREÇÃO — enquanto o Mestre vê/edita a ficha de OUTRO jogador
+// (js/campaign-agent-view.js), os campos de #tab-agentes contêm os dados
+// do jogador, mas currentAgentId continua sendo o do próprio Mestre. Sem
+// os guards abaixo, o autosave da ficha do Mestre gravava os dados do
+// jogador por cima da ficha do Mestre (e na nuvem, como se fossem dele).
+function isForeignSheetOpen(){
+  return !!(window.CRISCampaignAgentView && typeof window.CRISCampaignAgentView.isActive === "function" && window.CRISCampaignAgentView.isActive());
+}
+
 function scheduleAgentAutosave(){
   clearTimeout(__agentAutosaveTimer);
   if(!currentAgentId) return;
+  if(isForeignSheetOpen()) return;
   __agentAutosaveTimer = setTimeout(() => {
     __agentAutosaveTimer = null;
     if(__agentDirty) saveAgent(true);
@@ -3777,12 +3808,14 @@ function scheduleAgentAutosave(){
 }
 
 function markAgentDirty(){
+  if(isForeignSheetOpen()) return; // edição de ficha de terceiro NUNCA suja a ficha própria
   __agentDirty = true;
   __agentChangeRevision++;
   scheduleAgentAutosave();
 }
 
 async function saveAgent(isAutosave){
+  if(isForeignSheetOpen()) return false; // campos pertencem a outra ficha: nunca gravar na ficha própria
   if(window.QuickValueAdjustments?.hasPending()){
     if(isAutosave) return;
     window.QuickValueAdjustments.commitPending();
@@ -4029,8 +4062,14 @@ async function loadAgent(sheetId, preparedData){
        "conflito" falso da próxima vez que o usuário salvar, já que
        a versão local passa a bater com a da nuvem.
    ---------------------------------------------------------------- */
-async function applyRemoteAgentUpdateToOpenSheet(row){
+async function applyRemoteAgentUpdateToOpenSheet(row, expectedLocalId){
   if(!row || !currentAgentId) return;
+  // CORREÇÃO: o evento remoto foi associado a UMA ficha local; se o usuário
+  // trocou de ficha no meio do caminho (ou há ficha de terceiro na tela),
+  // aplicar aqui gravaria os dados da outra ficha por cima da que está aberta.
+  if(expectedLocalId && expectedLocalId !== currentAgentId) return;
+  if(isForeignSheetOpen()) return;
+  const sheetIdAtStart = currentAgentId;
 
   if(__agentDirty){
     flashIndicator("☁ Esta ficha foi alterada em outro dispositivo — salve para ver as mudanças.", true, 3600);
@@ -4053,10 +4092,22 @@ async function applyRemoteAgentUpdateToOpenSheet(row){
   });
 
   if(typeof window.CRISSync === "object" && window.CRISSync && typeof window.CRISSync.recordRemoteSyncForOpenSheet === "function"){
-    await window.CRISSync.recordRemoteSyncForOpenSheet(currentAgentId, row);
+    await window.CRISSync.recordRemoteSyncForOpenSheet(sheetIdAtStart, row);
+  }
+  // CORREÇÃO: o inventário e as conexões também chegam na atualização remota, mas só
+  // o disco era atualizado — a tela e invItems (memória) ficavam com a versão antiga e
+  // o próximo salvamento/sincronização devolvia a versão velha para a nuvem.
+  if(currentAgentId === sheetIdAtStart){
+    if(Array.isArray(data.inventario)){
+      invItems = JSON.parse(JSON.stringify(data.inventario));
+      renderInventory();
+    }
+    if(window.CharacterConnections && typeof window.CharacterConnections.refresh === "function"){
+      try{ window.CharacterConnections.refresh(); }catch(e){}
+    }
   }
   if(typeof window.CRISSync === "object" && window.CRISSync && typeof window.CRISSync.refreshBadge === "function"){
-    await window.CRISSync.refreshBadge(currentAgentId);
+    await window.CRISSync.refreshBadge(sheetIdAtStart);
   }
 
   flashIndicator("↻ Ficha atualizada (alterada em outro dispositivo).", false, 2600);
@@ -4147,6 +4198,8 @@ function renderSheetCards(){
 }
 
 function showWelcomeScreen(){
+  // Sai do modo "ficha de terceiro" (restaura a ficha/inventário do próprio Mestre)
+  if(isForeignSheetOpen()) window.CRISCampaignAgentView.exitIfNeeded();
   document.getElementById("app_screen").style.display = "none";
   document.getElementById("welcome_screen").style.display = "block";
   renderSheetCards();
@@ -4222,12 +4275,30 @@ async function createNewSheet(){
   // FASE G — se o Mestre estava vendo a ficha de terceiro (somente
   // leitura), sai desse modo antes de criar uma ficha nova de verdade.
   if (window.CRISCampaignAgentView && typeof window.CRISCampaignAgentView.isActive === "function" && window.CRISCampaignAgentView.isActive()) {
-    window.CRISCampaignAgentView.exitIfNeeded();
+    window.CRISCampaignAgentView.exitIfNeeded(true); // a nova ficha assume a tela: não restaurar a antiga
+  }
+  // CORREÇÃO: antes de trocar para a ficha nova, grava a ficha atual (campos,
+  // conexões e inventário). Sem isto, edições feitas nos últimos ~0,7s antes de
+  // clicar em "Nova ficha" ficavam só na tela e eram apagadas pela limpeza abaixo.
+  if(currentAgentId && !isForeignSheetOpen()){
+    window.QuickValueAdjustments?.commitPending();
+    const saveDeadline = Date.now() + 6000;
+    while(__agentSaveInFlight){
+      if(Date.now() > saveDeadline){ flashIndicator("Aguarde o salvamento atual antes de criar a nova ficha.", true, 3500); return; }
+      await new Promise(resolve => setTimeout(resolve, 40));
+    }
+    clearTimeout(__agentAutosaveTimer); __agentAutosaveTimer = null;
+    if(__agentDirty) await saveAgent(true);
+    if(__agentDirty){ flashIndicator("✕ Não foi possível salvar a ficha atual. A criação da nova foi cancelada.", true, 4200); return; }
+    const invSaved = await storageSet(inventoryStorageKey(currentAgentId), JSON.stringify(getOpenInventorySnapshot()), 1, true);
+    if(!invSaved){ flashIndicator("✕ Não foi possível salvar o inventário atual. A criação da nova ficha foi cancelada.", true, 4200); return; }
   }
   const id = genSheetId();
   currentAgentId = id;
   // ficha começa limpa — nenhum dado de outra ficha é carregado
   agentFieldIds().forEach(fid => { const el = document.getElementById(fid); if(el) el.value = ""; });
+  // a ficha nova precisa ser gravada ao menos uma vez (senão não pode ser reaberta)
+  markAgentDirty();
   document.querySelectorAll(".dice-tiers span").forEach(s => s.classList.remove("on"));
   updateSAN();
   updateHP();
@@ -4310,7 +4381,7 @@ async function openSheet(id){
   // FASE G — mesmo guard: abrir uma ficha de verdade (a própria ou
   // outra do gerenciador) sempre sai do modo "ficha de terceiro" antes.
   if (window.CRISCampaignAgentView && typeof window.CRISCampaignAgentView.isActive === "function" && window.CRISCampaignAgentView.isActive()) {
-    window.CRISCampaignAgentView.exitIfNeeded();
+    window.CRISCampaignAgentView.exitIfNeeded(true); // a ficha escolhida assume a tela: não restaurar a antiga
   }
   currentAgentId = id;
   await loadAgent(id, data);
@@ -6070,7 +6141,7 @@ window.crisResetAppState = function () {
   // Também encerra, defensivamente, o modo "ficha de terceiro" caso o
   // Mestre faça logout com uma ficha de jogador ainda aberta.
   if(typeof window.CRISCampaignAgentView === "object" && window.CRISCampaignAgentView && typeof window.CRISCampaignAgentView.exitIfNeeded === "function"){
-    window.CRISCampaignAgentView.exitIfNeeded();
+    window.CRISCampaignAgentView.exitIfNeeded(true);
   }
   // ETAPA 6 — interrompe qualquer processamento da fila em andamento e
   // limpa o estado em memória desta aba (NUNCA apaga a fila persistida —
@@ -6372,14 +6443,142 @@ async function bkpBuildFullSnapshot(){
   return data;
 }
 
+/* ---------- resumo e conferência do snapshot ---------- */
+function bkpParseJSON(raw, fallback){
+  try{ const v = JSON.parse(raw); return (v === null || v === undefined) ? fallback : v; }catch(e){ return fallback; }
+}
+function bkpIndexEntries(dataMap, indexKey, sheetPrefix, emptyName){
+  const arr = bkpParseJSON(dataMap[indexKey], []);
+  const list = Array.isArray(arr) ? arr.filter(e => e && e.id) : [];
+  return list.map(e => ({ id: e.id, name: (e.nome || e.name || emptyName) }));
+}
+// Lê o ÍNDICE gravado no próprio snapshot (e não variáveis em memória, que
+// podem estar vazias/desatualizadas) e confere se cada ficha do índice tem
+// mesmo os dados dentro do backup.
+function bkpSummarize(dataMap){
+  const agents = bkpIndexEntries(dataMap, "agentes:index", "agente:sheet:", "Ficha sem nome");
+  const creatures = bkpIndexEntries(dataMap, "criaturas:index", "criatura:sheet:", "Criatura sem nome");
+  const missingAgents = agents.filter(e => dataMap["agente:sheet:" + e.id] === undefined).map(e => e.id);
+  const missingCreatures = creatures.filter(e => dataMap["criatura:sheet:" + e.id] === undefined).map(e => e.id);
+  const agentIds = new Set(agents.map(e => e.id));
+  const creatureIds = new Set(creatures.map(e => e.id));
+  // fichas gravadas no armazenamento mas ausentes do índice: ficam no backup
+  // (ele copia TODAS as chaves), só não aparecem na lista do app.
+  let orphanAgents = 0, orphanCreatures = 0;
+  Object.keys(dataMap).forEach(k => {
+    let m = /^agente:sheet:([^:]+)$/.exec(k);
+    if(m && !agentIds.has(m[1])) orphanAgents++;
+    m = /^criatura:sheet:([^:]+)$/.exec(k);
+    if(m && !creatureIds.has(m[1])) orphanCreatures++;
+  });
+  return {
+    agents, creatures,
+    summary: {
+      agents: agents.length,
+      creatures: creatures.length,
+      keys: Object.keys(dataMap).length,
+      missingAgents, missingCreatures, orphanAgents, orphanCreatures
+    }
+  };
+}
+// Rascunhos de criatura que não conseguiram ser gravados (ficam só no
+// sessionStorage da aba). Entram no arquivo como cópia de segurança.
+function bkpCollectSessionDrafts(){
+  const out = {};
+  try{
+    for(let i = 0; i < sessionStorage.length; i++){
+      const k = sessionStorage.key(i);
+      if(k && k.indexOf("criaturas:rascunho:") === 0) out[k] = sessionStorage.getItem(k);
+    }
+  }catch(e){}
+  return out;
+}
+function bkpClearSessionDrafts(){
+  try{
+    const keys = [];
+    for(let i = 0; i < sessionStorage.length; i++){
+      const k = sessionStorage.key(i);
+      if(k && k.indexOf("criaturas:rascunho:") === 0) keys.push(k);
+    }
+    keys.forEach(k => sessionStorage.removeItem(k));
+  }catch(e){}
+}
+
+// Salva edições ainda pendentes (ficha de Agente e ficha de Criatura abertas)
+// ANTES de tirar o snapshot — o snapshot só enxerga o que já foi gravado.
+// Usado só nos fluxos manuais (backup/restauração): os backups automáticos
+// já são disparados de dentro dos próprios salvamentos.
+async function bkpFlushPendingEdits(){
+  try{
+    if(typeof isAgentDirty === "function" && isAgentDirty() && !isForeignSheetOpen()){
+      try{ if(window.QuickValueAdjustments && typeof window.QuickValueAdjustments.commitPending === "function") window.QuickValueAdjustments.commitPending(); }catch(e){}
+      for(let i = 0; i < 4 && isAgentDirty(); i++){
+        await saveAgent(true);
+        if(isAgentDirty()) await new Promise(r => setTimeout(r, 250));
+      }
+    }
+  }catch(e){}
+  try{
+    if(window.CRISCreatureSheets && typeof window.CRISCreatureSheets.beforeLeave === "function"){
+      await window.CRISCreatureSheets.beforeLeave();
+    }
+  }catch(e){}
+}
+
+// Dados que vivem só na nuvem (Supabase) e não existem no armazenamento
+// local: campanhas, participantes, fichas vinculadas, criaturas/agentes
+// publicados no compêndio e conexões personalizadas. Entram como CÓPIA DE
+// CONSULTA (a restauração não escreve na nuvem). Só no backup manual, só
+// com conta logada, e nunca impede o backup de ser criado.
+async function bkpCollectCloudExtras(){
+  const out = { included: false, note: "Cópia de consulta dos dados da nuvem. A restauração só reaplica os dados locais.", tables: {}, errors: {} };
+  try{
+    if(window.CRISGuest && typeof window.CRISGuest.isGuest === "function" && window.CRISGuest.isGuest()) return out;
+    const client = window.CRISAuth && !window.CRISAuth.configError ? window.CRISAuth.client : null;
+    if(!client) return out;
+    const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error("tempo esgotado")), ms))]);
+    const sess = await withTimeout(client.auth.getSession(), 6000);
+    const user = sess && sess.data && sess.data.session && sess.data.session.user;
+    if(!user) return out;
+    out.included = true;
+    out.userId = user.id;
+    const jobs = [
+      ["campaigns", () => client.from("campaigns").select("*")],
+      ["campaign_members", () => client.from("campaign_members").select("*")],
+      ["campaign_characters", () => client.from("campaign_characters").select("*")],
+      ["custom_connections", () => client.from("custom_connections").select("*")],
+      ["creature_compendium", () => client.from("creature_compendium").select("*").eq("owner_id", user.id)],
+      ["agent_compendium", () => client.from("agent_compendium").select("*").eq("owner_id", user.id)]
+    ];
+    for(const [name, run] of jobs){
+      try{
+        const res = await withTimeout(run(), 12000);
+        if(res && res.error) throw res.error;
+        out.tables[name] = (res && Array.isArray(res.data)) ? res.data : [];
+      }catch(e){
+        out.errors[name] = (e && e.message) ? String(e.message) : String(e);
+      }
+    }
+  }catch(e){
+    out.errors._geral = (e && e.message) ? String(e.message) : String(e);
+  }
+  return out;
+}
+
 function bkpBuildPayload(dataMap){
   const now = new Date();
+  const info = bkpSummarize(dataMap);
   return {
-    backupVersion: "1.0",
+    backupVersion: "2.0",
     app: "ordem-do-caos",
     date: bkpFormatDate(now),
     timestamp: now.getTime(),
-    characters: sheetsIndex.map(e => ({ id: e.id, name: e.nome || "Ficha sem nome" })),
+    // "characters" mantido (só agentes) para compatibilidade com backups/leitores v1.
+    characters: info.agents,
+    agents: info.agents,
+    creatures: info.creatures,
+    summary: info.summary,
+    sessionDrafts: bkpCollectSessionDrafts(),
     data: dataMap
   };
 }
@@ -6406,11 +6605,15 @@ function bkpDownloadJSON(obj, filename){
 // só devolve o payload em memória (usado pelos Backups Automáticos e
 // pelo backup de segurança pré-restauração).
 async function bkpCreateFullBackup(download){
+  if(download) await bkpFlushPendingEdits();
   const dataMap = await bkpBuildFullSnapshot();
   const payload = bkpBuildPayload(dataMap);
   if(download){
-    const filename = "ORIGEM_DO_CAOS_BACKUP_" + payload.date + ".json";
-    bkpDownloadJSON(payload, filename);
+    payload.cloud = await bkpCollectCloudExtras();
+    const d = new Date();
+    const hhmm = String(d.getHours()).padStart(2,"0") + "h" + String(d.getMinutes()).padStart(2,"0");
+    const filename = "ORIGEM_DO_CAOS_BACKUP_" + payload.date + "_" + hhmm + ".json";
+    payload.downloaded = bkpDownloadJSON(payload, filename);
   }
   return payload;
 }
@@ -6422,17 +6625,40 @@ function bkpIsValidPayload(p){
 // Grava de volta, chave por chave, exatamente como cada sistema já
 // gravou originalmente — nunca apaga chaves que não estejam no backup
 // (ex.: fichas criadas depois da data do backup permanecem intactas).
+// Fichas primeiro e índices por último: se algo falhar no meio, nenhum
+// índice passa a apontar para ficha que não foi gravada.
+// Devolve a lista de chaves que NÃO puderam ser gravadas.
 async function bkpApplyPayload(payload){
-  const entries = Object.entries(payload.data);
+  const entries = Object.entries(payload.data).filter(([k]) =>
+    k.indexOf("backup:auto:") !== 0 && k.indexOf("cris:") !== 0);
+  const isIndex = k => /(^|:)index$/.test(k);
+  entries.sort((a, b) => (isIndex(a[0]) ? 1 : 0) - (isIndex(b[0]) ? 1 : 0));
+  const failed = [];
   for(const [k, v] of entries){
-    await storageSet(k, v, 1, true);
+    const val = (typeof v === "string") ? v : JSON.stringify(v);
+    const ok = await storageSet(k, val, 1, true);
+    if(!ok) failed.push(k);
   }
+  // Rascunhos antigos de criatura (sessionStorage) mascarariam a ficha
+  // restaurada ao reabri-la: descarta.
+  bkpClearSessionDrafts();
+  return failed;
+}
+
+// Texto de resumo mostrado antes de restaurar (aceita backups v1 e v2).
+function bkpDescribePayload(payload){
+  const sum = (payload.summary && typeof payload.summary === "object") ? payload.summary : bkpSummarize(payload.data).summary;
+  const plural = (n, a, b) => n + " " + (n === 1 ? a : b);
+  return "Backup de " + (payload.date || "data desconhecida") + " — " +
+    plural(sum.agents || 0, "ficha de agente", "fichas de agente") + ", " +
+    plural(sum.creatures || 0, "ficha de criatura", "fichas de criatura") + " e " +
+    plural(Object.keys(payload.data).length, "item de dados no total", "itens de dados no total") + ".";
 }
 
 /* ---------- backups automáticos (internos, sem download) ---------- */
 const BKP_AUTO_INDEX_KEY = "backup:auto:index";
 const BKP_AUTO_MAX = 5;
-const BKP_AUTO_COOLDOWN_MS = 20000; // evita "milhares de backups" em edições rápidas seguidas
+const BKP_AUTO_COOLDOWN_MS = 15 * 60 * 1000; // backup completo é pesado (copia TODO o armazenamento): no máx. 1 a cada 15 min nos automáticos não-forçados
 let __bkpLastAutoTs = 0;
 
 function bkpAutoDataKey(id){ return "backup:auto:" + id; }
@@ -6453,6 +6679,7 @@ async function bkpSaveAutoIndex(list){
 async function bkpCreateAutoBackup(label, force){
   try{
     const now = Date.now();
+    if(isForeignSheetOpen()) return; // não faz snapshot com a tela ocupada por ficha de terceiro
     if(!force && (now - __bkpLastAutoTs) < BKP_AUTO_COOLDOWN_MS) return;
     __bkpLastAutoTs = now;
 
@@ -6468,7 +6695,7 @@ async function bkpCreateAutoBackup(label, force){
       await storageDeleteKey(bkpAutoDataKey(removed.id));
     }
     await bkpSaveAutoIndex(list);
-    flashIndicator("✓ Backup automático criado", false, 1600);
+    // (sem aviso na tela: backup automático é silencioso; o histórico fica em "Backups Automáticos")
   }catch(e){
     // Backup automático nunca pode travar o fluxo principal do usuário.
   }
@@ -6498,7 +6725,19 @@ document.getElementById("bkp_backup_confirm").addEventListener("click", async ()
   try{
     const payload = await bkpCreateFullBackup(true);
     bkpCloseModal();
-    flashIndicator("✓ Backup completo criado com sucesso!", false, 2500);
+    if(payload.downloaded === false){
+      flashIndicator("✕ O navegador bloqueou o download do backup. Tente novamente.", true, 4000);
+      return;
+    }
+    const sm = payload.summary || {};
+    const faltando = (sm.missingAgents || []).length + (sm.missingCreatures || []).length;
+    flashIndicator("✓ Backup completo criado: " + (sm.agents || 0) + " agente(s) e " + (sm.creatures || 0) + " criatura(s).", false, 3500);
+    if(faltando > 0){
+      alert("Atenção: " + faltando + " ficha(s) aparecem na lista mas não têm dados gravados no armazenamento do navegador, então não puderam entrar no backup.");
+    }
+    if(payload.cloud && payload.cloud.included && Object.keys(payload.cloud.errors || {}).length){
+      console.warn("[Backup] Alguns dados da nuvem não puderam ser copiados:", payload.cloud.errors);
+    }
   }catch(e){
     flashIndicator("✕ Não foi possível criar o backup. Tente novamente.", true, 3000);
   }finally{
@@ -6535,10 +6774,7 @@ bkpFileInput.addEventListener("change", async (e) => {
     return;
   }
   __bkpPendingRestorePayload = payload;
-  const qtdFichas = Array.isArray(payload.characters) ? payload.characters.length : 0;
-  const dataTxt = payload.date || "data desconhecida";
-  document.getElementById("bkp_restore_summary").textContent =
-    "Backup de " + dataTxt + " — " + qtdFichas + (qtdFichas === 1 ? " ficha encontrada." : " fichas encontradas.");
+  document.getElementById("bkp_restore_summary").textContent = bkpDescribePayload(payload);
   bkpShowView("bkp_view_confirm_restore");
 });
 document.getElementById("bkp_restore_cancel").addEventListener("click", () => {
@@ -6554,11 +6790,16 @@ document.getElementById("bkp_restore_confirm").addEventListener("click", async (
     // MUITO IMPORTANTE: antes de restaurar, cria automaticamente um
     // backup de segurança do estado ATUAL (não o do arquivo sendo
     // restaurado), para que o usuário nunca perca o estado atual.
+    await bkpFlushPendingEdits();
     await bkpCreateAutoBackup("Backup de segurança (pré-restauração)", true);
-    await bkpApplyPayload(payload);
+    const failed = await bkpApplyPayload(payload);
     __bkpPendingRestorePayload = null;
     bkpCloseModal();
-    alert("✓ Backup restaurado com sucesso! A página será recarregada para aplicar os dados.");
+    if(failed.length){
+      alert("⚠ Backup restaurado parcialmente: " + failed.length + " item(ns) não puderam ser gravados (provavelmente falta de espaço no navegador). A página será recarregada; o estado anterior continua nos Backups Automáticos.");
+    }else{
+      alert("✓ Backup restaurado com sucesso! A página será recarregada para aplicar os dados.");
+    }
     location.reload();
   }catch(e){
     flashIndicator("✕ Não foi possível restaurar o backup. Tente novamente.", true, 3000);
@@ -6618,11 +6859,16 @@ document.getElementById("bkp_auto_restore_confirm").addEventListener("click", as
     const payload = JSON.parse(raw);
     // Também cria um backup de segurança do estado atual antes de
     // restaurar, pelo mesmo motivo do Backup Completo acima.
+    await bkpFlushPendingEdits();
     await bkpCreateAutoBackup("Backup de segurança (pré-restauração)", true);
-    await bkpApplyPayload(payload);
+    const failed = await bkpApplyPayload(payload);
     __bkpPendingAutoRestoreId = null;
     bkpCloseModal();
-    alert("✓ Backup automático restaurado com sucesso! A página será recarregada para aplicar os dados.");
+    if(failed.length){
+      alert("⚠ Backup automático restaurado parcialmente: " + failed.length + " item(ns) não puderam ser gravados (provavelmente falta de espaço no navegador). A página será recarregada.");
+    }else{
+      alert("✓ Backup automático restaurado com sucesso! A página será recarregada para aplicar os dados.");
+    }
     location.reload();
   }catch(e){
     flashIndicator("✕ Não foi possível restaurar este backup. Tente novamente.", true, 3000);
