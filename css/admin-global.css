@@ -1,0 +1,82 @@
+/* C.R.I.S. — Central Global do Mestre */
+.cris-admin-open{
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  width:100%; padding:9px 12px; cursor:pointer;
+  border:1px solid rgba(184,121,26,.55); border-left:2px solid var(--amber-bright);
+  background:rgba(184,121,26,.09); color:var(--paper);
+  font:500 11px 'Oswald',sans-serif; letter-spacing:.12em; text-transform:uppercase;
+}
+.cris-admin-open:hover{background:rgba(184,121,26,.18); border-color:var(--amber-bright);}
+body.cris-admin-lock{overflow:hidden;}
+.cris-admin-overlay{
+  position:fixed; inset:0; z-index:9999; display:none; align-items:center; justify-content:center;
+  padding:clamp(8px,2vw,28px); background:rgba(4,3,2,.88); backdrop-filter:blur(8px);
+}
+.cris-admin-overlay.is-open{display:flex;}
+.cris-admin-shell{
+  width:min(1500px,100%); height:min(920px,94vh); display:flex; flex-direction:column;
+  overflow:hidden; color:var(--paper); background:#100e0b; border:1px solid #59472b;
+  box-shadow:0 28px 100px rgba(0,0,0,.65);
+}
+.cris-admin-header{display:flex; align-items:flex-start; justify-content:space-between; gap:20px; padding:22px 26px 17px; border-bottom:1px solid var(--line); background:linear-gradient(110deg,rgba(184,121,26,.12),transparent 60%);}
+.cris-admin-kicker{font:500 9px 'Oswald',sans-serif; letter-spacing:.25em; color:var(--amber-bright); text-transform:uppercase;}
+.cris-admin-heading h2{margin:5px 0 3px; font:600 clamp(22px,3vw,30px) 'Oswald',sans-serif; letter-spacing:.06em; text-transform:uppercase;}
+.cris-admin-heading p{margin:0; color:var(--paper-dim); font-size:11px;}
+.cris-admin-close{width:34px; height:34px; flex:0 0 auto; border:1px solid var(--line); background:transparent; color:var(--paper-dim); cursor:pointer; font-size:16px;}
+.cris-admin-close:hover{color:var(--paper); border-color:var(--amber-bright);}
+.cris-admin-search-wrap{padding:16px 26px 14px; border-bottom:1px solid var(--line); display:flex; flex-direction:column; gap:7px;}
+.cris-admin-search-wrap label{font:500 9px 'Oswald',sans-serif; letter-spacing:.2em; color:var(--sigil);}
+.cris-admin-search{width:100%; min-height:43px; padding:10px 13px; outline:none; border:1px solid #4b3b25; background:#19150f; color:var(--paper); font:13px 'Special Elite',monospace;}
+.cris-admin-search:focus{border-color:var(--amber-bright); box-shadow:0 0 0 2px rgba(240,168,60,.1);}
+.cris-admin-search::placeholder{color:#81765f;}
+.cris-admin-search-wrap small{color:#8d8067; font-size:10px;}
+.cris-admin-body{display:grid; grid-template-columns:minmax(260px,.82fr) minmax(0,1.55fr); flex:1; min-height:0;}
+.cris-admin-results{overflow:auto; padding:13px; border-right:1px solid var(--line);}
+.cris-admin-player{margin-bottom:9px; border:1px solid #382f21; background:#15120e;}
+.cris-admin-player-toggle{display:flex; align-items:center; justify-content:space-between; gap:12px; width:100%; padding:12px 13px; text-align:left; border:0; background:transparent; color:var(--paper); cursor:pointer;}
+.cris-admin-player-toggle:hover{background:rgba(184,121,26,.08);}
+.cris-admin-player-name{font:500 13px 'Oswald',sans-serif; letter-spacing:.04em; text-transform:uppercase;}
+.cris-admin-player-count{font-size:10px; color:var(--amber-bright); white-space:nowrap;}
+.cris-admin-agent-list{padding:0 8px 8px;}
+.cris-admin-agent-list[hidden]{display:none;}
+.cris-admin-agent{display:flex; flex-direction:column; align-items:flex-start; gap:4px; width:100%; padding:10px 11px; border:0; border-top:1px solid rgba(255,255,255,.055); background:transparent; color:var(--paper-dim); text-align:left; cursor:pointer;}
+.cris-admin-agent:hover{background:rgba(184,121,26,.1); color:var(--paper);}
+.cris-admin-agent-name{font:500 12px 'Oswald',sans-serif; letter-spacing:.04em;}
+.cris-admin-agent-meta{font-size:9px; color:#8a7d64;}
+.cris-admin-detail{overflow:auto; padding:20px 24px 30px; scroll-behavior:smooth;}
+.cris-admin-empty-detail,.cris-admin-no-results{padding:28px 16px; color:#92866d; text-align:center; font-size:12px; line-height:1.6;}
+.cris-admin-detail-top{padding-bottom:17px; margin-bottom:18px; border-bottom:1px solid var(--line);}
+.cris-admin-detail-top h3{margin:5px 0; font:600 24px 'Oswald',sans-serif; text-transform:uppercase; letter-spacing:.04em;}
+.cris-admin-detail-meta{font-size:10px; color:#9d8d6d;}
+.cris-admin-copy-id{margin-top:10px; padding:5px 8px; border:1px solid #403522; background:#17130e; color:#aa9a7b; font-size:9px; cursor:pointer; overflow-wrap:anywhere;}
+.cris-admin-data-section{margin:0 0 17px; padding:0 0 15px; border-bottom:1px solid rgba(255,255,255,.07);}
+.cris-admin-data-section>h4{margin:0 0 10px; color:var(--amber-bright); font:500 11px 'Oswald',sans-serif; letter-spacing:.16em; text-transform:uppercase;}
+.cris-admin-nested{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px;}
+.cris-admin-nested.is-array{grid-template-columns:1fr;}
+.cris-admin-field{min-width:0; padding:9px 10px; border:1px solid rgba(255,255,255,.065); background:rgba(255,255,255,.018);}
+.cris-admin-field-label{margin-bottom:5px; color:#9d8d6d; font:500 9px 'Oswald',sans-serif; letter-spacing:.1em; text-transform:uppercase;}
+.cris-admin-value{display:block; color:#e2d6bd; font:11px/1.55 'Special Elite',monospace; overflow-wrap:anywhere; white-space:pre-wrap;}
+.cris-admin-value.is-empty{color:#665d4c;}
+.cris-admin-field .cris-admin-nested{margin-top:7px;}
+.cris-admin-footer{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 20px; border-top:1px solid var(--line); background:#15120e;}
+.cris-admin-status{color:#a99979; font-size:10px;}
+.cris-admin-more{padding:8px 12px; border:1px solid #6b4b20; background:rgba(184,121,26,.12); color:var(--paper); font:500 10px 'Oswald',sans-serif; letter-spacing:.1em; text-transform:uppercase; cursor:pointer;}
+.cris-admin-more:hover{background:rgba(184,121,26,.22);}
+.cris-admin-more:disabled{opacity:.5; cursor:wait;}
+@media(max-width:760px){
+  .cris-admin-overlay{padding:0;}
+  .cris-admin-shell{height:100dvh; border:0;}
+  .cris-admin-header{padding:16px 17px 13px;}
+  .cris-admin-search-wrap{padding:13px 17px;}
+  .cris-admin-body{grid-template-columns:1fr; grid-template-rows:minmax(150px,.75fr) minmax(220px,1.25fr);}
+  .cris-admin-results{border-right:0; border-bottom:1px solid var(--line); padding:9px 12px;}
+  .cris-admin-detail{padding:17px 16px 28px;}
+  .cris-admin-nested{grid-template-columns:1fr;}
+  .cris-admin-footer{padding:10px 13px;}
+  .cris-admin-status{font-size:9px;}
+  .cris-admin-more{font-size:9px; padding:7px 9px;}
+}
+.cris-admin-footer-actions{display:flex; align-items:center; gap:8px;}
+.cris-admin-refresh{padding:8px 11px; border:1px solid #403522; background:transparent; color:#c9b995; font:500 10px 'Oswald',sans-serif; letter-spacing:.1em; text-transform:uppercase; cursor:pointer;}
+.cris-admin-refresh:hover{border-color:var(--amber-bright); color:var(--paper);}
+@media(max-width:760px){.cris-admin-footer-actions{gap:5px;}.cris-admin-refresh{padding:7px 8px;font-size:9px;}}
